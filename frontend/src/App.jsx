@@ -8,87 +8,116 @@ import heroImage from "./assets/hero-cintac.jpg";
 import "./App.css";
 
 
+const API_URL =
+  "http://127.0.0.1:8000/api";
+
+
 function App() {
-  const [rutas, setRutas] = useState([]);
-  const [tiposContenedor, setTiposContenedor] = useState([]);
+  const [rutas, setRutas] =
+    useState([]);
 
-  const [origen, setOrigen] = useState("");
-  const [destino, setDestino] = useState("");
-  const [tipoContenedor, setTipoContenedor] = useState("");
+  const [origen, setOrigen] =
+    useState("");
 
-  const [pesoCarga, setPesoCarga] = useState("");
-  const [unidadPeso, setUnidadPeso] = useState("kg");
+  const [destino, setDestino] =
+    useState("");
 
-  const [contingencia, setContingencia] = useState("0");
-  const [tipoCambio, setTipoCambio] = useState("");
+  const [
+    tipoContenedor,
+    setTipoContenedor,
+  ] = useState("");
 
-  const [cargandoDatos, setCargandoDatos] = useState(true);
-  const [errorDatos, setErrorDatos] = useState("");
+  const [pesoCarga, setPesoCarga] =
+    useState("");
 
-  const [mensaje, setMensaje] = useState("");
-  const [resultado, setResultado] = useState(null);
+  const [unidadPeso, setUnidadPeso] =
+    useState("kg");
 
-  const [errores, setErrores] = useState({
-    origen: false,
-    destino: false,
-    pesoCarga: false,
-    contingencia: false,
-    tipoCambio: false,
-  });
+  const [
+    contingencia,
+    setContingencia,
+  ] = useState("0");
+
+  const [tipoCambio, setTipoCambio] =
+    useState("");
+
+  const [
+    recomendacion,
+    setRecomendacion,
+  ] = useState(null);
+
+  const [
+    cargandoDatos,
+    setCargandoDatos,
+  ] = useState(true);
+
+  const [
+    cargandoOpciones,
+    setCargandoOpciones,
+  ] = useState(false);
+
+  const [
+    cotizando,
+    setCotizando,
+  ] = useState(false);
+
+  const [
+    errorDatos,
+    setErrorDatos,
+  ] = useState("");
+
+  const [mensaje, setMensaje] =
+    useState("");
+
+  const [resultado, setResultado] =
+    useState(null);
+
+  const [errores, setErrores] =
+    useState({
+      origen: false,
+      destino: false,
+      pesoCarga: false,
+      contingencia: false,
+      tipoCambio: false,
+    });
 
 
   /* ======================================
-     DATOS DESDE DJANGO
+     RUTAS DESDE DJANGO
   ====================================== */
 
   useEffect(() => {
-    const cargarDatos = async () => {
-      setCargandoDatos(true);
+    const cargarRutas =
+      async () => {
+        setCargandoDatos(true);
 
-      try {
-        const [
-          respuestaRutas,
-          respuestaContenedores,
-        ] = await Promise.all([
-          fetch(
-            "http://127.0.0.1:8000/api/rutas/"
-          ),
-          fetch(
-            "http://127.0.0.1:8000/api/tipos-contenedor/"
-          ),
-        ]);
+        try {
+          const respuesta =
+            await fetch(
+              `${API_URL}/rutas/`
+            );
 
-        if (
-          !respuestaRutas.ok ||
-          !respuestaContenedores.ok
-        ) {
-          throw new Error();
+          if (!respuesta.ok) {
+            throw new Error();
+          }
+
+          const datos =
+            await respuesta.json();
+
+          setRutas(datos);
+          setErrorDatos("");
+        } catch {
+          setRutas([]);
+
+          setErrorDatos(
+            "No fue posible cargar la información del cotizador."
+          );
+        } finally {
+          setCargandoDatos(false);
         }
+      };
 
-        const [
-          datosRutas,
-          datosContenedores,
-        ] = await Promise.all([
-          respuestaRutas.json(),
-          respuestaContenedores.json(),
-        ]);
-
-        setRutas(datosRutas);
-        setTiposContenedor(datosContenedores);
-        setErrorDatos("");
-      } catch {
-        setRutas([]);
-        setTiposContenedor([]);
-
-        setErrorDatos(
-          "No fue posible cargar la información del cotizador."
-        );
-      } finally {
-        setCargandoDatos(false);
-      }
-    };
-
-    cargarDatos();
+    cargarRutas();
   }, []);
 
 
@@ -96,106 +125,126 @@ function App() {
      PUERTOS Y RUTA
   ====================================== */
 
-  const puertosOrigen = useMemo(
-    () => [
-      ...new Set(
-        rutas.map(
-          (ruta) => ruta.origen
-        )
-      ),
-    ],
-    [rutas]
-  );
-
-
-  const puertosDestino = useMemo(() => {
-    if (!origen) {
-      return [];
-    }
-
-    return [
-      ...new Set(
-        rutas
-          .filter(
+  const puertosOrigen =
+    useMemo(
+      () => [
+        ...new Set(
+          rutas.map(
             (ruta) =>
-              ruta.origen === origen
+              ruta.origen
           )
-          .map(
-            (ruta) =>
-              ruta.destino
-          )
-      ),
-    ];
-  }, [
-    rutas,
-    origen,
-  ]);
-
-
-  const rutaSeleccionada = useMemo(() => {
-    if (
-      !origen ||
-      !destino
-    ) {
-      return null;
-    }
-
-    return (
-      rutas.find(
-        (ruta) =>
-          ruta.origen === origen &&
-          ruta.destino === destino
-      ) || null
+        ),
+      ],
+      [rutas]
     );
-  }, [
-    rutas,
-    origen,
-    destino,
-  ]);
+
+
+  const puertosDestino =
+    useMemo(() => {
+      if (!origen) {
+        return [];
+      }
+
+      return [
+        ...new Set(
+          rutas
+            .filter(
+              (ruta) =>
+                ruta.origen ===
+                origen
+            )
+            .map(
+              (ruta) =>
+                ruta.destino
+            )
+        ),
+      ];
+    }, [
+      rutas,
+      origen,
+    ]);
+
+
+  const rutaSeleccionada =
+    useMemo(() => {
+      if (
+        !origen ||
+        !destino
+      ) {
+        return null;
+      }
+
+      return (
+        rutas.find(
+          (ruta) =>
+            ruta.origen ===
+              origen &&
+            ruta.destino ===
+              destino
+        ) || null
+      );
+    }, [
+      rutas,
+      origen,
+      destino,
+    ]);
 
 
   /* ======================================
      FORMATOS
   ====================================== */
 
-  const formatearUSD = (valor) =>
-    new Intl.NumberFormat(
-      "es-CL",
-      {
-        maximumFractionDigits: 0,
-      }
-    ).format(valor);
+  const formatearUSD =
+    (valor) =>
+      new Intl.NumberFormat(
+        "es-CL",
+        {
+          maximumFractionDigits: 0,
+        }
+      ).format(
+        Number(valor)
+      );
 
 
-  const formatearCLP = (valor) =>
-    new Intl.NumberFormat(
-      "es-CL",
-      {
-        maximumFractionDigits: 0,
-      }
-    ).format(valor);
+  const formatearCLP =
+    (valor) =>
+      new Intl.NumberFormat(
+        "es-CL",
+        {
+          maximumFractionDigits: 0,
+        }
+      ).format(
+        Number(valor)
+      );
 
 
-  const formatearNumero = (valor) =>
-    new Intl.NumberFormat(
-      "es-CL",
-      {
-        maximumFractionDigits: 2,
-      }
-    ).format(valor);
+  const formatearNumero =
+    (valor) =>
+      new Intl.NumberFormat(
+        "es-CL",
+        {
+          maximumFractionDigits: 2,
+        }
+      ).format(
+        Number(valor)
+      );
 
 
   /* ======================================
-     OPCIONES DE CONTENEDORES
+     OPCIONES DESDE DJANGO
   ====================================== */
 
-  const recomendacion = useMemo(() => {
+  useEffect(() => {
+    setRecomendacion(null);
+    setTipoContenedor("");
+    setResultado(null);
+    setMensaje("");
+
     if (
       !rutaSeleccionada ||
-      pesoCarga === "" ||
-      tiposContenedor.length === 0
+      pesoCarga === ""
     ) {
-      return null;
+      return;
     }
 
     const pesoNumero =
@@ -207,479 +256,386 @@ function App() {
       ) ||
       pesoNumero <= 0
     ) {
-      return null;
+      return;
     }
 
-    const pesoTN =
-      unidadPeso === "kg"
-        ? pesoNumero / 1000
-        : pesoNumero;
+    const controlador =
+      new AbortController();
 
-    const pesoKg =
-      unidadPeso === "kg"
-        ? pesoNumero
-        : pesoNumero * 1000;
+    const temporizador =
+      setTimeout(
+        async () => {
+          setCargandoOpciones(
+            true
+          );
 
+          try {
+            const respuesta =
+              await fetch(
+                `${API_URL}/opciones-contenedores/`,
+                {
+                  method:
+                    "POST",
 
-    const opciones =
-      tiposContenedor
-        .map((contenedor) => {
-          const capacidadTN =
-            Number(
-              contenedor.capacidad_tn
+                  headers: {
+                    "Content-Type":
+                      "application/json",
+                  },
+
+                  body:
+                    JSON.stringify(
+                      {
+                        ruta_id:
+                          rutaSeleccionada.id,
+
+                        peso_carga:
+                          pesoCarga,
+
+                        unidad_peso:
+                          unidadPeso,
+                      }
+                    ),
+
+                  signal:
+                    controlador.signal,
+                }
+              );
+
+            const datos =
+              await respuesta.json();
+
+            if (!respuesta.ok) {
+              throw new Error(
+                datos.detail ||
+                "No fue posible obtener las opciones."
+              );
+            }
+
+            setRecomendacion(
+              datos
             );
 
-          if (
-            !Number.isFinite(
-              capacidadTN
-            ) ||
-            capacidadTN <= 0
-          ) {
-            return null;
+            setTipoContenedor(
+              datos.sugerida
+            );
+          } catch (error) {
+            if (
+              error.name !==
+              "AbortError"
+            ) {
+              setMensaje(
+                error.message
+              );
+            }
+          } finally {
+            if (
+              !controlador.signal
+                .aborted
+            ) {
+              setCargandoOpciones(
+                false
+              );
+            }
           }
-
-          const tarifa =
-            rutaSeleccionada.tarifas.find(
-              (item) =>
-                item.tipoContenedor ===
-                contenedor.codigo
-            );
-
-          if (!tarifa) {
-            return null;
-          }
-
-          const tarifaMin =
-            Number(
-              tarifa.valorMinimo
-            );
-
-          const tarifaMax =
-            Number(
-              tarifa.valorMaximo
-            );
-
-          if (
-            !Number.isFinite(
-              tarifaMin
-            ) ||
-            !Number.isFinite(
-              tarifaMax
-            )
-          ) {
-            return null;
-          }
-
-          const cantidad =
-            Math.ceil(
-              pesoTN /
-              capacidadTN
-            );
-
-          const totalMin =
-            tarifaMin *
-            cantidad;
-
-          const totalMax =
-            tarifaMax *
-            cantidad;
-
-          const costoPromedio =
-            (
-              totalMin +
-              totalMax
-            ) / 2;
-
-          return {
-            codigo:
-              contenedor.codigo,
-
-            nombre:
-              contenedor.nombre,
-
-            capacidadTN,
-
-            cantidad,
-
-            tarifaMin,
-            tarifaMax,
-
-            totalMin,
-            totalMax,
-
-            costoPromedio,
-
-            fuente:
-              tarifa.fuente,
-          };
-        })
-        .filter(Boolean);
-
-
-    if (
-      opciones.length === 0
-    ) {
-      return null;
-    }
-
-
-    const sugerida =
-      opciones.reduce(
-        (
-          mejor,
-          actual
-        ) =>
-          actual.costoPromedio <
-          mejor.costoPromedio
-            ? actual
-            : mejor
+        },
+        250
       );
 
+    return () => {
+      clearTimeout(
+        temporizador
+      );
 
-    return {
-      pesoTN,
-      pesoKg,
-      opciones,
-      sugerida,
+      controlador.abort();
     };
   }, [
     rutaSeleccionada,
     pesoCarga,
     unidadPeso,
-    tiposContenedor,
   ]);
-
-
-  /* ======================================
-     PRESELECCIÓN AUTOMÁTICA
-  ====================================== */
-
-  useEffect(() => {
-    if (!recomendacion) {
-      setTipoContenedor("");
-      setResultado(null);
-      return;
-    }
-
-    setTipoContenedor(
-      recomendacion.sugerida.codigo
-    );
-
-    setResultado(null);
-    setMensaje("");
-  }, [recomendacion]);
 
 
   /* ======================================
      AUXILIARES
   ====================================== */
 
-  const limpiarResultado = () => {
-    setResultado(null);
-    setMensaje("");
-  };
+  const limpiarResultado =
+    () => {
+      setResultado(null);
+      setMensaje("");
+    };
 
 
-  const limpiarError = (campo) => {
-    setErrores(
-      (actuales) => ({
-        ...actuales,
-        [campo]: false,
-      })
-    );
-  };
+  const limpiarError =
+    (campo) => {
+      setErrores(
+        (actuales) => ({
+          ...actuales,
+          [campo]: false,
+        })
+      );
+    };
 
 
-  const nuevaCotizacion = () => {
-    setOrigen("");
-    setDestino("");
-    setTipoContenedor("");
+  const nuevaCotizacion =
+    () => {
+      setOrigen("");
+      setDestino("");
 
-    setPesoCarga("");
-    setUnidadPeso("kg");
+      setTipoContenedor("");
 
-    setContingencia("0");
-    setTipoCambio("");
+      setPesoCarga("");
+      setUnidadPeso("kg");
 
-    setMensaje("");
-    setResultado(null);
+      setContingencia("0");
+      setTipoCambio("");
 
-    setErrores({
-      origen: false,
-      destino: false,
-      pesoCarga: false,
-      contingencia: false,
-      tipoCambio: false,
-    });
+      setRecomendacion(null);
 
-    window.scrollTo({
-      top: 0,
-      behavior: "smooth",
-    });
-  };
+      setMensaje("");
+      setResultado(null);
+
+      setErrores({
+        origen: false,
+        destino: false,
+        pesoCarga: false,
+        contingencia: false,
+        tipoCambio: false,
+      });
+
+      window.scrollTo({
+        top: 0,
+        behavior: "smooth",
+      });
+    };
 
 
   /* ======================================
-     COTIZAR
+     COTIZACIÓN DESDE DJANGO
   ====================================== */
 
-  const cotizar = (e) => {
-    e.preventDefault();
+  const cotizar =
+    async (e) => {
+      e.preventDefault();
 
-    setMensaje("");
-    setResultado(null);
-
-
-    const nuevosErrores = {
-      origen: !origen,
-      destino: !destino,
-      pesoCarga: !pesoCarga,
-      contingencia: false,
-      tipoCambio: false,
-    };
-
-    setErrores(
-      nuevosErrores
-    );
+      setMensaje("");
+      setResultado(null);
 
 
-    if (
-      nuevosErrores.origen ||
-      nuevosErrores.destino ||
-      nuevosErrores.pesoCarga
-    ) {
-      setMensaje(
-        "Complete los campos obligatorios para realizar la cotización."
-      );
+      const nuevosErrores = {
+        origen: !origen,
+        destino: !destino,
+        pesoCarga:
+          !pesoCarga,
+        contingencia: false,
+        tipoCambio: false,
+      };
 
-      return;
-    }
-
-
-    const pesoNumero =
-      Number(pesoCarga);
-
-    if (
-      !Number.isFinite(
-        pesoNumero
-      ) ||
-      pesoNumero <= 0
-    ) {
       setErrores(
-        (actuales) => ({
-          ...actuales,
-          pesoCarga: true,
-        })
+        nuevosErrores
       );
 
-      setMensaje(
-        "El peso total debe ser mayor que cero."
-      );
-
-      return;
-    }
-
-
-    if (!rutaSeleccionada) {
-      setMensaje(
-        "No existe información para la ruta seleccionada."
-      );
-
-      return;
-    }
-
-
-    if (!recomendacion) {
-      setMensaje(
-        "No existen opciones disponibles para esta operación."
-      );
-
-      return;
-    }
-
-
-    const opcionSeleccionada =
-      recomendacion.opciones.find(
-        (opcion) =>
-          opcion.codigo ===
-          tipoContenedor
-      );
-
-
-    if (!opcionSeleccionada) {
-      setMensaje(
-        "Seleccione un tipo de contenedor."
-      );
-
-      return;
-    }
-
-
-    const contingenciaNumero =
-      Number(contingencia) || 0;
-
-
-    if (
-      !Number.isInteger(
-        contingenciaNumero
-      ) ||
-      contingenciaNumero < 0
-    ) {
-      setErrores(
-        (actuales) => ({
-          ...actuales,
-          contingencia: true,
-        })
-      );
-
-      setMensaje(
-        "El margen de contingencia debe ser un número entero igual o mayor que cero."
-      );
-
-      return;
-    }
-
-
-    let tipoCambioNumero = null;
-
-
-    if (tipoCambio !== "") {
-      tipoCambioNumero =
-        Number(tipoCambio);
 
       if (
-        !Number.isFinite(
-          tipoCambioNumero
-        ) ||
-        tipoCambioNumero <= 0
+        nuevosErrores.origen ||
+        nuevosErrores.destino ||
+        nuevosErrores.pesoCarga
       ) {
-        setErrores(
-          (actuales) => ({
-            ...actuales,
-            tipoCambio: true,
-          })
-        );
-
         setMensaje(
-          "El tipo de cambio debe ser mayor que cero."
+          "Complete los campos obligatorios para realizar la cotización."
         );
 
         return;
       }
-    }
 
 
-    const totalMinCLP =
-      tipoCambioNumero !== null
-        ? opcionSeleccionada.totalMin *
-          tipoCambioNumero
-        : null;
+      if (
+        !rutaSeleccionada
+      ) {
+        setMensaje(
+          "No existe información para la ruta seleccionada."
+        );
+
+        return;
+      }
 
 
-    const totalMaxCLP =
-      tipoCambioNumero !== null
-        ? opcionSeleccionada.totalMax *
-          tipoCambioNumero
-        : null;
+      const pesoNumero =
+        Number(pesoCarga);
+
+      if (
+        !Number.isFinite(
+          pesoNumero
+        ) ||
+        pesoNumero <= 0
+      ) {
+        setErrores(
+          (actuales) => ({
+            ...actuales,
+            pesoCarga: true,
+          })
+        );
+
+        setMensaje(
+          "El peso total debe ser mayor que cero."
+        );
+
+        return;
+      }
 
 
-    const tieneTransito =
-      rutaSeleccionada.transitoMin !== null &&
-      rutaSeleccionada.transitoMax !== null;
+      if (
+        !recomendacion ||
+        !tipoContenedor
+      ) {
+        setMensaje(
+          "Seleccione una opción de contenedor."
+        );
+
+        return;
+      }
 
 
-    const transitoMin =
-      tieneTransito
-        ? rutaSeleccionada.transitoMin +
+      const contingenciaNumero =
+        Number(
+          contingencia
+        ) || 0;
+
+
+      if (
+        !Number.isInteger(
           contingenciaNumero
-        : null;
+        ) ||
+        contingenciaNumero < 0
+      ) {
+        setErrores(
+          (actuales) => ({
+            ...actuales,
+            contingencia: true,
+          })
+        );
+
+        setMensaje(
+          "El margen de contingencia debe ser un número entero igual o mayor que cero."
+        );
+
+        return;
+      }
 
 
-    const transitoMax =
-      tieneTransito
-        ? rutaSeleccionada.transitoMax +
-          contingenciaNumero
-        : null;
+      if (
+        tipoCambio !== ""
+      ) {
+        const cambio =
+          Number(
+            tipoCambio
+          );
+
+        if (
+          !Number.isFinite(
+            cambio
+          ) ||
+          cambio <= 0
+        ) {
+          setErrores(
+            (actuales) => ({
+              ...actuales,
+              tipoCambio: true,
+            })
+          );
+
+          setMensaje(
+            "El tipo de cambio debe ser mayor que cero."
+          );
+
+          return;
+        }
+      }
 
 
-    setResultado({
-      origen:
-        rutaSeleccionada.origen,
-
-      destino:
-        rutaSeleccionada.destino,
-
-      pais:
-        rutaSeleccionada.pais,
-
-      tipoRuta:
-        rutaSeleccionada.tipoRuta,
-
-      pesoTN:
-        recomendacion.pesoTN,
-
-      pesoKg:
-        recomendacion.pesoKg,
-
-      tipoContenedor:
-        opcionSeleccionada.codigo,
-
-      nombreContenedor:
-        opcionSeleccionada.nombre,
-
-      capacidadTN:
-        opcionSeleccionada.capacidadTN,
-
-      cantidad:
-        opcionSeleccionada.cantidad,
-
-      tarifaMin:
-        opcionSeleccionada.tarifaMin,
-
-      tarifaMax:
-        opcionSeleccionada.tarifaMax,
-
-      totalMin:
-        opcionSeleccionada.totalMin,
-
-      totalMax:
-        opcionSeleccionada.totalMax,
-
-      esSugerida:
-        opcionSeleccionada.codigo ===
-        recomendacion.sugerida.codigo,
-
-      transitoOriginalMin:
-        rutaSeleccionada.transitoMin,
-
-      transitoOriginalMax:
-        rutaSeleccionada.transitoMax,
-
-      transitoMin,
-      transitoMax,
-
-      contingencia:
-        contingenciaNumero,
-
-      fuente:
-        opcionSeleccionada.fuente,
-
-      tipoCambio:
-        tipoCambioNumero,
-
-      totalMinCLP,
-      totalMaxCLP,
-    });
+      setCotizando(true);
 
 
-    setErrores({
-      origen: false,
-      destino: false,
-      pesoCarga: false,
-      contingencia: false,
-      tipoCambio: false,
-    });
-  };
+      try {
+        const respuesta =
+          await fetch(
+            `${API_URL}/cotizar/`,
+            {
+              method: "POST",
+
+              headers: {
+                "Content-Type":
+                  "application/json",
+              },
+
+              body:
+                JSON.stringify(
+                  {
+                    ruta_id:
+                      rutaSeleccionada.id,
+
+                    peso_carga:
+                      pesoCarga,
+
+                    unidad_peso:
+                      unidadPeso,
+
+                    tipo_contenedor:
+                      tipoContenedor,
+
+                    contingencia:
+                      contingenciaNumero,
+
+                    tipo_cambio:
+                      tipoCambio === ""
+                        ? null
+                        : tipoCambio,
+                  }
+                ),
+            }
+          );
+
+
+        const datos =
+          await respuesta.json();
+
+
+        if (!respuesta.ok) {
+          const detalle =
+            datos.detail ||
+            Object.values(
+              datos
+            )
+              .flat()
+              .join(" ");
+
+          throw new Error(
+            detalle ||
+            "No fue posible generar la cotización."
+          );
+        }
+
+
+        setResultado(
+          datos
+        );
+
+
+        setErrores({
+          origen: false,
+          destino: false,
+          pesoCarga: false,
+          contingencia: false,
+          tipoCambio: false,
+        });
+      } catch (error) {
+        setMensaje(
+          error.message
+        );
+      } finally {
+        setCotizando(false);
+      }
+    };
 
 
   return (
@@ -796,14 +752,6 @@ function App() {
 
 
           <form onSubmit={cotizar}>
-            {cargandoDatos && (
-              <div className="message-box">
-                <p>
-                  Cargando información del cotizador...
-                </p>
-              </div>
-            )}
-
             {errorDatos && (
               <div className="message-box">
                 <span className="message-icon">
@@ -1038,7 +986,7 @@ function App() {
                       (opcion) => {
                         const sugerida =
                           opcion.codigo ===
-                          recomendacion.sugerida.codigo;
+                          recomendacion.sugerida;
 
                         const seleccionada =
                           opcion.codigo ===
@@ -1259,11 +1207,15 @@ function App() {
                   className="primary-button"
                   disabled={
                     cargandoDatos ||
+                    cargandoOpciones ||
+                    cotizando ||
                     Boolean(errorDatos)
                   }
                 >
                   <span>
-                    COTIZAR OPERACIÓN
+                    {cotizando
+                      ? "COTIZANDO..."
+                      : "COTIZAR OPERACIÓN"}
                   </span>
 
                   <span className="button-arrow">

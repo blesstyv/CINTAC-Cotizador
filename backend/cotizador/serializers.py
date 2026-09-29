@@ -1,6 +1,13 @@
+from decimal import Decimal
+
 from rest_framework import serializers
 
-from .models import Ruta, Tarifa, TiempoTransito, TipoContenedor
+from .models import (
+    Ruta,
+    Tarifa,
+    TiempoTransito,
+    TipoContenedor,
+)
 
 
 class TipoContenedorSerializer(serializers.ModelSerializer):
@@ -99,3 +106,44 @@ class RutaSerializer(serializers.ModelSerializer):
             return obj.tiempo_transito.dias_maximos
         except TiempoTransito.DoesNotExist:
             return None
+
+
+class OpcionesOperacionSerializer(serializers.Serializer):
+    ruta_id = serializers.IntegerField(
+        min_value=1,
+    )
+
+    peso_carga = serializers.DecimalField(
+        max_digits=18,
+        decimal_places=3,
+        min_value=Decimal("0.001"),
+    )
+
+    unidad_peso = serializers.ChoiceField(
+        choices=[
+            "kg",
+            "tn",
+        ]
+    )
+
+
+class CotizacionOperacionSerializer(
+    OpcionesOperacionSerializer
+):
+    tipo_contenedor = serializers.CharField(
+        max_length=2,
+    )
+
+    contingencia = serializers.IntegerField(
+        min_value=0,
+        required=False,
+        default=0,
+    )
+
+    tipo_cambio = serializers.DecimalField(
+        max_digits=12,
+        decimal_places=4,
+        min_value=Decimal("0.0001"),
+        required=False,
+        allow_null=True,
+    )
