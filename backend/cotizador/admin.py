@@ -1,12 +1,37 @@
 from django.contrib import admin
 
 from .models import (
+    PerfilUsuario,
     Puerto,
     Ruta,
     Tarifa,
     TiempoTransito,
     TipoContenedor,
 )
+
+
+@admin.register(PerfilUsuario)
+class PerfilUsuarioAdmin(
+    admin.ModelAdmin
+):
+    list_display = (
+        "usuario",
+        "autorizado",
+    )
+
+    list_editable = (
+        "autorizado",
+    )
+
+    search_fields = (
+        "usuario__username",
+        "usuario__first_name",
+        "usuario__last_name",
+    )
+
+    list_filter = (
+        "autorizado",
+    )
 
 
 @admin.register(Puerto)
@@ -23,7 +48,9 @@ class PuertoAdmin(admin.ModelAdmin):
 
 
 @admin.register(TipoContenedor)
-class TipoContenedorAdmin(admin.ModelAdmin):
+class TipoContenedorAdmin(
+    admin.ModelAdmin
+):
     list_display = (
         "codigo",
         "nombre",
@@ -77,7 +104,9 @@ class TarifaAdmin(admin.ModelAdmin):
 
 
 @admin.register(TiempoTransito)
-class TiempoTransitoAdmin(admin.ModelAdmin):
+class TiempoTransitoAdmin(
+    admin.ModelAdmin
+):
     list_display = (
         "ruta",
         "dias_minimos",

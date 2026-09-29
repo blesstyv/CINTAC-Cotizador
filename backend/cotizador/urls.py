@@ -1,5 +1,11 @@
 from django.urls import path
 
+from .auth_views import (
+    cerrar_sesion,
+    iniciar_sesion,
+    sesion_actual,
+)
+
 from .views import (
     cotizar_operacion,
     listar_rutas,
@@ -9,6 +15,24 @@ from .views import (
 
 
 urlpatterns = [
+    path(
+        "login/",
+        iniciar_sesion,
+        name="login",
+    ),
+
+    path(
+        "sesion/",
+        sesion_actual,
+        name="sesion",
+    ),
+
+    path(
+        "logout/",
+        cerrar_sesion,
+        name="logout",
+    ),
+
     path(
         "tipos-contenedor/",
         listar_tipos_contenedor,

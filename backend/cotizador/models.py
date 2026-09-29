@@ -1,4 +1,28 @@
+from django.contrib.auth.models import User
 from django.db import models
+
+
+class PerfilUsuario(models.Model):
+    usuario = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        related_name="perfil_cintac",
+    )
+
+    autorizado = models.BooleanField(
+        default=False,
+    )
+
+    def __str__(self):
+        estado = (
+            "Autorizado"
+            if self.autorizado
+            else "No autorizado"
+        )
+
+        return (
+            f"{self.usuario.username} - {estado}"
+        )
 
 
 class Puerto(models.Model):
@@ -42,14 +66,20 @@ class TipoContenedor(models.Model):
         ordering = ["codigo"]
 
     def __str__(self):
-        return f"{self.nombre} - {self.capacidad_tn} TN"
+        return (
+            f"{self.nombre} - "
+            f"{self.capacidad_tn} TN"
+        )
 
 
 class Ruta(models.Model):
     TIPO_RUTA_CHOICES = [
         ("Directo", "Directo"),
         ("Transbordo", "Transbordo"),
-        ("Directo / Transbordo", "Directo / Transbordo"),
+        (
+            "Directo / Transbordo",
+            "Directo / Transbordo",
+        ),
     ]
 
     puerto_origen = models.ForeignKey(
@@ -72,13 +102,19 @@ class Ruta(models.Model):
     class Meta:
         constraints = [
             models.UniqueConstraint(
-                fields=["puerto_origen", "puerto_destino"],
+                fields=[
+                    "puerto_origen",
+                    "puerto_destino",
+                ],
                 name="ruta_origen_destino_unica",
             )
         ]
 
     def __str__(self):
-        return f"{self.puerto_origen.nombre} → {self.puerto_destino.nombre}"
+        return (
+            f"{self.puerto_origen.nombre} "
+            f"→ {self.puerto_destino.nombre}"
+        )
 
 
 class Tarifa(models.Model):
@@ -116,13 +152,19 @@ class Tarifa(models.Model):
     class Meta:
         constraints = [
             models.UniqueConstraint(
-                fields=["ruta", "tipo_contenedor"],
+                fields=[
+                    "ruta",
+                    "tipo_contenedor",
+                ],
                 name="tarifa_ruta_contenedor_unica",
             )
         ]
 
     def __str__(self):
-        return f"{self.ruta} - {self.tipo_contenedor} pies"
+        return (
+            f"{self.ruta} - "
+            f"{self.tipo_contenedor} pies"
+        )
 
 
 class TiempoTransito(models.Model):
@@ -138,5 +180,6 @@ class TiempoTransito(models.Model):
     def __str__(self):
         return (
             f"{self.ruta} - "
-            f"{self.dias_minimos} a {self.dias_maximos} días"
+            f"{self.dias_minimos} a "
+            f"{self.dias_maximos} días"
         )

@@ -1,0 +1,145 @@
+from django.contrib.auth import authenticate
+
+from rest_framework.authtoken.models import Token
+from rest_framework.decorators import (
+    api_view,
+    permission_classes,
+)
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
+from rest_framework import status
+
+from .models import PerfilUsuario
+
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def iniciar_sesion(request):
+    username = (
+        request.data
+        .get("username", "")
+        .strip()
+    )
+
+    password = request.data.get(
+        "password",
+        "",
+    )
+
+    if not username or not password:
+        return Response(
+            {
+                "detail":
+                    "Debe ingresar usuario y contraseña."
+            },
+            status=
+                status.HTTP_400_BAD_REQUEST,
+        )
+
+    usuario = authenticate(
+        username=username,
+        password=password,
+    )
+
+    if usuario is None:
+        return Response(
+            {
+                "detail":
+                    "Usuario o contraseña incorrectos."
+            },
+            status=
+                status.HTTP_400_BAD_REQUEST,
+        )
+
+    if not usuario.is_active:
+        return Response(
+            {
+                "detail":
+                    "El usuario no se encuentra activo."
+            },
+            status=
+                status.HTTP_403_FORBIDDEN,
+        )
+
+    if not usuario.is_superuser:
+        perfil = (
+            PerfilUsuario.objects
+            .filter(
+                usuario=usuario,
+                autorizado=True,
+            )
+            .first()
+        )
+
+        if perfil is None:
+            return Response(
+                {
+                    "detail":
+                        "El usuario no está autorizado "
+                        "para acceder al cotizador."
+                },
+                status=
+                    status.HTTP_403_FORBIDDEN,
+            )
+
+    token, _ = (
+        Token.objects
+        .get_or_create(
+            user=usuario
+        )
+    )
+
+    nombre = (
+        usuario.get_full_name()
+        or usuario.username
+    )
+
+    return Response(
+        {
+            "token": token.key,
+            "usuario": {
+                "id": usuario.id,
+                "username":
+                    usuario.username,
+                "nombre":
+                    nombre,
+            },
+        }
+    )
+
+
+@api_view(["GET"])
+def sesion_actual(request):
+    usuario = request.user
+
+    return Response(
+        {
+            "id":
+                usuario.id,
+
+            "username":
+                usuario.username,
+
+            "nombre":
+                (
+                    usuario.get_full_name()
+                    or usuario.username
+                ),
+
+            "autorizado":
+                True,
+        }
+    )
+
+
+@api_view(["POST"])
+def cerrar_sesion(request):
+    if request.auth:
+        request.auth.delete()
+
+    return Response(
+        {
+            "detail":
+                "Sesión cerrada correctamente."
+        }
+    )
