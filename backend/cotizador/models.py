@@ -18,6 +18,33 @@ class Puerto(models.Model):
         return f"{self.nombre} - {self.pais}"
 
 
+class TipoContenedor(models.Model):
+    codigo = models.CharField(
+        max_length=2,
+        unique=True,
+    )
+
+    nombre = models.CharField(
+        max_length=50,
+    )
+
+    capacidad_tn = models.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+        default=25.00,
+    )
+
+    activo = models.BooleanField(
+        default=True,
+    )
+
+    class Meta:
+        ordering = ["codigo"]
+
+    def __str__(self):
+        return f"{self.nombre} - {self.capacidad_tn} TN"
+
+
 class Ruta(models.Model):
     TIPO_RUTA_CHOICES = [
         ("Directo", "Directo"),

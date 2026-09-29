@@ -1,7 +1,12 @@
 from django.core.management.base import BaseCommand
 
-from cotizador.models import Puerto, Ruta, Tarifa, TiempoTransito
-
+from cotizador.models import (
+    Puerto,
+    Ruta,
+    Tarifa,
+    TiempoTransito,
+    TipoContenedor,
+)
 
 DATOS = [
     {
@@ -219,6 +224,25 @@ class Command(BaseCommand):
     help = "Carga los datos iniciales utilizados por el cotizador CINTAC"
 
     def handle(self, *args, **options):
+
+        contenedor_20, _ = TipoContenedor.objects.update_or_create(
+            codigo="20",
+            defaults={
+                "nombre": "Contenedor 20'",
+                "capacidad_tn": 25,
+                "activo": True,
+            },
+        )
+
+        contenedor_40, _ = TipoContenedor.objects.update_or_create(
+            codigo="40",
+            defaults={
+                "nombre": "Contenedor 40'",
+                "capacidad_tn": 25,
+                "activo": True,
+            },
+        )
+
         for dato in DATOS:
             origen, _ = Puerto.objects.get_or_create(
                 nombre=dato["origen"],

@@ -1,92 +1,404 @@
-import { useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+
 import { tarifas } from "./data/tarifas";
 import heroImage from "./assets/hero-cintac.jpg";
+
 import "./App.css";
 
+
 function App() {
-  const [origen, setOrigen] = useState("");
-  const [destino, setDestino] = useState("");
-  const [tipoContenedor, setTipoContenedor] = useState("");
-  const [cantidad, setCantidad] = useState("");
-  const [contingencia, setContingencia] = useState("0");
+  const [origen, setOrigen] =
+    useState("");
 
-  const [pesoCarga, setPesoCarga] = useState("");
-  const [unidadPeso, setUnidadPeso] = useState("kg");
-  const [tipoCambio, setTipoCambio] = useState("");
+  const [destino, setDestino] =
+    useState("");
 
-  const [mensaje, setMensaje] = useState("");
-  const [resultado, setResultado] = useState(null);
+  const [
+    tipoContenedor,
+    setTipoContenedor,
+  ] = useState("");
 
-  const [errores, setErrores] = useState({
-    origen: false,
-    destino: false,
-    tipoContenedor: false,
-    cantidad: false,
-    contingencia: false,
-    pesoCarga: false,
-    tipoCambio: false,
-  });
+  const [pesoCarga, setPesoCarga] =
+    useState("");
+
+  const [unidadPeso, setUnidadPeso] =
+    useState("kg");
+
+  const [
+    contingencia,
+    setContingencia,
+  ] = useState("0");
+
+  const [tipoCambio, setTipoCambio] =
+    useState("");
+
+  const [
+    tiposContenedor,
+    setTiposContenedor,
+  ] = useState([]);
+
+  const [
+    errorConfiguracion,
+    setErrorConfiguracion,
+  ] = useState("");
+
+  const [mensaje, setMensaje] =
+    useState("");
+
+  const [resultado, setResultado] =
+    useState(null);
+
+  const [errores, setErrores] =
+    useState({
+      origen: false,
+      destino: false,
+      pesoCarga: false,
+      contingencia: false,
+      tipoCambio: false,
+    });
+
+
+  /* ======================================
+     CARGA DE CONFIGURACIÓN DESDE DJANGO
+  ====================================== */
+
+  useEffect(() => {
+    const cargarTiposContenedor =
+      async () => {
+        try {
+          const respuesta =
+            await fetch(
+              "http://127.0.0.1:8000/api/tipos-contenedor/"
+            );
+
+          if (!respuesta.ok) {
+            throw new Error();
+          }
+
+          const datos =
+            await respuesta.json();
+
+          setTiposContenedor(datos);
+          setErrorConfiguracion("");
+        } catch {
+          setTiposContenedor([]);
+
+          setErrorConfiguracion(
+            "No fue posible cargar la configuración de contenedores."
+          );
+        }
+      };
+
+    cargarTiposContenedor();
+  }, []);
+
+
+  /* ======================================
+     RUTAS DISPONIBLES
+  ====================================== */
 
   const puertosOrigen = [
-    ...new Set(tarifas.map((ruta) => ruta.origen)),
+    ...new Set(
+      tarifas.map(
+        (ruta) => ruta.origen
+      )
+    ),
   ];
+
 
   const puertosDestino = origen
     ? [
         ...new Set(
           tarifas
-            .filter((ruta) => ruta.origen === origen)
-            .map((ruta) => ruta.destino)
+            .filter(
+              (ruta) =>
+                ruta.origen === origen
+            )
+            .map(
+              (ruta) =>
+                ruta.destino
+            )
         ),
       ]
     : [];
 
+
+  const rutaSeleccionada =
+    useMemo(() => {
+      if (!origen || !destino) {
+        return null;
+      }
+
+      return (
+        tarifas.find(
+          (ruta) =>
+            ruta.origen === origen &&
+            ruta.destino === destino
+        ) || null
+      );
+    }, [
+      origen,
+      destino,
+    ]);
+
+
+  /* ======================================
+     FORMATOS
+  ====================================== */
+
   const formatearUSD = (valor) =>
-    new Intl.NumberFormat("es-CL", {
-      maximumFractionDigits: 0,
-    }).format(valor);
+    new Intl.NumberFormat(
+      "es-CL",
+      {
+        maximumFractionDigits: 0,
+      }
+    ).format(valor);
+
 
   const formatearCLP = (valor) =>
-    new Intl.NumberFormat("es-CL", {
-      maximumFractionDigits: 0,
-    }).format(valor);
+    new Intl.NumberFormat(
+      "es-CL",
+      {
+        maximumFractionDigits: 0,
+      }
+    ).format(valor);
+
 
   const formatearNumero = (valor) =>
-    new Intl.NumberFormat("es-CL", {
-      maximumFractionDigits: 2,
-    }).format(valor);
+    new Intl.NumberFormat(
+      "es-CL",
+      {
+        maximumFractionDigits: 2,
+      }
+    ).format(valor);
+
+
+  /* ======================================
+     RECOMENDACIÓN
+  ====================================== */
+
+  const recomendacion =
+    useMemo(() => {
+      if (
+        !rutaSeleccionada ||
+        pesoCarga === "" ||
+        tiposContenedor.length === 0
+      ) {
+        return null;
+      }
+
+      const pesoNumero =
+        Number(pesoCarga);
+
+      if (
+        !Number.isFinite(
+          pesoNumero
+        ) ||
+        pesoNumero <= 0
+      ) {
+        return null;
+      }
+
+      const pesoTN =
+        unidadPeso === "kg"
+          ? pesoNumero / 1000
+          : pesoNumero;
+
+      const pesoKg =
+        unidadPeso === "kg"
+          ? pesoNumero
+          : pesoNumero * 1000;
+
+
+      const opciones =
+        tiposContenedor
+          .map((contenedor) => {
+            const capacidadTN =
+              Number(
+                contenedor.capacidad_tn
+              );
+
+            if (
+              !Number.isFinite(
+                capacidadTN
+              ) ||
+              capacidadTN <= 0
+            ) {
+              return null;
+            }
+
+            const cantidad =
+              Math.ceil(
+                pesoTN /
+                  capacidadTN
+              );
+
+            let tarifaMin;
+            let tarifaMax;
+
+            if (
+              contenedor.codigo ===
+              "20"
+            ) {
+              tarifaMin =
+                rutaSeleccionada
+                  .tarifa20Min;
+
+              tarifaMax =
+                rutaSeleccionada
+                  .tarifa20Max;
+            } else if (
+              contenedor.codigo ===
+              "40"
+            ) {
+              tarifaMin =
+                rutaSeleccionada
+                  .tarifa40Min;
+
+              tarifaMax =
+                rutaSeleccionada
+                  .tarifa40Max;
+            } else {
+              return null;
+            }
+
+            const totalMin =
+              tarifaMin *
+              cantidad;
+
+            const totalMax =
+              tarifaMax *
+              cantidad;
+
+            const costoPromedio =
+              (
+                totalMin +
+                totalMax
+              ) / 2;
+
+            return {
+              codigo:
+                contenedor.codigo,
+
+              nombre:
+                contenedor.nombre,
+
+              capacidadTN,
+
+              cantidad,
+
+              tarifaMin,
+              tarifaMax,
+
+              totalMin,
+              totalMax,
+
+              costoPromedio,
+            };
+          })
+          .filter(Boolean);
+
+
+      if (
+        opciones.length === 0
+      ) {
+        return null;
+      }
+
+
+      const sugerida =
+        opciones.reduce(
+          (
+            mejor,
+            actual
+          ) =>
+            actual.costoPromedio <
+            mejor.costoPromedio
+              ? actual
+              : mejor
+        );
+
+
+      return {
+        pesoTN,
+        pesoKg,
+        opciones,
+        sugerida,
+      };
+    }, [
+      rutaSeleccionada,
+      pesoCarga,
+      unidadPeso,
+      tiposContenedor,
+    ]);
+
+
+  /* ======================================
+     SELECCIÓN INICIAL SUGERIDA
+  ====================================== */
+
+  useEffect(() => {
+    if (!recomendacion) {
+      setTipoContenedor("");
+      setResultado(null);
+
+      return;
+    }
+
+    setTipoContenedor(
+      recomendacion.sugerida.codigo
+    );
+
+    setResultado(null);
+    setMensaje("");
+  }, [recomendacion]);
+
+
+  /* ======================================
+     FUNCIONES AUXILIARES
+  ====================================== */
 
   const limpiarResultado = () => {
     setResultado(null);
     setMensaje("");
   };
 
-  const limpiarError = (campo) => {
-    setErrores((actuales) => ({
-      ...actuales,
-      [campo]: false,
-    }));
-  };
+
+  const limpiarError =
+    (campo) => {
+      setErrores(
+        (actuales) => ({
+          ...actuales,
+          [campo]: false,
+        })
+      );
+    };
+
 
   const nuevaCotizacion = () => {
     setOrigen("");
     setDestino("");
+
     setTipoContenedor("");
-    setCantidad("");
-    setContingencia("0");
+
     setPesoCarga("");
     setUnidadPeso("kg");
+
+    setContingencia("0");
     setTipoCambio("");
+
     setMensaje("");
     setResultado(null);
 
     setErrores({
       origen: false,
       destino: false,
-      tipoContenedor: false,
-      cantidad: false,
-      contingencia: false,
       pesoCarga: false,
+      contingencia: false,
       tipoCambio: false,
     });
 
@@ -96,207 +408,240 @@ function App() {
     });
   };
 
+
+  /* ======================================
+     COTIZACIÓN
+  ====================================== */
+
   const cotizar = (e) => {
     e.preventDefault();
 
     setMensaje("");
     setResultado(null);
 
+
     const nuevosErrores = {
       origen: !origen,
       destino: !destino,
-      tipoContenedor: !tipoContenedor,
-      cantidad: !cantidad,
+      pesoCarga: !pesoCarga,
       contingencia: false,
-      pesoCarga: false,
       tipoCambio: false,
     };
 
-    setErrores(nuevosErrores);
+    setErrores(
+      nuevosErrores
+    );
+
 
     if (
       nuevosErrores.origen ||
       nuevosErrores.destino ||
-      nuevosErrores.tipoContenedor ||
-      nuevosErrores.cantidad
+      nuevosErrores.pesoCarga
     ) {
       setMensaje(
-        "Debe completar todos los datos obligatorios antes de realizar la cotización."
+        "Complete los campos obligatorios para realizar la cotización."
       );
+
       return;
     }
 
-    const cantidadNumero = Number(cantidad);
-    const contingenciaNumero = Number(contingencia) || 0;
 
-    if (
-      !Number.isInteger(cantidadNumero) ||
-      cantidadNumero <= 0
-    ) {
-      setErrores((actuales) => ({
-        ...actuales,
-        cantidad: true,
-      }));
-
+    if (!rutaSeleccionada) {
       setMensaje(
-        "La cantidad de contenedores debe ser un número entero mayor que cero."
+        "No existe información disponible para la ruta seleccionada."
       );
+
       return;
     }
 
+
+    if (!recomendacion) {
+      setMensaje(
+        "No fue posible determinar las opciones de contenedor."
+      );
+
+      return;
+    }
+
+
+    const opcionSeleccionada =
+      recomendacion.opciones.find(
+        (opcion) =>
+          opcion.codigo ===
+          tipoContenedor
+      );
+
+
+    if (!opcionSeleccionada) {
+      setMensaje(
+        "Seleccione una opción de contenedor."
+      );
+
+      return;
+    }
+
+
+    const contingenciaNumero =
+      Number(contingencia) || 0;
+
+
     if (
-      !Number.isInteger(contingenciaNumero) ||
+      !Number.isInteger(
+        contingenciaNumero
+      ) ||
       contingenciaNumero < 0
     ) {
-      setErrores((actuales) => ({
-        ...actuales,
-        contingencia: true,
-      }));
+      setErrores(
+        (actuales) => ({
+          ...actuales,
+          contingencia: true,
+        })
+      );
 
       setMensaje(
         "El margen de contingencia debe ser un número entero igual o mayor que cero."
       );
+
       return;
     }
 
-    let pesoNumero = null;
-
-    if (pesoCarga !== "") {
-      pesoNumero = Number(pesoCarga);
-
-      if (!Number.isFinite(pesoNumero) || pesoNumero <= 0) {
-        setErrores((actuales) => ({
-          ...actuales,
-          pesoCarga: true,
-        }));
-
-        setMensaje(
-          "El peso de la carga debe ser un valor mayor que cero."
-        );
-        return;
-      }
-    }
 
     let tipoCambioNumero = null;
 
+
     if (tipoCambio !== "") {
-      tipoCambioNumero = Number(tipoCambio);
+      tipoCambioNumero =
+        Number(tipoCambio);
 
       if (
-        !Number.isFinite(tipoCambioNumero) ||
+        !Number.isFinite(
+          tipoCambioNumero
+        ) ||
         tipoCambioNumero <= 0
       ) {
-        setErrores((actuales) => ({
-          ...actuales,
-          tipoCambio: true,
-        }));
+        setErrores(
+          (actuales) => ({
+            ...actuales,
+            tipoCambio: true,
+          })
+        );
 
         setMensaje(
           "El tipo de cambio debe ser un valor mayor que cero."
         );
+
         return;
       }
     }
 
-    const ruta = tarifas.find(
-      (item) =>
-        item.origen === origen &&
-        item.destino === destino
-    );
-
-    if (!ruta) {
-      setMensaje(
-        "No existe información disponible para la ruta seleccionada."
-      );
-      return;
-    }
-
-    let tarifaMin;
-    let tarifaMax;
-
-    if (tipoContenedor === "20") {
-      tarifaMin = ruta.tarifa20Min;
-      tarifaMax = ruta.tarifa20Max;
-    } else {
-      tarifaMin = ruta.tarifa40Min;
-      tarifaMax = ruta.tarifa40Max;
-    }
-
-    const totalMin = tarifaMin * cantidadNumero;
-    const totalMax = tarifaMax * cantidadNumero;
-
-    const transitoMin =
-      ruta.transitoMin + contingenciaNumero;
-
-    const transitoMax =
-      ruta.transitoMax + contingenciaNumero;
-
-    let pesoKg = null;
-    let pesoTN = null;
-
-    if (pesoNumero !== null) {
-      if (unidadPeso === "kg") {
-        pesoKg = pesoNumero;
-        pesoTN = pesoNumero / 1000;
-      } else {
-        pesoTN = pesoNumero;
-        pesoKg = pesoNumero * 1000;
-      }
-    }
-
-    const capacidadReferenciaTN =
-      cantidadNumero * 25;
-
-    const superaReferencia =
-      pesoTN !== null &&
-      pesoTN > capacidadReferenciaTN;
 
     const totalMinCLP =
       tipoCambioNumero !== null
-        ? totalMin * tipoCambioNumero
+        ? opcionSeleccionada
+            .totalMin *
+          tipoCambioNumero
         : null;
+
 
     const totalMaxCLP =
       tipoCambioNumero !== null
-        ? totalMax * tipoCambioNumero
+        ? opcionSeleccionada
+            .totalMax *
+          tipoCambioNumero
         : null;
+
+
+    const transitoMin =
+      rutaSeleccionada
+        .transitoMin +
+      contingenciaNumero;
+
+
+    const transitoMax =
+      rutaSeleccionada
+        .transitoMax +
+      contingenciaNumero;
+
+
+    setResultado({
+      origen:
+        rutaSeleccionada.origen,
+
+      destino:
+        rutaSeleccionada.destino,
+
+      pais:
+        rutaSeleccionada.pais,
+
+      tipoRuta:
+        rutaSeleccionada.tipoRuta,
+
+      pesoTN:
+        recomendacion.pesoTN,
+
+      pesoKg:
+        recomendacion.pesoKg,
+
+      tipoContenedor:
+        opcionSeleccionada.codigo,
+
+      nombreContenedor:
+        opcionSeleccionada.nombre,
+
+      capacidadTN:
+        opcionSeleccionada.capacidadTN,
+
+      cantidad:
+        opcionSeleccionada.cantidad,
+
+      tarifaMin:
+        opcionSeleccionada.tarifaMin,
+
+      tarifaMax:
+        opcionSeleccionada.tarifaMax,
+
+      totalMin:
+        opcionSeleccionada.totalMin,
+
+      totalMax:
+        opcionSeleccionada.totalMax,
+
+      esSugerida:
+        opcionSeleccionada.codigo ===
+        recomendacion.sugerida.codigo,
+
+      transitoOriginalMin:
+        rutaSeleccionada.transitoMin,
+
+      transitoOriginalMax:
+        rutaSeleccionada.transitoMax,
+
+      transitoMin,
+      transitoMax,
+
+      contingencia:
+        contingenciaNumero,
+
+      fuente:
+        rutaSeleccionada.fuente,
+
+      tipoCambio:
+        tipoCambioNumero,
+
+      totalMinCLP,
+      totalMaxCLP,
+    });
+
 
     setErrores({
       origen: false,
       destino: false,
-      tipoContenedor: false,
-      cantidad: false,
-      contingencia: false,
       pesoCarga: false,
+      contingencia: false,
       tipoCambio: false,
     });
-
-    setResultado({
-      origen: ruta.origen,
-      pais: ruta.pais,
-      destino: ruta.destino,
-      tipoRuta: ruta.tipoRuta,
-      tipoContenedor,
-      cantidad: cantidadNumero,
-      tarifaMin,
-      tarifaMax,
-      totalMin,
-      totalMax,
-      transitoOriginalMin: ruta.transitoMin,
-      transitoOriginalMax: ruta.transitoMax,
-      transitoMin,
-      transitoMax,
-      contingencia: contingenciaNumero,
-      fuente: ruta.fuente,
-      pesoKg,
-      pesoTN,
-      capacidadReferenciaTN,
-      superaReferencia,
-      tipoCambio: tipoCambioNumero,
-      totalMinCLP,
-      totalMaxCLP,
-    });
   };
+
 
   return (
     <div className="app">
@@ -305,24 +650,33 @@ function App() {
           <div className="cintac-brand">
             <div className="cintac-wordmark">
               CINTAC
-              <span className="registered">®</span>
-            </div>
 
-          
+              <span className="registered">
+                ®
+              </span>
+            </div>
           </div>
 
           <div className="header-context">
-            <span>IMPORTACIONES</span>
+            <span>
+              IMPORTACIONES
+            </span>
+
             <span className="context-divider"></span>
-            <span>COMERCIO EXTERIOR</span>
+
+            <span>
+              COMERCIO EXTERIOR
+            </span>
           </div>
         </div>
       </header>
 
+
       <section
         className="hero"
         style={{
-          backgroundImage: `url(${heroImage})`,
+          backgroundImage:
+            `url(${heroImage})`,
         }}
       >
         <div className="hero-overlay"></div>
@@ -336,20 +690,29 @@ function App() {
 
           <h1>
             Cotiza tus operaciones
+
             <br />
-            <strong>de importación</strong>
+
+            <strong>
+              de importación
+            </strong>
           </h1>
 
           <p>
-            Consulta rutas, tarifas y tiempos de tránsito
-            utilizando información logística de referencia.
+            Consulta rutas, tarifas y
+            tiempos estimados para tu
+            operación.
           </p>
 
-          <a href="#cotizador" className="hero-button">
+          <a
+            href="#cotizador"
+            className="hero-button"
+          >
             INICIAR COTIZACIÓN
           </a>
         </div>
       </section>
+
 
       <section className="intro-strip">
         <div className="intro-inner">
@@ -358,11 +721,13 @@ function App() {
           </div>
 
           <div className="intro-text">
-            Selecciona los antecedentes de la operación
-            para obtener un rango estimado del flete.
+            Ingrese los antecedentes de
+            la operación para obtener
+            una estimación.
           </div>
         </div>
       </section>
+
 
       <main
         className="main-container"
@@ -384,10 +749,12 @@ function App() {
               </h2>
 
               <p>
-                Complete los antecedentes requeridos.
+                Complete los antecedentes
+                de la operación.
               </p>
             </div>
           </div>
+
 
           <form onSubmit={cotizar}>
             <section className="form-section">
@@ -395,86 +762,121 @@ function App() {
                 <span className="section-line"></span>
 
                 <div>
-                  <h3>Ruta de importación</h3>
+                  <h3>
+                    Ruta de importación
+                  </h3>
 
                   <p>
-                    Seleccione el origen y destino de la operación.
+                    Seleccione origen y
+                    destino.
                   </p>
                 </div>
               </div>
+
 
               <div className="form-grid">
                 <div className="form-group">
                   <label>
                     Puerto de origen
-                    <span className="required">*</span>
+
+                    <span className="required">
+                      *
+                    </span>
                   </label>
 
                   <select
                     className={
-                      errores.origen ? "campo-error" : ""
+                      errores.origen
+                        ? "campo-error"
+                        : ""
                     }
                     value={origen}
                     onChange={(e) => {
-                      setOrigen(e.target.value);
+                      setOrigen(
+                        e.target.value
+                      );
+
                       setDestino("");
 
-                      limpiarError("origen");
-                      limpiarError("destino");
+                      limpiarError(
+                        "origen"
+                      );
+
+                      limpiarError(
+                        "destino"
+                      );
+
                       limpiarResultado();
                     }}
                   >
                     <option value="">
-                      Seleccione puerto de origen
+                      Seleccione puerto
                     </option>
 
-                    {puertosOrigen.map((puerto) => (
-                      <option
-                        key={puerto}
-                        value={puerto}
-                      >
-                        {puerto}
-                      </option>
-                    ))}
+                    {puertosOrigen.map(
+                      (puerto) => (
+                        <option
+                          key={puerto}
+                          value={puerto}
+                        >
+                          {puerto}
+                        </option>
+                      )
+                    )}
                   </select>
                 </div>
+
 
                 <div className="form-group">
                   <label>
                     Puerto de destino
-                    <span className="required">*</span>
+
+                    <span className="required">
+                      *
+                    </span>
                   </label>
 
                   <select
                     className={
-                      errores.destino ? "campo-error" : ""
+                      errores.destino
+                        ? "campo-error"
+                        : ""
                     }
                     value={destino}
                     disabled={!origen}
                     onChange={(e) => {
-                      setDestino(e.target.value);
-                      limpiarError("destino");
+                      setDestino(
+                        e.target.value
+                      );
+
+                      limpiarError(
+                        "destino"
+                      );
+
                       limpiarResultado();
                     }}
                   >
                     <option value="">
                       {origen
-                        ? "Seleccione puerto de destino"
+                        ? "Seleccione puerto"
                         : "Seleccione primero el origen"}
                     </option>
 
-                    {puertosDestino.map((puerto) => (
-                      <option
-                        key={puerto}
-                        value={puerto}
-                      >
-                        {puerto}
-                      </option>
-                    ))}
+                    {puertosDestino.map(
+                      (puerto) => (
+                        <option
+                          key={puerto}
+                          value={puerto}
+                        >
+                          {puerto}
+                        </option>
+                      )
+                    )}
                   </select>
                 </div>
               </div>
             </section>
+
 
             <section className="form-section">
               <div className="section-heading">
@@ -482,89 +884,214 @@ function App() {
 
                 <div>
                   <h3>
-                    Información del contenedor
+                    Carga total
                   </h3>
+                </div>
+              </div>
+
+
+              <div className="form-grid single">
+                <div className="form-group">
+                  <label>
+                    Peso total
+
+                    <span className="required">
+                      *
+                    </span>
+                  </label>
+
+                  <div className="field-with-select">
+                    <input
+                      className={
+                        errores.pesoCarga
+                          ? "campo-error"
+                          : ""
+                      }
+                      type="number"
+                      min="0"
+                      step="any"
+                      value={pesoCarga}
+                      onChange={(e) => {
+                        setPesoCarga(
+                          e.target.value
+                        );
+
+                        limpiarError(
+                          "pesoCarga"
+                        );
+
+                        limpiarResultado();
+                      }}
+                      placeholder="Ej: 25000"
+                    />
+
+                    <select
+                      value={unidadPeso}
+                      onChange={(e) => {
+                        setUnidadPeso(
+                          e.target.value
+                        );
+
+                        limpiarResultado();
+                      }}
+                    >
+                      <option value="kg">
+                        kg
+                      </option>
+
+                      <option value="tn">
+                        TN
+                      </option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+
+              {errorConfiguracion && (
+                <div className="message-box">
+                  <span className="message-icon">
+                    !
+                  </span>
 
                   <p>
-                    Indique el tipo y cantidad requerida.
+                    {errorConfiguracion}
                   </p>
                 </div>
-              </div>
+              )}
 
-              <div className="form-grid">
-                <div className="form-group">
-                  <label>
-                    Tipo de contenedor
-                    <span className="required">*</span>
-                  </label>
 
-                  <select
-                    className={
-                      errores.tipoContenedor
-                        ? "campo-error"
-                        : ""
-                    }
-                    value={tipoContenedor}
-                    onChange={(e) => {
-                      setTipoContenedor(e.target.value);
-                      limpiarError("tipoContenedor");
-                      limpiarResultado();
-                    }}
-                  >
-                    <option value="">
-                      Seleccione tipo
-                    </option>
+              {recomendacion && (
+                <div className="recommendation-box">
+                  <div className="recommendation-header">
+                    <div>
+                      <span className="recommendation-eyebrow">
+                        OPCIONES
+                      </span>
 
-                    <option value="20">
-                      Contenedor 20 pies
-                    </option>
+                      <h4>
+                        Contenedores
+                      </h4>
+                    </div>
 
-                    <option value="40">
-                      Contenedor 40 pies
-                    </option>
-                  </select>
+                    <div className="load-summary">
+                      {formatearNumero(
+                        recomendacion.pesoTN
+                      )}{" "}
+                      TN
+                    </div>
+                  </div>
+
+
+                  <div className="recommendation-options">
+                    {recomendacion.opciones.map(
+                      (opcion) => {
+                        const sugerida =
+                          opcion.codigo ===
+                          recomendacion
+                            .sugerida
+                            .codigo;
+
+                        const seleccionada =
+                          opcion.codigo ===
+                          tipoContenedor;
+
+                        return (
+                          <button
+                            key={
+                              opcion.codigo
+                            }
+                            type="button"
+                            className={[
+                              "recommendation-option",
+
+                              sugerida
+                                ? "suggested"
+                                : "",
+
+                              seleccionada
+                                ? "selected"
+                                : "",
+                            ]
+                              .filter(Boolean)
+                              .join(" ")}
+                            onClick={() => {
+                              setTipoContenedor(
+                                opcion.codigo
+                              );
+
+                              limpiarResultado();
+                            }}
+                          >
+                            <div className="option-top">
+                              <strong>
+                                {
+                                  opcion.nombre
+                                }
+                              </strong>
+
+                              <div className="option-labels">
+                                {sugerida && (
+                                  <span className="suggested-label">
+                                    SUGERIDO
+                                  </span>
+                                )}
+
+                                {seleccionada && (
+                                  <span className="selected-label">
+                                    SELECCIONADO
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+
+
+                            <div className="option-quantity">
+                              {formatearNumero(
+                                opcion.cantidad
+                              )}{" "}
+                              contenedor
+                              {opcion.cantidad !==
+                              1
+                                ? "es"
+                                : ""}
+                            </div>
+
+
+                            <div className="option-price">
+                              US${" "}
+                              {formatearUSD(
+                                opcion.totalMin
+                              )}
+
+                              {" - "}
+
+                              US${" "}
+                              {formatearUSD(
+                                opcion.totalMax
+                              )}
+                            </div>
+                          </button>
+                        );
+                      }
+                    )}
+                  </div>
                 </div>
-
-                <div className="form-group">
-                  <label>
-                    Cantidad de contenedores
-                    <span className="required">*</span>
-                  </label>
-
-                  <input
-                    className={
-                      errores.cantidad
-                        ? "campo-error"
-                        : ""
-                    }
-                    type="number"
-                    min="1"
-                    step="1"
-                    value={cantidad}
-                    onChange={(e) => {
-                      setCantidad(e.target.value);
-                      limpiarError("cantidad");
-                      limpiarResultado();
-                    }}
-                    placeholder="Ej: 1"
-                  />
-                </div>
-              </div>
+              )}
             </section>
+
 
             <section className="form-section">
               <div className="section-heading">
                 <span className="section-line"></span>
 
                 <div>
-                  <h3>Tiempo de tránsito</h3>
-
-                  <p>
-                    Puede incorporar días adicionales
-                    de contingencia.
-                  </p>
+                  <h3>
+                    Tiempo de tránsito
+                  </h3>
                 </div>
               </div>
+
 
               <div className="form-grid single">
                 <div className="form-group">
@@ -584,22 +1111,26 @@ function App() {
                       step="1"
                       value={contingencia}
                       onChange={(e) => {
-                        setContingencia(e.target.value);
-                        limpiarError("contingencia");
+                        setContingencia(
+                          e.target.value
+                        );
+
+                        limpiarError(
+                          "contingencia"
+                        );
+
                         limpiarResultado();
                       }}
                     />
 
-                    <span>días</span>
+                    <span>
+                      días
+                    </span>
                   </div>
-
-                  <small>
-                    Modifica únicamente la estimación
-                    temporal y no el costo del flete.
-                  </small>
                 </div>
               </div>
             </section>
+
 
             <section className="form-section">
               <div className="section-heading">
@@ -607,68 +1138,17 @@ function App() {
 
                 <div>
                   <h3>
-                    Carga y conversiones
+                    Conversión monetaria
                   </h3>
-
-                  <p>
-                    Información complementaria para la operación.
-                  </p>
                 </div>
               </div>
 
-              <div className="form-grid">
-                <div className="form-group">
-                  <label>
-                    Peso total de la carga
-                    <span className="optional">
-                      Opcional
-                    </span>
-                  </label>
 
-                  <div className="field-with-select">
-                    <input
-                      className={
-                        errores.pesoCarga
-                          ? "campo-error"
-                          : ""
-                      }
-                      type="number"
-                      min="0"
-                      step="any"
-                      value={pesoCarga}
-                      onChange={(e) => {
-                        setPesoCarga(e.target.value);
-                        limpiarError("pesoCarga");
-                        limpiarResultado();
-                      }}
-                      placeholder="Ej: 18000"
-                    />
-
-                    <select
-                      value={unidadPeso}
-                      onChange={(e) => {
-                        setUnidadPeso(e.target.value);
-                        limpiarResultado();
-                      }}
-                    >
-                      <option value="kg">
-                        kg
-                      </option>
-
-                      <option value="tn">
-                        TN
-                      </option>
-                    </select>
-                  </div>
-
-                  <small>
-                    Conversión automática entre kg y TN.
-                  </small>
-                </div>
-
+              <div className="form-grid single">
                 <div className="form-group">
                   <label>
                     Tipo de cambio
+
                     <span className="optional">
                       Opcional
                     </span>
@@ -686,23 +1166,27 @@ function App() {
                       step="any"
                       value={tipoCambio}
                       onChange={(e) => {
-                        setTipoCambio(e.target.value);
-                        limpiarError("tipoCambio");
+                        setTipoCambio(
+                          e.target.value
+                        );
+
+                        limpiarError(
+                          "tipoCambio"
+                        );
+
                         limpiarResultado();
                       }}
                       placeholder="Ej: 950"
                     />
 
-                    <span>CLP/USD</span>
+                    <span>
+                      CLP/USD
+                    </span>
                   </div>
-
-                  <small>
-                    Utilice el tipo de cambio definido
-                    para la operación.
-                  </small>
                 </div>
               </div>
             </section>
+
 
             {mensaje && (
               <div className="message-box">
@@ -710,9 +1194,12 @@ function App() {
                   !
                 </span>
 
-                <p>{mensaje}</p>
+                <p>
+                  {mensaje}
+                </p>
               </div>
             )}
+
 
             <div className="form-actions">
               <span className="required-note">
@@ -723,7 +1210,9 @@ function App() {
                 <button
                   type="button"
                   className="secondary-button"
-                  onClick={nuevaCotizacion}
+                  onClick={
+                    nuevaCotizacion
+                  }
                 >
                   LIMPIAR
                 </button>
@@ -745,6 +1234,7 @@ function App() {
           </form>
         </section>
 
+
         <aside className="result-card">
           <div className="result-header">
             <span className="result-number">
@@ -756,9 +1246,12 @@ function App() {
                 RESULTADO
               </span>
 
-              <h2>Cotización</h2>
+              <h2>
+                Cotización
+              </h2>
             </div>
           </div>
+
 
           {!resultado ? (
             <div className="empty-result">
@@ -772,13 +1265,16 @@ function App() {
 
               <p>
                 Complete los antecedentes
-                para generar una cotización.
+                para generar una
+                cotización.
               </p>
             </div>
           ) : (
             <div className="result-content">
               <div className="route-summary">
-                <span>RUTA</span>
+                <span>
+                  RUTA
+                </span>
 
                 <strong>
                   {resultado.origen}
@@ -793,15 +1289,38 @@ function App() {
                 </small>
               </div>
 
+
               <div className="result-item">
-                <span>Contenedor</span>
+                <span>
+                  Carga total
+                </span>
 
                 <strong>
-                  {resultado.cantidad}
-                  {" × "}
-                  {resultado.tipoContenedor}'
+                  {formatearNumero(
+                    resultado.pesoTN
+                  )}{" "}
+                  TN
                 </strong>
               </div>
+
+
+              <div className="result-item">
+                <span>
+                  Contenedor
+                </span>
+
+                <strong>
+                  {
+                    resultado.cantidad
+                  }{" "}
+                  ×{" "}
+                  {
+                    resultado.tipoContenedor
+                  }
+                  '
+                </strong>
+              </div>
+
 
               <div className="result-item vertical-result">
                 <span>
@@ -809,11 +1328,20 @@ function App() {
                 </span>
 
                 <strong>
-                  US$ {formatearUSD(resultado.tarifaMin)}
+                  US${" "}
+                  {formatearUSD(
+                    resultado.tarifaMin
+                  )}
+
                   {" - "}
-                  US$ {formatearUSD(resultado.tarifaMax)}
+
+                  US${" "}
+                  {formatearUSD(
+                    resultado.tarifaMax
+                  )}
                 </strong>
               </div>
+
 
               <div className="total-result">
                 <span>
@@ -821,49 +1349,72 @@ function App() {
                 </span>
 
                 <strong>
-                  US$ {formatearUSD(resultado.totalMin)}
-                  {" - "}
-                  US$ {formatearUSD(resultado.totalMax)}
-                </strong>
+                  US${" "}
+                  {formatearUSD(
+                    resultado.totalMin
+                  )}
 
-                <small>
-                  Para {resultado.cantidad} contenedor
-                  {resultado.cantidad !== 1 ? "es" : ""}
-                </small>
+                  {" - "}
+
+                  US${" "}
+                  {formatearUSD(
+                    resultado.totalMax
+                  )}
+                </strong>
               </div>
+
 
               {resultado.tipoCambio && (
                 <div className="conversion-box">
-                  <span>CONVERSIÓN A CLP</span>
+                  <span>
+                    TOTAL EN CLP
+                  </span>
 
                   <strong>
-                    ${formatearCLP(resultado.totalMinCLP)}
-                    {" - $"}
-                    {formatearCLP(resultado.totalMaxCLP)}
-                  </strong>
+                    $
+                    {formatearCLP(
+                      resultado.totalMinCLP
+                    )}
 
-                  <small>
-                    Tipo de cambio: $
-                    {formatearCLP(resultado.tipoCambio)} CLP/USD
-                  </small>
+                    {" - $"}
+
+                    {formatearCLP(
+                      resultado.totalMaxCLP
+                    )}
+                  </strong>
                 </div>
               )}
 
+
               <div className="result-item">
-                <span>Tránsito base</span>
+                <span>
+                  Tránsito base
+                </span>
 
                 <strong>
-                  {resultado.transitoOriginalMin}
+                  {
+                    resultado.transitoOriginalMin
+                  }
                   {" - "}
-                  {resultado.transitoOriginalMax} días
+                  {
+                    resultado.transitoOriginalMax
+                  }{" "}
+                  días
                 </strong>
               </div>
 
-              {resultado.contingencia > 0 && (
+
+              {resultado.contingencia >
+                0 && (
                 <div className="contingency-info">
-                  + {resultado.contingencia} días de contingencia
+                  +{" "}
+                  {
+                    resultado.contingencia
+                  }{" "}
+                  días
                 </div>
               )}
+
 
               <div className="result-item">
                 <span>
@@ -871,56 +1422,21 @@ function App() {
                 </span>
 
                 <strong>
-                  {resultado.transitoMin}
+                  {
+                    resultado.transitoMin
+                  }
                   {" - "}
-                  {resultado.transitoMax} días
+                  {
+                    resultado.transitoMax
+                  }{" "}
+                  días
                 </strong>
               </div>
 
-              <div className="capacity-box">
-                <span>
-                  REFERENCIA DE CAPACIDAD
-                </span>
-
-                <strong>
-                  {resultado.capacidadReferenciaTN} TN
-                </strong>
-
-                <small>
-                  {resultado.cantidad} × 25 TN por contenedor
-                </small>
-              </div>
-
-              {resultado.pesoTN !== null && (
-                <>
-                  <div className="result-item">
-                    <span>Peso en kg</span>
-
-                    <strong>
-                      {formatearNumero(resultado.pesoKg)} kg
-                    </strong>
-                  </div>
-
-                  <div className="result-item">
-                    <span>Peso en TN</span>
-
-                    <strong>
-                      {formatearNumero(resultado.pesoTN)} TN
-                    </strong>
-                  </div>
-
-                  {resultado.superaReferencia && (
-                    <div className="warning-box">
-                      El peso informado supera la referencia
-                      de 25 TN por contenedor.
-                    </div>
-                  )}
-                </>
-              )}
 
               <div className="result-item source-item">
                 <span>
-                  Fuente / referencia
+                  Fuente
                 </span>
 
                 <strong>
@@ -928,22 +1444,29 @@ function App() {
                 </strong>
               </div>
 
+
               <button
                 type="button"
                 className="new-quote-button"
-                onClick={nuevaCotizacion}
+                onClick={
+                  nuevaCotizacion
+                }
               >
                 NUEVA COTIZACIÓN
               </button>
             </div>
           )}
 
+
           <div className="result-footer">
             <span></span>
-            Información referencial para la operación logística
+
+            Información referencial para
+            la operación logística
           </div>
         </aside>
       </main>
+
 
       <footer className="footer">
         <div className="footer-inner">
@@ -952,12 +1475,14 @@ function App() {
           </div>
 
           <div className="footer-copy">
-            Cotizador Logístico · Comercio Exterior
+            Cotizador Logístico · Comercio
+            Exterior
           </div>
         </div>
       </footer>
     </div>
   );
 }
+
 
 export default App;

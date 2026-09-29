@@ -3,10 +3,6 @@
   --cintac-orange-dark: #e84600;
   --cintac-orange-light: #fff1eb;
 
-  --cintac-blue: #17394b;
-  --cintac-blue-dark: #102d3c;
-  --cintac-blue-light: #edf3f6;
-
   --text-main: #44484c;
   --text-soft: #808287;
 
@@ -20,32 +16,31 @@
   --error: #d73f32;
   --error-light: #fff4f3;
 
-  --warning: #8d660b;
-  --warning-light: #fff8e7;
-
   --shadow:
-    0 12px 34px rgba(31, 41, 48, 0.09);
+    0 12px 34px
+    rgba(31, 41, 48, 0.09);
 }
 
-/* ========================================
-   CONFIGURACIÓN GENERAL
-======================================== */
 
 * {
   box-sizing: border-box;
 }
 
+
 html {
   scroll-behavior: smooth;
 }
 
+
 body {
   margin: 0;
+
   min-width: 320px;
 
   background: #f6f6f6;
 
-  color: var(--text-main);
+  color:
+    var(--text-main);
 
   font-family:
     "Aptos",
@@ -53,9 +48,10 @@ body {
     Arial,
     sans-serif;
 
-  -webkit-font-smoothing: antialiased;
-  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing:
+    antialiased;
 }
+
 
 button,
 input,
@@ -63,21 +59,21 @@ select {
   font: inherit;
 }
 
-/* ========================================
-   ENCABEZADO CINTAC
-======================================== */
+
+/* HEADER */
 
 .site-header {
-  background: var(--white);
+  background:
+    var(--white);
 
   border-top:
     4px solid
     var(--cintac-orange);
 
   border-bottom:
-    1px solid
-    #ececec;
+    1px solid #ececec;
 }
+
 
 .header-inner {
   width:
@@ -100,13 +96,6 @@ select {
   gap: 40px;
 }
 
-.cintac-brand {
-  display: flex;
-
-  align-items: flex-end;
-
-  gap: 28px;
-}
 
 .cintac-wordmark {
   position: relative;
@@ -128,10 +117,12 @@ select {
   letter-spacing: -3px;
 }
 
+
 .registered {
   position: absolute;
 
   top: -3px;
+
   right: -13px;
 
   font-size: 10px;
@@ -139,20 +130,6 @@ select {
   letter-spacing: 0;
 }
 
-.brand-subtitle {
-  padding-left: 28px;
-
-  border-left:
-    1px solid
-    var(--gray-300);
-
-  color:
-    #777b80;
-
-  font-size: 18px;
-
-  font-weight: 400;
-}
 
 .header-context {
   display: flex;
@@ -161,26 +138,23 @@ select {
 
   gap: 16px;
 
-  color:
-    #818388;
+  color: #818388;
 
   font-size: 13px;
-
-  letter-spacing:
-    0.4px;
 }
+
 
 .context-divider {
   width: 1px;
+
   height: 18px;
 
   background:
     var(--cintac-orange);
 }
 
-/* ========================================
-   HERO / IMAGEN PRINCIPAL
-======================================== */
+
+/* HERO */
 
 .hero {
   position: relative;
@@ -188,13 +162,13 @@ select {
   min-height: 380px;
 
   display: flex;
+
   align-items: center;
 
   background-position:
     center 52%;
 
-  background-size:
-    cover;
+  background-size: cover;
 
   background-repeat:
     no-repeat;
@@ -205,11 +179,7 @@ select {
   overflow: hidden;
 }
 
-/*
-  Este overlay ayuda a integrar mejor la imagen
-  y también disimula parcialmente una imagen
-  de resolución limitada.
-*/
+
 .hero-overlay {
   position: absolute;
 
@@ -218,17 +188,23 @@ select {
   background:
     linear-gradient(
       90deg,
-      rgba(20, 27, 31, 0.82) 0%,
-      rgba(20, 27, 31, 0.62) 42%,
-      rgba(20, 27, 31, 0.22) 72%,
-      rgba(20, 27, 31, 0.08) 100%
+      rgba(20, 27, 31, 0.82)
+        0%,
+      rgba(20, 27, 31, 0.62)
+        42%,
+      rgba(20, 27, 31, 0.22)
+        72%,
+      rgba(20, 27, 31, 0.08)
+        100%
     );
 }
+
 
 .hero-accent {
   position: absolute;
 
   left: 0;
+
   bottom: 0;
 
   width: 37%;
@@ -238,6 +214,7 @@ select {
   background:
     var(--cintac-orange);
 }
+
 
 .hero-content {
   position: relative;
@@ -255,6 +232,7 @@ select {
   padding: 55px 0;
 }
 
+
 .hero-kicker {
   margin-bottom: 13px;
 
@@ -268,10 +246,9 @@ select {
   letter-spacing: 2px;
 }
 
+
 .hero h1 {
   margin: 0;
-
-  max-width: 720px;
 
   color:
     var(--white);
@@ -286,13 +263,13 @@ select {
   font-weight: 400;
 
   line-height: 1.02;
-
-  letter-spacing: -1.8px;
 }
+
 
 .hero h1 strong {
   font-weight: 700;
 }
+
 
 .hero p {
   max-width: 590px;
@@ -313,12 +290,9 @@ select {
   line-height: 1.5;
 }
 
+
 .hero-button {
   display: inline-flex;
-
-  align-items: center;
-
-  justify-content: center;
 
   padding:
     13px 22px;
@@ -327,42 +301,26 @@ select {
     var(--cintac-orange);
 
   color:
-    var(--white);
+    white;
 
   text-decoration: none;
 
   font-size: 13px;
 
   font-weight: 700;
-
-  letter-spacing:
-    0.5px;
-
-  transition:
-    background-color 0.2s ease,
-    transform 0.2s ease;
 }
 
-.hero-button:hover {
-  background:
-    var(--cintac-orange-dark);
 
-  transform:
-    translateY(-1px);
-}
-
-/* ========================================
-   FRANJA INTRODUCTORIA
-======================================== */
+/* INTRO */
 
 .intro-strip {
   background:
-    var(--white);
+    white;
 
   border-bottom:
-    1px solid
-    #ededed;
+    1px solid #ededed;
 }
+
 
 .intro-inner {
   width:
@@ -373,18 +331,18 @@ select {
 
   margin: auto;
 
-  padding:
-    28px 0;
+  padding: 28px 0;
 
   display: flex;
-
-  align-items: center;
 
   justify-content:
     space-between;
 
+  align-items: center;
+
   gap: 50px;
 }
+
 
 .intro-title {
   color:
@@ -395,6 +353,7 @@ select {
   font-weight: 700;
 }
 
+
 .intro-text {
   color:
     var(--text-soft);
@@ -404,9 +363,8 @@ select {
   text-align: right;
 }
 
-/* ========================================
-   LAYOUT PRINCIPAL
-======================================== */
+
+/* PRINCIPAL */
 
 .main-container {
   width:
@@ -429,30 +387,26 @@ select {
   align-items: start;
 }
 
-/* ========================================
-   TARJETAS
-======================================== */
 
 .quote-card,
 .result-card {
   background:
-    var(--white);
+    white;
 
   border:
-    1px solid
-    #ededed;
+    1px solid #ededed;
 
   box-shadow:
     var(--shadow);
 }
 
+
 .quote-card {
   overflow: hidden;
 }
 
-/* ========================================
-   ENCABEZADO FORMULARIO
-======================================== */
+
+/* CABECERA FORM */
 
 .card-title {
   display: flex;
@@ -469,9 +423,11 @@ select {
     var(--gray-200);
 }
 
+
 .title-icon,
 .result-number {
   width: 44px;
+
   height: 44px;
 
   flex-shrink: 0;
@@ -486,12 +442,13 @@ select {
     var(--cintac-orange);
 
   color:
-    var(--white);
+    white;
 
   font-size: 14px;
 
   font-weight: 700;
 }
+
 
 .card-eyebrow,
 .result-eyebrow {
@@ -509,19 +466,19 @@ select {
   letter-spacing: 1px;
 }
 
+
 .card-title h2 {
   margin: 0;
-
-  color:
-    #41454a;
 
   font-size: 25px;
 
   font-weight: 600;
 }
 
+
 .card-title p {
-  margin: 3px 0 0;
+  margin:
+    3px 0 0;
 
   color:
     var(--text-soft);
@@ -529,14 +486,14 @@ select {
   font-size: 14px;
 }
 
-/* ========================================
-   FORMULARIO
-======================================== */
+
+/* FORM */
 
 form {
   padding:
     5px 30px 30px;
 }
+
 
 .form-section {
   padding:
@@ -547,9 +504,6 @@ form {
     var(--gray-200);
 }
 
-.form-section:last-of-type {
-  border-bottom: none;
-}
 
 .section-heading {
   display: flex;
@@ -558,6 +512,7 @@ form {
 
   margin-bottom: 21px;
 }
+
 
 .section-line {
   width: 4px;
@@ -568,16 +523,15 @@ form {
     var(--cintac-orange);
 }
 
+
 .section-heading h3 {
   margin: 0;
-
-  color:
-    #474b50;
 
   font-size: 18px;
 
   font-weight: 600;
 }
+
 
 .section-heading p {
   margin:
@@ -588,6 +542,7 @@ form {
 
   font-size: 13px;
 }
+
 
 .form-grid {
   display: grid;
@@ -601,6 +556,7 @@ form {
   gap: 22px;
 }
 
+
 .form-grid.single {
   grid-template-columns:
     minmax(
@@ -608,6 +564,7 @@ form {
       390px
     );
 }
+
 
 .form-group {
   display: flex;
@@ -617,27 +574,26 @@ form {
   gap: 7px;
 }
 
-.form-group label {
-  color:
-    #41454a;
 
+.form-group label {
   font-size: 14px;
 
   font-weight: 600;
 }
 
+
 .required {
+  margin-left: 3px;
+
   color:
     var(--cintac-orange);
-
-  margin-left: 3px;
 }
+
 
 .optional {
   margin-left: 7px;
 
-  color:
-    #a0a1a4;
+  color: #a0a1a4;
 
   font-size: 10px;
 
@@ -646,6 +602,7 @@ form {
   text-transform:
     uppercase;
 }
+
 
 .form-group input,
 .form-group select {
@@ -657,28 +614,17 @@ form {
     10px 13px;
 
   border:
-    1px solid
-    #d0d4d7;
+    1px solid #d0d4d7;
 
   background:
-    var(--white);
+    white;
 
   color:
     #41454a;
 
   border-radius: 2px;
-
-  transition:
-    border-color 0.2s ease,
-    box-shadow 0.2s ease,
-    background-color 0.2s ease;
 }
 
-.form-group input:hover,
-.form-group select:hover {
-  border-color:
-    #aeb3b7;
-}
 
 .form-group input:focus,
 .form-group select:focus {
@@ -697,29 +643,14 @@ form {
     );
 }
 
-.form-group select:disabled {
-  color:
-    #999;
 
+.form-group select:disabled {
   background:
     var(--gray-100);
 
-  cursor:
-    not-allowed;
+  color: #999;
 }
 
-.form-group small {
-  color:
-    var(--text-soft);
-
-  font-size: 12px;
-
-  line-height: 1.4;
-}
-
-/* ========================================
-   CAMPOS CON ERROR
-======================================== */
 
 .form-group input.campo-error,
 .form-group select.campo-error {
@@ -729,43 +660,37 @@ form {
 
   background:
     var(--error-light);
-
-  box-shadow:
-    0 0 0 2px
-    rgba(
-      215,
-      63,
-      50,
-      0.08
-    );
 }
 
-.form-group input.campo-error:focus,
-.form-group select.campo-error:focus {
-  border-color:
-    var(--error);
 
-  box-shadow:
-    0 0 0 3px
-    rgba(
-      215,
-      63,
-      50,
-      0.12
-    );
+/* UNIDADES */
+
+.field-with-select {
+  display: grid;
+
+  grid-template-columns:
+    minmax(0, 1fr)
+    90px;
 }
 
-/* ========================================
-   INPUT CON UNIDAD
-======================================== */
+
+.field-with-select select {
+  border-left: none;
+
+  background:
+    var(--gray-100);
+}
+
 
 .input-with-unit {
   position: relative;
 }
 
+
 .input-with-unit input {
-  padding-right: 84px;
+  padding-right: 85px;
 }
+
 
 .input-with-unit span {
   position: absolute;
@@ -777,46 +702,250 @@ form {
   transform:
     translateY(-50%);
 
-  color:
-    #979a9e;
+  color: #979a9e;
 
   font-size: 11px;
 
   font-weight: 600;
-
-  pointer-events: none;
 }
 
-/* ========================================
-   INPUT + SELECT
-======================================== */
 
-.field-with-select {
+/* OPCIONES */
+
+.recommendation-box {
+  margin-top: 25px;
+
+  padding: 20px;
+
+  border:
+    1px solid
+    var(--gray-300);
+
+  border-left:
+    4px solid
+    var(--cintac-orange);
+
+  background:
+    white;
+}
+
+
+.recommendation-header {
+  margin-bottom: 17px;
+
+  display: flex;
+
+  justify-content:
+    space-between;
+
+  align-items: center;
+
+  gap: 20px;
+}
+
+
+.recommendation-eyebrow {
+  display: block;
+
+  margin-bottom: 3px;
+
+  color:
+    var(--cintac-orange);
+
+  font-size: 10px;
+
+  font-weight: 800;
+
+  letter-spacing: 1px;
+}
+
+
+.recommendation-header h4 {
+  margin: 0;
+
+  font-size: 20px;
+}
+
+
+.load-summary {
+  font-size: 18px;
+
+  font-weight: 700;
+
+  color:
+    #45494d;
+}
+
+
+.recommendation-options {
   display: grid;
 
   grid-template-columns:
-    minmax(0, 1fr)
-    90px;
+    repeat(
+      2,
+      minmax(0, 1fr)
+    );
+
+  gap: 14px;
 }
 
-.field-with-select input {
-  border-radius:
-    2px 0 0 2px;
-}
 
-.field-with-select select {
-  border-left: none;
+.recommendation-option {
+  min-height: 150px;
 
-  border-radius:
-    0 2px 2px 0;
+  padding: 17px;
+
+  display: flex;
+
+  flex-direction: column;
+
+  align-items: stretch;
+
+  gap: 13px;
+
+  border:
+    1px solid
+    var(--gray-300);
 
   background:
-    var(--gray-100);
+    var(--gray-050);
+
+  color:
+    var(--text-main);
+
+  text-align: left;
+
+  cursor: pointer;
+
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.15s ease;
 }
 
-/* ========================================
-   ALERTA DE VALIDACIÓN
-======================================== */
+
+.recommendation-option:hover {
+  border-color:
+    var(--cintac-orange);
+
+  transform:
+    translateY(-1px);
+}
+
+
+.recommendation-option.suggested {
+  background:
+    var(--cintac-orange-light);
+
+  border-color:
+    rgba(
+      255,
+      79,
+      0,
+      0.6
+    );
+}
+
+
+.recommendation-option.selected {
+  border:
+    2px solid
+    var(--cintac-orange);
+
+  box-shadow:
+    0 0 0 2px
+    rgba(
+      255,
+      79,
+      0,
+      0.08
+    );
+}
+
+
+.option-top {
+  display: flex;
+
+  justify-content:
+    space-between;
+
+  align-items:
+    flex-start;
+
+  gap: 10px;
+}
+
+
+.option-top strong {
+  font-size: 15px;
+}
+
+
+.option-labels {
+  display: flex;
+
+  flex-direction: column;
+
+  align-items: flex-end;
+
+  gap: 4px;
+}
+
+
+.suggested-label,
+.selected-label {
+  padding:
+    4px 6px;
+
+  font-size: 8px;
+
+  font-weight: 800;
+
+  letter-spacing:
+    0.4px;
+}
+
+
+.suggested-label {
+  background:
+    var(--cintac-orange);
+
+  color:
+    white;
+}
+
+
+.selected-label {
+  background:
+    #484c50;
+
+  color:
+    white;
+}
+
+
+.option-quantity {
+  color:
+    var(--text-soft);
+
+  font-size: 13px;
+}
+
+
+.option-price {
+  margin-top: auto;
+
+  color:
+    #45494d;
+
+  font-size: 17px;
+
+  font-weight: 700;
+}
+
+
+/* MENSAJES */
 
 .message-box {
   margin-top: 22px;
@@ -837,9 +966,9 @@ form {
   background:
     var(--cintac-orange-light);
 
-  color:
-    #82452c;
+  color: #82452c;
 }
+
 
 .message-box p {
   margin: 0;
@@ -847,17 +976,17 @@ form {
   font-size: 13px;
 }
 
+
 .message-icon {
   width: 24px;
-  height: 24px;
 
-  flex-shrink: 0;
+  height: 24px;
 
   display: flex;
 
-  justify-content: center;
-
   align-items: center;
+
+  justify-content: center;
 
   border-radius: 50%;
 
@@ -870,9 +999,8 @@ form {
   font-weight: 700;
 }
 
-/* ========================================
-   BOTONES
-======================================== */
+
+/* ACCIONES */
 
 .form-actions {
   margin-top: 28px;
@@ -887,18 +1015,20 @@ form {
   gap: 20px;
 }
 
+
 .required-note {
-  color:
-    #92959a;
+  color: #92959a;
 
   font-size: 12px;
 }
+
 
 .buttons-container {
   display: flex;
 
   gap: 10px;
 }
+
 
 .primary-button,
 .secondary-button {
@@ -909,20 +1039,13 @@ form {
 
   cursor: pointer;
 
-  border-radius: 0;
-
   font-size: 12px;
 
   font-weight: 700;
 
-  letter-spacing:
-    0.3px;
-
-  transition:
-    background-color 0.2s ease,
-    border-color 0.2s ease,
-    transform 0.2s ease;
+  border-radius: 0;
 }
+
 
 .primary-button {
   min-width: 210px;
@@ -934,29 +1057,19 @@ form {
 
   align-items: center;
 
-  gap: 28px;
-
   border: none;
 
   background:
     var(--cintac-orange);
 
   color:
-    var(--white);
+    white;
 }
 
-.primary-button:hover {
-  background:
-    var(--cintac-orange-dark);
-
-  transform:
-    translateY(-1px);
-}
 
 .secondary-button {
   border:
-    1px solid
-    #c9cccf;
+    1px solid #c9cccf;
 
   background:
     white;
@@ -965,18 +1078,13 @@ form {
     #6f7377;
 }
 
-.secondary-button:hover {
-  background:
-    var(--gray-100);
-}
 
 .button-arrow {
   font-size: 18px;
 }
 
-/* ========================================
-   PANEL DE RESULTADOS
-======================================== */
+
+/* RESULTADOS */
 
 .result-card {
   position: sticky;
@@ -985,6 +1093,7 @@ form {
 
   overflow: hidden;
 }
+
 
 .result-header {
   padding: 22px;
@@ -1006,22 +1115,18 @@ form {
     var(--cintac-orange);
 }
 
+
 .result-header h2 {
   margin: 0;
 
   font-size: 22px;
-
-  font-weight: 600;
 }
+
 
 .result-eyebrow {
-  color:
-    #ff8d5c;
+  color: #ff8d5c;
 }
 
-/* ========================================
-   RESULTADO VACÍO
-======================================== */
 
 .empty-result {
   min-height: 330px;
@@ -1040,6 +1145,7 @@ form {
   text-align: center;
 }
 
+
 .result-symbol {
   width: 68px;
 
@@ -1049,9 +1155,9 @@ form {
 
   display: flex;
 
-  justify-content: center;
-
   align-items: center;
+
+  justify-content: center;
 
   border:
     1px solid
@@ -1064,31 +1170,28 @@ form {
 
   border-radius: 50%;
 
-  color:
-    var(--cintac-orange);
-
   background:
     var(--cintac-orange-light);
+
+  color:
+    var(--cintac-orange);
 
   font-size: 27px;
 
   font-weight: 700;
 }
 
+
 .empty-result h3 {
   margin:
     0 0 8px;
-
-  color:
-    #464a4f;
-
-  font-size: 18px;
 }
 
-.empty-result p {
-  max-width: 250px;
 
+.empty-result p {
   margin: 0;
+
+  max-width: 250px;
 
   color:
     var(--text-soft);
@@ -1098,16 +1201,13 @@ form {
   line-height: 1.5;
 }
 
-/* ========================================
-   CONTENIDO DE RESULTADOS
-======================================== */
 
 .result-content {
   padding: 20px;
 }
 
-.route-summary,
-.capacity-box {
+
+.route-summary {
   padding: 16px;
 
   margin-bottom: 11px;
@@ -1120,8 +1220,8 @@ form {
     #f4f5f5;
 }
 
-.route-summary span,
-.capacity-box span {
+
+.route-summary span {
   display: block;
 
   margin-bottom: 4px;
@@ -1132,22 +1232,17 @@ form {
   font-size: 10px;
 
   font-weight: 700;
-
-  letter-spacing: 1px;
 }
 
-.route-summary strong,
-.capacity-box strong {
-  display: block;
 
-  color:
-    #484d51;
+.route-summary strong {
+  display: block;
 
   font-size: 16px;
 }
 
-.route-summary small,
-.capacity-box small {
+
+.route-summary small {
   display: block;
 
   margin-top: 5px;
@@ -1157,6 +1252,7 @@ form {
 
   font-size: 12px;
 }
+
 
 .result-item {
   padding:
@@ -1176,6 +1272,7 @@ form {
     var(--gray-200);
 }
 
+
 .result-item span {
   color:
     var(--text-soft);
@@ -1183,14 +1280,13 @@ form {
   font-size: 13px;
 }
 
-.result-item strong {
-  color:
-    #45494d;
 
+.result-item strong {
   font-size: 14px;
 
   text-align: right;
 }
+
 
 .vertical-result,
 .source-item {
@@ -1199,14 +1295,12 @@ form {
   align-items: flex-start;
 }
 
+
 .vertical-result strong,
 .source-item strong {
   text-align: left;
 }
 
-/* ========================================
-   TOTAL ESTIMADO
-======================================== */
 
 .total-result {
   margin: 14px 0;
@@ -1226,34 +1320,18 @@ form {
     white;
 }
 
+
 .total-result span {
   font-size: 10px;
 
   font-weight: 700;
-
-  letter-spacing:
-    0.8px;
 }
+
 
 .total-result strong {
   font-size: 22px;
 }
 
-.total-result small {
-  color:
-    rgba(
-      255,
-      255,
-      255,
-      0.85
-    );
-
-  font-size: 11px;
-}
-
-/* ========================================
-   CONVERSIÓN CLP
-======================================== */
 
 .conversion-box {
   margin:
@@ -1275,6 +1353,7 @@ form {
     var(--gray-050);
 }
 
+
 .conversion-box span {
   color:
     var(--text-soft);
@@ -1284,23 +1363,11 @@ form {
   font-weight: 700;
 }
 
-.conversion-box strong {
-  color:
-    #484d51;
 
+.conversion-box strong {
   font-size: 18px;
 }
 
-.conversion-box small {
-  color:
-    var(--text-soft);
-
-  font-size: 11px;
-}
-
-/* ========================================
-   CONTINGENCIA
-======================================== */
 
 .contingency-info {
   margin-top: 8px;
@@ -1319,53 +1386,13 @@ form {
   font-weight: 600;
 }
 
-/* ========================================
-   CAPACIDAD
-======================================== */
-
-.capacity-box {
-  margin-top: 15px;
-}
-
-/* ========================================
-   ADVERTENCIA DE PESO
-======================================== */
-
-.warning-box {
-  margin-top: 10px;
-
-  padding:
-    11px 13px;
-
-  border-left:
-    4px solid
-    #e3a31e;
-
-  background:
-    var(--warning-light);
-
-  color:
-    var(--warning);
-
-  font-size: 12px;
-
-  line-height: 1.4;
-}
-
-/* ========================================
-   FUENTE
-======================================== */
 
 .source-item strong {
-  color:
-    #64686c;
+  color: #64686c;
 
   font-size: 12px;
 }
 
-/* ========================================
-   NUEVA COTIZACIÓN
-======================================== */
 
 .new-quote-button {
   width: 100%;
@@ -1388,23 +1415,9 @@ form {
 
   font-weight: 700;
 
-  letter-spacing:
-    0.3px;
-
   cursor: pointer;
-
-  transition:
-    background-color 0.2s ease;
 }
 
-.new-quote-button:hover {
-  background:
-    var(--cintac-orange-light);
-}
-
-/* ========================================
-   FOOTER PANEL RESULTADO
-======================================== */
 
 .result-footer {
   padding:
@@ -1425,12 +1438,11 @@ form {
   font-size: 11px;
 }
 
+
 .result-footer span {
   width: 6px;
 
   height: 6px;
-
-  flex-shrink: 0;
 
   border-radius: 50%;
 
@@ -1438,9 +1450,8 @@ form {
     var(--cintac-orange);
 }
 
-/* ========================================
-   FOOTER GENERAL
-======================================== */
+
+/* FOOTER */
 
 .footer {
   border-top:
@@ -1453,6 +1464,7 @@ form {
   color:
     white;
 }
+
 
 .footer-inner {
   width:
@@ -1475,6 +1487,7 @@ form {
   gap: 30px;
 }
 
+
 .footer-logo {
   color:
     var(--cintac-orange);
@@ -1482,27 +1495,22 @@ form {
   font-size: 30px;
 
   font-weight: 800;
-
-  letter-spacing: -1px;
 }
 
+
 .footer-copy {
-  color:
-    #d6d7d8;
+  color: #d6d7d8;
 
   font-size: 12px;
 }
 
-/* ========================================
-   TABLET
-======================================== */
+
+/* TABLET */
 
 @media (max-width: 900px) {
   .header-inner {
     width:
       calc(100% - 40px);
-
-    min-height: 90px;
   }
 
   .header-context {
@@ -1512,11 +1520,6 @@ form {
   .hero-content {
     width:
       calc(100% - 40px);
-  }
-
-  .hero {
-    background-position:
-      center center;
   }
 
   .main-container {
@@ -1549,20 +1552,15 @@ form {
   }
 }
 
-/* ========================================
-   MÓVIL
-======================================== */
+
+/* MÓVIL */
 
 @media (max-width: 650px) {
   .header-inner {
-    min-height: 78px;
-
     width:
       calc(100% - 30px);
-  }
 
-  .brand-subtitle {
-    display: none;
+    min-height: 78px;
   }
 
   .cintac-wordmark {
@@ -1571,9 +1569,6 @@ form {
 
   .hero {
     min-height: 340px;
-
-    background-position:
-      58% center;
   }
 
   .hero-overlay {
@@ -1582,7 +1577,7 @@ form {
         15,
         27,
         34,
-        0.7
+        0.72
       );
   }
 
@@ -1596,13 +1591,6 @@ form {
 
   .hero h1 {
     font-size: 37px;
-
-    letter-spacing:
-      -1px;
-  }
-
-  .hero p {
-    font-size: 16px;
   }
 
   .intro-inner {
@@ -1621,6 +1609,19 @@ form {
   .form-grid.single {
     grid-template-columns:
       1fr;
+  }
+
+  .recommendation-options {
+    grid-template-columns:
+      1fr;
+  }
+
+  .recommendation-header {
+    align-items:
+      flex-start;
+
+    flex-direction:
+      column;
   }
 
   .card-title,
@@ -1673,7 +1674,5 @@ form {
 
     padding:
       20px 0;
-
-    text-align: center;
   }
 }
