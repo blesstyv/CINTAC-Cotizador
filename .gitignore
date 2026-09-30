@@ -31,6 +31,7 @@ __pycache__/
 # Django
 backend/db.sqlite3
 backend/staticfiles/
+backend/backups/
 
 # Variables de entorno
 .env
