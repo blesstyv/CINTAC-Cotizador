@@ -11,8 +11,56 @@ import "./App.css";
 const API_URL =
   "http://127.0.0.1:8000/api";
 
+const TOKEN_KEY =
+  "cintac_token";
+
 
 function App() {
+  /* ======================================
+     AUTENTICACIÓN
+  ====================================== */
+
+  const [token, setToken] =
+    useState(
+      () =>
+        sessionStorage.getItem(
+          TOKEN_KEY
+        ) || ""
+    );
+
+  const [usuario, setUsuario] =
+    useState(null);
+
+  const [
+    verificandoSesion,
+    setVerificandoSesion,
+  ] = useState(Boolean(token));
+
+  const [
+    loginUsuario,
+    setLoginUsuario,
+  ] = useState("");
+
+  const [
+    loginPassword,
+    setLoginPassword,
+  ] = useState("");
+
+  const [
+    loginError,
+    setLoginError,
+  ] = useState("");
+
+  const [
+    iniciandoSesion,
+    setIniciandoSesion,
+  ] = useState(false);
+
+
+  /* ======================================
+     COTIZADOR
+  ====================================== */
+
   const [rutas, setRutas] =
     useState([]);
 
@@ -49,7 +97,7 @@ function App() {
   const [
     cargandoDatos,
     setCargandoDatos,
-  ] = useState(true);
+  ] = useState(false);
 
   const [
     cargandoOpciones,
@@ -83,18 +131,99 @@ function App() {
 
 
   /* ======================================
-     RUTAS DESDE DJANGO
+     CERRAR SESIÓN LOCAL
+  ====================================== */
+
+  const limpiarSesion = () => {
+    sessionStorage.removeItem(
+      TOKEN_KEY
+    );
+
+    setToken("");
+    setUsuario(null);
+
+    setRutas([]);
+    setOrigen("");
+    setDestino("");
+    setTipoContenedor("");
+
+    setPesoCarga("");
+    setUnidadPeso("kg");
+
+    setContingencia("0");
+    setTipoCambio("");
+
+    setRecomendacion(null);
+    setResultado(null);
+
+    setMensaje("");
+    setErrorDatos("");
+  };
+
+
+  /* ======================================
+     PETICIÓN AUTENTICADA
+  ====================================== */
+
+  const peticionAutenticada =
+    async (
+      url,
+      opciones = {}
+    ) => {
+      const respuesta =
+        await fetch(
+          url,
+          {
+            ...opciones,
+
+            headers: {
+              ...opciones.headers,
+
+              Authorization:
+                `Token ${token}`,
+            },
+          }
+        );
+
+      if (
+        respuesta.status === 401 ||
+        respuesta.status === 403
+      ) {
+        limpiarSesion();
+
+        throw new Error(
+          "La sesión no es válida o el usuario ya no está autorizado."
+        );
+      }
+
+      return respuesta;
+    };
+
+
+  /* ======================================
+     VALIDAR SESIÓN GUARDADA
   ====================================== */
 
   useEffect(() => {
-    const cargarRutas =
+    if (!token) {
+      setVerificandoSesion(false);
+      return;
+    }
+
+    const verificarSesion =
       async () => {
-        setCargandoDatos(true);
+        setVerificandoSesion(true);
 
         try {
           const respuesta =
             await fetch(
-              `${API_URL}/rutas/`
+              `${API_URL}/sesion/`,
+              {
+                headers: {
+                  Authorization:
+                    `Token ${token}`,
+                },
+              }
             );
 
           if (!respuesta.ok) {
@@ -104,21 +233,178 @@ function App() {
           const datos =
             await respuesta.json();
 
+          setUsuario(datos);
+        } catch {
+          limpiarSesion();
+        } finally {
+          setVerificandoSesion(false);
+        }
+      };
+
+    verificarSesion();
+  }, [token]);
+
+
+  /* ======================================
+     LOGIN
+  ====================================== */
+
+  const iniciarSesion =
+    async (e) => {
+      e.preventDefault();
+
+      setLoginError("");
+
+      if (
+        !loginUsuario.trim() ||
+        !loginPassword
+      ) {
+        setLoginError(
+          "Ingrese usuario y contraseña."
+        );
+
+        return;
+      }
+
+      setIniciandoSesion(true);
+
+      try {
+        const respuesta =
+          await fetch(
+            `${API_URL}/login/`,
+            {
+              method: "POST",
+
+              headers: {
+                "Content-Type":
+                  "application/json",
+              },
+
+              body:
+                JSON.stringify({
+                  username:
+                    loginUsuario.trim(),
+
+                  password:
+                    loginPassword,
+                }),
+            }
+          );
+
+        const datos =
+          await respuesta.json();
+
+        if (!respuesta.ok) {
+          throw new Error(
+            datos.detail ||
+            "No fue posible iniciar sesión."
+          );
+        }
+
+        sessionStorage.setItem(
+          TOKEN_KEY,
+          datos.token
+        );
+
+        setToken(
+          datos.token
+        );
+
+        setUsuario(
+          datos.usuario
+        );
+
+        setLoginUsuario("");
+        setLoginPassword("");
+        setLoginError("");
+      } catch (error) {
+        setLoginError(
+          error.message
+        );
+      } finally {
+        setIniciandoSesion(false);
+      }
+    };
+
+
+  /* ======================================
+     LOGOUT
+  ====================================== */
+
+  const cerrarSesion =
+    async () => {
+      if (token) {
+        try {
+          await fetch(
+            `${API_URL}/logout/`,
+            {
+              method: "POST",
+
+              headers: {
+                Authorization:
+                  `Token ${token}`,
+              },
+            }
+          );
+        } catch {
+          // La sesión local igualmente
+          // debe eliminarse.
+        }
+      }
+
+      limpiarSesion();
+    };
+
+
+  /* ======================================
+     CARGAR RUTAS
+  ====================================== */
+
+  useEffect(() => {
+    if (
+      !token ||
+      !usuario
+    ) {
+      return;
+    }
+
+    const cargarRutas =
+      async () => {
+        setCargandoDatos(true);
+
+        try {
+          const respuesta =
+            await peticionAutenticada(
+              `${API_URL}/rutas/`
+            );
+
+          if (!respuesta.ok) {
+            throw new Error(
+              "No fue posible cargar la información del cotizador."
+            );
+          }
+
+          const datos =
+            await respuesta.json();
+
           setRutas(datos);
           setErrorDatos("");
-        } catch {
-          setRutas([]);
-
-          setErrorDatos(
-            "No fue posible cargar la información del cotizador."
-          );
+        } catch (error) {
+          if (token) {
+            setErrorDatos(
+              error.message
+            );
+          }
         } finally {
           setCargandoDatos(false);
         }
       };
 
     cargarRutas();
-  }, []);
+  }, [
+    token,
+    usuario,
+  ]);
 
 
   /* ======================================
@@ -231,7 +517,7 @@ function App() {
 
 
   /* ======================================
-     OPCIONES DESDE DJANGO
+     OPCIONES DE CONTENEDORES
   ====================================== */
 
   useEffect(() => {
@@ -241,6 +527,7 @@ function App() {
     setMensaje("");
 
     if (
+      !token ||
       !rutaSeleccionada ||
       pesoCarga === ""
     ) {
@@ -271,11 +558,10 @@ function App() {
 
           try {
             const respuesta =
-              await fetch(
+              await peticionAutenticada(
                 `${API_URL}/opciones-contenedores/`,
                 {
-                  method:
-                    "POST",
+                  method: "POST",
 
                   headers: {
                     "Content-Type":
@@ -283,18 +569,16 @@ function App() {
                   },
 
                   body:
-                    JSON.stringify(
-                      {
-                        ruta_id:
-                          rutaSeleccionada.id,
+                    JSON.stringify({
+                      ruta_id:
+                        rutaSeleccionada.id,
 
-                        peso_carga:
-                          pesoCarga,
+                      peso_carga:
+                        pesoCarga,
 
-                        unidad_peso:
-                          unidadPeso,
-                      }
-                    ),
+                      unidad_peso:
+                        unidadPeso,
+                    }),
 
                   signal:
                     controlador.signal,
@@ -329,7 +613,8 @@ function App() {
             }
           } finally {
             if (
-              !controlador.signal
+              !controlador
+                .signal
                 .aborted
             ) {
               setCargandoOpciones(
@@ -349,6 +634,7 @@ function App() {
       controlador.abort();
     };
   }, [
+    token,
     rutaSeleccionada,
     pesoCarga,
     unidadPeso,
@@ -411,7 +697,7 @@ function App() {
 
 
   /* ======================================
-     COTIZACIÓN DESDE DJANGO
+     COTIZAR
   ====================================== */
 
   const cotizar =
@@ -558,7 +844,7 @@ function App() {
 
       try {
         const respuesta =
-          await fetch(
+          await peticionAutenticada(
             `${API_URL}/cotizar/`,
             {
               method: "POST",
@@ -569,29 +855,27 @@ function App() {
               },
 
               body:
-                JSON.stringify(
-                  {
-                    ruta_id:
-                      rutaSeleccionada.id,
+                JSON.stringify({
+                  ruta_id:
+                    rutaSeleccionada.id,
 
-                    peso_carga:
-                      pesoCarga,
+                  peso_carga:
+                    pesoCarga,
 
-                    unidad_peso:
-                      unidadPeso,
+                  unidad_peso:
+                    unidadPeso,
 
-                    tipo_contenedor:
-                      tipoContenedor,
+                  tipo_contenedor:
+                    tipoContenedor,
 
-                    contingencia:
-                      contingenciaNumero,
+                  contingencia:
+                    contingenciaNumero,
 
-                    tipo_cambio:
-                      tipoCambio === ""
-                        ? null
-                        : tipoCambio,
-                  }
-                ),
+                  tipo_cambio:
+                    tipoCambio === ""
+                      ? null
+                      : tipoCambio,
+                }),
             }
           );
 
@@ -638,6 +922,185 @@ function App() {
     };
 
 
+  /* ======================================
+     VALIDANDO SESIÓN
+  ====================================== */
+
+  if (verificandoSesion) {
+    return (
+      <div className="session-screen">
+        <div className="session-loader">
+          <div className="cintac-wordmark login-wordmark">
+            CINTAC
+          </div>
+
+          <p>
+            Validando sesión...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+
+  /* ======================================
+     LOGIN
+  ====================================== */
+
+  if (
+    !token ||
+    !usuario
+  ) {
+    return (
+      <div
+        className="login-page"
+        style={{
+          backgroundImage:
+            `url(${heroImage})`,
+        }}
+      >
+        <div className="login-overlay"></div>
+
+        <div className="login-shell">
+          <div className="login-brand-panel">
+            <div className="login-brand">
+              CINTAC
+            </div>
+
+            <div className="login-kicker">
+              COMERCIO EXTERIOR
+            </div>
+
+            <h1>
+              Cotizador
+              <br />
+              Logístico
+            </h1>
+
+            <p>
+              Plataforma interna para
+              operaciones de importación.
+            </p>
+          </div>
+
+
+          <div className="login-card">
+            <div className="login-card-header">
+              <span>
+                ACCESO
+              </span>
+
+              <h2>
+                Iniciar sesión
+              </h2>
+
+              <p>
+                Ingrese sus credenciales
+                autorizadas.
+              </p>
+            </div>
+
+
+            <form
+              className="login-form"
+              onSubmit={
+                iniciarSesion
+              }
+            >
+              <div className="login-field">
+                <label>
+                  Usuario
+                </label>
+
+                <input
+                  type="text"
+                  value={
+                    loginUsuario
+                  }
+                  onChange={(e) => {
+                    setLoginUsuario(
+                      e.target.value
+                    );
+
+                    setLoginError("");
+                  }}
+                  autoComplete="username"
+                  placeholder="Usuario"
+                  disabled={
+                    iniciandoSesion
+                  }
+                />
+              </div>
+
+
+              <div className="login-field">
+                <label>
+                  Contraseña
+                </label>
+
+                <input
+                  type="password"
+                  value={
+                    loginPassword
+                  }
+                  onChange={(e) => {
+                    setLoginPassword(
+                      e.target.value
+                    );
+
+                    setLoginError("");
+                  }}
+                  autoComplete="current-password"
+                  placeholder="Contraseña"
+                  disabled={
+                    iniciandoSesion
+                  }
+                />
+              </div>
+
+
+              {loginError && (
+                <div className="login-error">
+                  <span>
+                    !
+                  </span>
+
+                  <p>
+                    {loginError}
+                  </p>
+                </div>
+              )}
+
+
+              <button
+                type="submit"
+                className="login-button"
+                disabled={
+                  iniciandoSesion
+                }
+              >
+                {iniciandoSesion
+                  ? "INGRESANDO..."
+                  : "INGRESAR"}
+              </button>
+            </form>
+
+
+            <div className="login-footer">
+              Acceso exclusivo para
+              usuarios autorizados
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+
+  /* ======================================
+     COTIZADOR AUTENTICADO
+  ====================================== */
+
   return (
     <div className="app">
       <header className="site-header">
@@ -652,16 +1115,28 @@ function App() {
             </div>
           </div>
 
-          <div className="header-context">
-            <span>
-              IMPORTACIONES
-            </span>
 
-            <span className="context-divider"></span>
+          <div className="header-user">
+            <div className="user-info">
+              <span>
+                USUARIO
+              </span>
 
-            <span>
-              COMERCIO EXTERIOR
-            </span>
+              <strong>
+                {usuario.nombre ||
+                  usuario.username}
+              </strong>
+            </div>
+
+            <button
+              type="button"
+              className="logout-button"
+              onClick={
+                cerrarSesion
+              }
+            >
+              CERRAR SESIÓN
+            </button>
           </div>
         </div>
       </header>
@@ -775,7 +1250,8 @@ function App() {
                   </h3>
 
                   <p>
-                    Seleccione origen y destino.
+                    Seleccione origen y
+                    destino.
                   </p>
                 </div>
               </div>
@@ -959,6 +1435,13 @@ function App() {
               </div>
 
 
+              {cargandoOpciones && (
+                <div className="loading-inline">
+                  Cargando opciones...
+                </div>
+              )}
+
+
               {recomendacion && (
                 <div className="recommendation-box">
                   <div className="recommendation-header">
@@ -994,13 +1477,17 @@ function App() {
 
                         return (
                           <button
-                            key={opcion.codigo}
+                            key={
+                              opcion.codigo
+                            }
                             type="button"
                             className={[
                               "recommendation-option",
+
                               sugerida
                                 ? "suggested"
                                 : "",
+
                               seleccionada
                                 ? "selected"
                                 : "",
@@ -1041,7 +1528,8 @@ function App() {
                                 opcion.cantidad
                               )}{" "}
                               contenedor
-                              {opcion.cantidad !== 1
+                              {opcion.cantidad !==
+                              1
                                 ? "es"
                                 : ""}
                             </div>
@@ -1197,7 +1685,9 @@ function App() {
                 <button
                   type="button"
                   className="secondary-button"
-                  onClick={nuevaCotizacion}
+                  onClick={
+                    nuevaCotizacion
+                  }
                 >
                   LIMPIAR
                 </button>
@@ -1209,7 +1699,9 @@ function App() {
                     cargandoDatos ||
                     cargandoOpciones ||
                     cotizando ||
-                    Boolean(errorDatos)
+                    Boolean(
+                      errorDatos
+                    )
                   }
                 >
                   <span>
@@ -1368,8 +1860,10 @@ function App() {
               )}
 
 
-              {resultado.transitoOriginalMin !== null &&
-              resultado.transitoOriginalMax !== null ? (
+              {resultado.transitoOriginalMin !==
+                null &&
+              resultado.transitoOriginalMax !==
+                null ? (
                 <>
                   <div className="result-item">
                     <span>
@@ -1377,18 +1871,29 @@ function App() {
                     </span>
 
                     <strong>
-                      {resultado.transitoOriginalMin}
+                      {
+                        resultado.transitoOriginalMin
+                      }
                       {" - "}
-                      {resultado.transitoOriginalMax}{" "}
+                      {
+                        resultado.transitoOriginalMax
+                      }{" "}
                       días
                     </strong>
                   </div>
 
-                  {resultado.contingencia > 0 && (
+
+                  {resultado.contingencia >
+                    0 && (
                     <div className="contingency-info">
-                      + {resultado.contingencia} días
+                      +{" "}
+                      {
+                        resultado.contingencia
+                      }{" "}
+                      días
                     </div>
                   )}
+
 
                   <div className="result-item">
                     <span>
@@ -1396,9 +1901,13 @@ function App() {
                     </span>
 
                     <strong>
-                      {resultado.transitoMin}
+                      {
+                        resultado.transitoMin
+                      }
                       {" - "}
-                      {resultado.transitoMax}{" "}
+                      {
+                        resultado.transitoMax
+                      }{" "}
                       días
                     </strong>
                   </div>
@@ -1431,7 +1940,9 @@ function App() {
               <button
                 type="button"
                 className="new-quote-button"
-                onClick={nuevaCotizacion}
+                onClick={
+                  nuevaCotizacion
+                }
               >
                 NUEVA COTIZACIÓN
               </button>

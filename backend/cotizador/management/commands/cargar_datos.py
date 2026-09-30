@@ -1,4 +1,5 @@
 from django.core.management.base import BaseCommand
+from django.db import transaction
 
 from cotizador.models import (
     Puerto,
@@ -7,6 +8,7 @@ from cotizador.models import (
     TiempoTransito,
     TipoContenedor,
 )
+
 
 DATOS = [
     {
@@ -221,11 +223,30 @@ DATOS = [
 
 
 class Command(BaseCommand):
-    help = "Carga los datos iniciales utilizados por el cotizador CINTAC"
+    help = (
+        "Carga los datos iniciales del cotizador CINTAC "
+        "sin modificar registros existentes."
+    )
 
+    @transaction.atomic
     def handle(self, *args, **options):
+        creados = {
+            "contenedores": 0,
+            "puertos": 0,
+            "rutas": 0,
+            "tarifas": 0,
+            "transitos": 0,
+        }
 
-        contenedor_20, _ = TipoContenedor.objects.update_or_create(
+        existentes = {
+            "contenedores": 0,
+            "puertos": 0,
+            "rutas": 0,
+            "tarifas": 0,
+            "transitos": 0,
+        }
+
+        _, creado = TipoContenedor.objects.get_or_create(
             codigo="20",
             defaults={
                 "nombre": "Contenedor 20'",
@@ -234,7 +255,12 @@ class Command(BaseCommand):
             },
         )
 
-        contenedor_40, _ = TipoContenedor.objects.update_or_create(
+        if creado:
+            creados["contenedores"] += 1
+        else:
+            existentes["contenedores"] += 1
+
+        _, creado = TipoContenedor.objects.get_or_create(
             codigo="40",
             defaults={
                 "nombre": "Contenedor 40'",
@@ -243,18 +269,33 @@ class Command(BaseCommand):
             },
         )
 
+        if creado:
+            creados["contenedores"] += 1
+        else:
+            existentes["contenedores"] += 1
+
         for dato in DATOS:
-            origen, _ = Puerto.objects.get_or_create(
+            origen, creado = Puerto.objects.get_or_create(
                 nombre=dato["origen"],
                 pais=dato["pais"],
             )
 
-            destino, _ = Puerto.objects.get_or_create(
+            if creado:
+                creados["puertos"] += 1
+            else:
+                existentes["puertos"] += 1
+
+            destino, creado = Puerto.objects.get_or_create(
                 nombre=dato["destino"],
                 pais="Chile",
             )
 
-            ruta, _ = Ruta.objects.update_or_create(
+            if creado:
+                creados["puertos"] += 1
+            else:
+                existentes["puertos"] += 1
+
+            ruta, creado = Ruta.objects.get_or_create(
                 puerto_origen=origen,
                 puerto_destino=destino,
                 defaults={
@@ -262,7 +303,12 @@ class Command(BaseCommand):
                 },
             )
 
-            Tarifa.objects.update_or_create(
+            if creado:
+                creados["rutas"] += 1
+            else:
+                existentes["rutas"] += 1
+
+            _, creado = Tarifa.objects.get_or_create(
                 ruta=ruta,
                 tipo_contenedor="20",
                 defaults={
@@ -272,7 +318,12 @@ class Command(BaseCommand):
                 },
             )
 
-            Tarifa.objects.update_or_create(
+            if creado:
+                creados["tarifas"] += 1
+            else:
+                existentes["tarifas"] += 1
+
+            _, creado = Tarifa.objects.get_or_create(
                 ruta=ruta,
                 tipo_contenedor="40",
                 defaults={
@@ -282,7 +333,12 @@ class Command(BaseCommand):
                 },
             )
 
-            TiempoTransito.objects.update_or_create(
+            if creado:
+                creados["tarifas"] += 1
+            else:
+                existentes["tarifas"] += 1
+
+            _, creado = TiempoTransito.objects.get_or_create(
                 ruta=ruta,
                 defaults={
                     "dias_minimos": dato["transito_min"],
@@ -290,8 +346,54 @@ class Command(BaseCommand):
                 },
             )
 
+            if creado:
+                creados["transitos"] += 1
+            else:
+                existentes["transitos"] += 1
+
+        self.stdout.write("")
         self.stdout.write(
             self.style.SUCCESS(
-                "Datos iniciales cargados correctamente."
+                "Carga inicial finalizada correctamente."
             )
+        )
+
+        self.stdout.write("")
+        self.stdout.write("Registros creados:")
+
+        self.stdout.write(
+            f"  Contenedores: {creados['contenedores']}"
+        )
+        self.stdout.write(
+            f"  Puertos: {creados['puertos']}"
+        )
+        self.stdout.write(
+            f"  Rutas: {creados['rutas']}"
+        )
+        self.stdout.write(
+            f"  Tarifas: {creados['tarifas']}"
+        )
+        self.stdout.write(
+            f"  Tiempos de tránsito: {creados['transitos']}"
+        )
+
+        self.stdout.write("")
+        self.stdout.write(
+            "Registros existentes conservados sin modificar:"
+        )
+
+        self.stdout.write(
+            f"  Contenedores: {existentes['contenedores']}"
+        )
+        self.stdout.write(
+            f"  Puertos: {existentes['puertos']}"
+        )
+        self.stdout.write(
+            f"  Rutas: {existentes['rutas']}"
+        )
+        self.stdout.write(
+            f"  Tarifas: {existentes['tarifas']}"
+        )
+        self.stdout.write(
+            f"  Tiempos de tránsito: {existentes['transitos']}"
         )

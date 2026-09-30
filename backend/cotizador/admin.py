@@ -6,14 +6,13 @@ from .models import (
     Ruta,
     Tarifa,
     TiempoTransito,
+    TipoCambio,
     TipoContenedor,
 )
 
 
 @admin.register(PerfilUsuario)
-class PerfilUsuarioAdmin(
-    admin.ModelAdmin
-):
+class PerfilUsuarioAdmin(admin.ModelAdmin):
     list_display = (
         "usuario",
         "autorizado",
@@ -48,9 +47,7 @@ class PuertoAdmin(admin.ModelAdmin):
 
 
 @admin.register(TipoContenedor)
-class TipoContenedorAdmin(
-    admin.ModelAdmin
-):
+class TipoContenedorAdmin(admin.ModelAdmin):
     list_display = (
         "codigo",
         "nombre",
@@ -60,6 +57,15 @@ class TipoContenedorAdmin(
 
     list_editable = (
         "capacidad_tn",
+        "activo",
+    )
+
+    search_fields = (
+        "codigo",
+        "nombre",
+    )
+
+    list_filter = (
         "activo",
     )
 
@@ -104,11 +110,47 @@ class TarifaAdmin(admin.ModelAdmin):
 
 
 @admin.register(TiempoTransito)
-class TiempoTransitoAdmin(
-    admin.ModelAdmin
-):
+class TiempoTransitoAdmin(admin.ModelAdmin):
     list_display = (
         "ruta",
         "dias_minimos",
         "dias_maximos",
+    )
+
+    search_fields = (
+        "ruta__puerto_origen__nombre",
+        "ruta__puerto_destino__nombre",
+    )
+
+
+@admin.register(TipoCambio)
+class TipoCambioAdmin(admin.ModelAdmin):
+    list_display = (
+        "moneda_origen",
+        "moneda_destino",
+        "valor",
+        "fecha_referencia",
+        "fuente",
+        "obtenido_en",
+    )
+
+    readonly_fields = (
+        "obtenido_en",
+    )
+
+    list_filter = (
+        "moneda_origen",
+        "moneda_destino",
+        "fuente",
+    )
+
+    search_fields = (
+        "moneda_origen",
+        "moneda_destino",
+        "fuente",
+    )
+
+    ordering = (
+        "-fecha_referencia",
+        "-obtenido_en",
     )

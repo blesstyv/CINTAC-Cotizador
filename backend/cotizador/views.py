@@ -1,4 +1,8 @@
-from decimal import Decimal, ROUND_CEILING
+from decimal import (
+    Decimal,
+    ROUND_CEILING,
+    ROUND_HALF_UP,
+)
 
 from django.db.models import Prefetch
 from django.shortcuts import get_object_or_404
@@ -21,34 +25,70 @@ from .serializers import (
     TipoContenedorSerializer,
 )
 
+from .services.tipo_cambio import (
+    TipoCambioNoDisponible,
+    convertir_usd_a_clp,
+    obtener_tipo_cambio,
+)
 
-def convertir_peso(peso_carga, unidad_peso):
+
+def convertir_peso(
+    peso_carga,
+    unidad_peso,
+):
     if unidad_peso == "kg":
         peso_kg = peso_carga
-        peso_tn = peso_carga / Decimal("1000")
+
+        peso_tn = (
+            peso_carga
+            / Decimal("1000")
+        )
+
     else:
         peso_tn = peso_carga
-        peso_kg = peso_carga * Decimal("1000")
 
-    return peso_kg, peso_tn
+        peso_kg = (
+            peso_carga
+            * Decimal("1000")
+        )
+
+    return (
+        peso_kg,
+        peso_tn,
+    )
 
 
-def obtener_opciones(ruta, peso_tn):
-    tipos = TipoContenedor.objects.filter(
-        activo=True
-    ).order_by("id")
+def obtener_opciones(
+    ruta,
+    peso_tn,
+):
+    tipos = (
+        TipoContenedor.objects
+        .filter(
+            activo=True
+        )
+        .order_by("id")
+    )
 
     tarifas = {
-        tarifa.tipo_contenedor: tarifa
-        for tarifa in Tarifa.objects.filter(
-            ruta=ruta
-        ).order_by("id")
+        tarifa.tipo_contenedor:
+            tarifa
+
+        for tarifa in (
+            Tarifa.objects
+            .filter(
+                ruta=ruta
+            )
+            .order_by("id")
+        )
     }
 
     opciones = []
 
     for contenedor in tipos:
-        capacidad_tn = contenedor.capacidad_tn
+        capacidad_tn = (
+            contenedor.capacidad_tn
+        )
 
         if capacidad_tn <= 0:
             continue
@@ -62,7 +102,8 @@ def obtener_opciones(ruta, peso_tn):
 
         cantidad = int(
             (
-                peso_tn / capacidad_tn
+                peso_tn
+                / capacidad_tn
             ).to_integral_value(
                 rounding=ROUND_CEILING
             )
@@ -79,53 +120,82 @@ def obtener_opciones(ruta, peso_tn):
         )
 
         costo_promedio = (
-            total_min + total_max
+            total_min
+            + total_max
         ) / Decimal("2")
 
         opciones.append(
             {
-                "id": contenedor.id,
-                "codigo": contenedor.codigo,
-                "nombre": contenedor.nombre,
-                "capacidadTN": str(
-                    capacidad_tn
-                ),
-                "cantidad": cantidad,
-                "tarifaMin": str(
-                    tarifa.valor_minimo
-                ),
-                "tarifaMax": str(
-                    tarifa.valor_maximo
-                ),
-                "totalMin": str(
-                    total_min
-                ),
-                "totalMax": str(
-                    total_max
-                ),
-                "fuente": tarifa.fuente,
+                "id":
+                    contenedor.id,
+
+                "codigo":
+                    contenedor.codigo,
+
+                "nombre":
+                    contenedor.nombre,
+
+                "capacidadTN":
+                    str(
+                        capacidad_tn
+                    ),
+
+                "cantidad":
+                    cantidad,
+
+                "tarifaMin":
+                    str(
+                        tarifa.valor_minimo
+                    ),
+
+                "tarifaMax":
+                    str(
+                        tarifa.valor_maximo
+                    ),
+
+                "totalMin":
+                    str(
+                        total_min
+                    ),
+
+                "totalMax":
+                    str(
+                        total_max
+                    ),
+
+                "fuente":
+                    tarifa.fuente,
+
                 "_costoPromedio":
                     costo_promedio,
+
                 "_totalMax":
                     total_max,
             }
         )
 
     if not opciones:
-        return [], None
+        return (
+            [],
+            None,
+        )
 
     sugerida = min(
         opciones,
         key=lambda opcion: (
-            opcion["_costoPromedio"],
-            opcion["_totalMax"],
+            opcion[
+                "_costoPromedio"
+            ],
+            opcion[
+                "_totalMax"
+            ],
             opcion["id"],
         ),
     )
 
-    codigo_sugerido = sugerida[
-        "codigo"
-    ]
+    codigo_sugerido = (
+        sugerida["codigo"]
+    )
 
     opciones_publicas = []
 
@@ -133,9 +203,13 @@ def obtener_opciones(ruta, peso_tn):
         opciones_publicas.append(
             {
                 clave: valor
+
                 for clave, valor
                 in opcion.items()
-                if not clave.startswith("_")
+
+                if not clave.startswith(
+                    "_"
+                )
             }
         )
 
@@ -145,15 +219,30 @@ def obtener_opciones(ruta, peso_tn):
     )
 
 
-@api_view(["GET"])
-def listar_tipos_contenedor(request):
-    tipos = TipoContenedor.objects.filter(
-        activo=True
-    ).order_by("id")
+def redondear_clp(valor):
+    return Decimal(valor).quantize(
+        Decimal("1"),
+        rounding=ROUND_HALF_UP,
+    )
 
-    serializer = TipoContenedorSerializer(
-        tipos,
-        many=True,
+
+@api_view(["GET"])
+def listar_tipos_contenedor(
+    request
+):
+    tipos = (
+        TipoContenedor.objects
+        .filter(
+            activo=True
+        )
+        .order_by("id")
+    )
+
+    serializer = (
+        TipoContenedorSerializer(
+            tipos,
+            many=True,
+        )
     )
 
     return Response(
@@ -162,9 +251,13 @@ def listar_tipos_contenedor(request):
 
 
 @api_view(["GET"])
-def listar_rutas(request):
+def listar_rutas(
+    request
+):
     tarifas_ordenadas = (
-        Tarifa.objects.order_by("id")
+        Tarifa.objects.order_by(
+            "id"
+        )
     )
 
     rutas = (
@@ -208,7 +301,9 @@ def obtener_opciones_contenedor(
         raise_exception=True
     )
 
-    datos = serializer.validated_data
+    datos = (
+        serializer.validated_data
+    )
 
     ruta = get_object_or_404(
         Ruta.objects.select_related(
@@ -218,9 +313,11 @@ def obtener_opciones_contenedor(
         id=datos["ruta_id"],
     )
 
-    peso_kg, peso_tn = convertir_peso(
-        datos["peso_carga"],
-        datos["unidad_peso"],
+    peso_kg, peso_tn = (
+        convertir_peso(
+            datos["peso_carga"],
+            datos["unidad_peso"],
+        )
     )
 
     opciones, sugerida = (
@@ -234,7 +331,11 @@ def obtener_opciones_contenedor(
         return Response(
             {
                 "detail":
-                    "No existen opciones de contenedor disponibles para esta ruta."
+                    (
+                        "No existen opciones "
+                        "de contenedor disponibles "
+                        "para esta ruta."
+                    )
             },
             status=
                 status.HTTP_400_BAD_REQUEST,
@@ -242,14 +343,15 @@ def obtener_opciones_contenedor(
 
     return Response(
         {
-            "pesoKg": str(
-                peso_kg
-            ),
-            "pesoTN": str(
-                peso_tn
-            ),
+            "pesoKg":
+                str(peso_kg),
+
+            "pesoTN":
+                str(peso_tn),
+
             "sugerida":
                 sugerida,
+
             "opciones":
                 opciones,
         }
@@ -257,7 +359,9 @@ def obtener_opciones_contenedor(
 
 
 @api_view(["POST"])
-def cotizar_operacion(request):
+def cotizar_operacion(
+    request
+):
     serializer = (
         CotizacionOperacionSerializer(
             data=request.data
@@ -268,19 +372,24 @@ def cotizar_operacion(request):
         raise_exception=True
     )
 
-    datos = serializer.validated_data
+    datos = (
+        serializer.validated_data
+    )
 
     ruta = get_object_or_404(
         Ruta.objects.select_related(
             "puerto_origen",
             "puerto_destino",
+            "tiempo_transito",
         ),
         id=datos["ruta_id"],
     )
 
-    peso_kg, peso_tn = convertir_peso(
-        datos["peso_carga"],
-        datos["unidad_peso"],
+    peso_kg, peso_tn = (
+        convertir_peso(
+            datos["peso_carga"],
+            datos["unidad_peso"],
+        )
     )
 
     opciones, sugerida = (
@@ -293,7 +402,10 @@ def cotizar_operacion(request):
     opcion_seleccionada = next(
         (
             opcion
-            for opcion in opciones
+
+            for opcion
+            in opciones
+
             if opcion["codigo"]
             == datos[
                 "tipo_contenedor"
@@ -306,7 +418,11 @@ def cotizar_operacion(request):
         return Response(
             {
                 "detail":
-                    "El tipo de contenedor seleccionado no está disponible para esta ruta."
+                    (
+                        "El tipo de contenedor "
+                        "seleccionado no está "
+                        "disponible para esta ruta."
+                    )
             },
             status=
                 status.HTTP_400_BAD_REQUEST,
@@ -315,10 +431,6 @@ def cotizar_operacion(request):
     contingencia = datos.get(
         "contingencia",
         0,
-    )
-
-    tipo_cambio = datos.get(
-        "tipo_cambio"
     )
 
     total_min = Decimal(
@@ -333,22 +445,68 @@ def cotizar_operacion(request):
         ]
     )
 
+
+    tipo_cambio = None
+    fecha_tipo_cambio = None
+    fuente_tipo_cambio = None
+    modo_tipo_cambio = None
+
     total_min_clp = None
     total_max_clp = None
 
-    if tipo_cambio is not None:
-        total_min_clp = (
-            total_min
-            * tipo_cambio
+    conversion_disponible = False
+    mensaje_conversion = None
+
+
+    try:
+        cambio = (
+            obtener_tipo_cambio()
         )
 
-        total_max_clp = (
-            total_max
-            * tipo_cambio
+        tipo_cambio = (
+            cambio["valor"]
         )
+
+        fecha_tipo_cambio = (
+            cambio["fecha"]
+        )
+
+        fuente_tipo_cambio = (
+            cambio["fuente"]
+        )
+
+        modo_tipo_cambio = (
+            cambio["modo"]
+        )
+
+        total_min_clp = redondear_clp(
+            convertir_usd_a_clp(
+                total_min,
+                tipo_cambio,
+            )
+        )
+
+        total_max_clp = redondear_clp(
+            convertir_usd_a_clp(
+                total_max,
+                tipo_cambio,
+            )
+        )
+
+        conversion_disponible = True
+
+    except TipoCambioNoDisponible:
+        mensaje_conversion = (
+            "La cotización en USD fue "
+            "generada correctamente, pero "
+            "la conversión automática a CLP "
+            "no está disponible temporalmente."
+        )
+
 
     transito_original_min = None
     transito_original_max = None
+
     transito_min = None
     transito_max = None
 
@@ -377,6 +535,7 @@ def cotizar_operacion(request):
 
     except TiempoTransito.DoesNotExist:
         pass
+
 
     return Response(
         {
@@ -442,9 +601,12 @@ def cotizar_operacion(request):
                 ],
 
             "esSugerida":
-                opcion_seleccionada[
-                    "codigo"
-                ] == sugerida,
+                (
+                    opcion_seleccionada[
+                        "codigo"
+                    ]
+                    == sugerida
+                ),
 
             "transitoOriginalMin":
                 transito_original_min,
@@ -466,6 +628,9 @@ def cotizar_operacion(request):
                     "fuente"
                 ],
 
+            "conversionDisponible":
+                conversion_disponible,
+
             "tipoCambio":
                 (
                     str(tipo_cambio)
@@ -473,6 +638,21 @@ def cotizar_operacion(request):
                     is not None
                     else None
                 ),
+
+            "fechaTipoCambio":
+                (
+                    fecha_tipo_cambio
+                    .isoformat()
+                    if fecha_tipo_cambio
+                    is not None
+                    else None
+                ),
+
+            "fuenteTipoCambio":
+                fuente_tipo_cambio,
+
+            "modoTipoCambio":
+                modo_tipo_cambio,
 
             "totalMinCLP":
                 (
@@ -489,5 +669,8 @@ def cotizar_operacion(request):
                     is not None
                     else None
                 ),
+
+            "mensajeConversion":
+                mensaje_conversion,
         }
     )
