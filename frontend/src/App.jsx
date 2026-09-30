@@ -9,10 +9,68 @@ import "./App.css";
 
 
 const API_URL =
+  import.meta.env.VITE_API_URL ||
   "http://127.0.0.1:8000/api";
 
-const TOKEN_KEY =
-  "cintac_token";
+const TOKEN_KEY = "cintac_token";
+
+
+function recopilarMensajes(valor) {
+  if (valor === null || valor === undefined) {
+    return [];
+  }
+
+  if (typeof valor === "string") {
+    return [valor];
+  }
+
+  if (Array.isArray(valor)) {
+    return valor.flatMap(
+      recopilarMensajes
+    );
+  }
+
+  if (typeof valor === "object") {
+    return Object.values(
+      valor
+    ).flatMap(
+      recopilarMensajes
+    );
+  }
+
+  return [
+    String(valor),
+  ];
+}
+
+
+function extraerMensajeError(
+  datos,
+  mensajePredeterminado,
+) {
+  if (!datos) {
+    return mensajePredeterminado;
+  }
+
+  if (datos.detail) {
+    const mensajes =
+      recopilarMensajes(
+        datos.detail
+      );
+
+    if (mensajes.length > 0) {
+      return mensajes.join(" ");
+    }
+  }
+
+  const mensajes =
+    recopilarMensajes(datos);
+
+  return (
+    mensajes.join(" ") ||
+    mensajePredeterminado
+  );
+}
 
 
 function App() {
@@ -75,19 +133,20 @@ function App() {
     setTipoContenedor,
   ] = useState("");
 
-  const [pesoCarga, setPesoCarga] =
-    useState("");
+  const [
+    pesoCarga,
+    setPesoCarga,
+  ] = useState("");
 
-  const [unidadPeso, setUnidadPeso] =
-    useState("kg");
+  const [
+    unidadPeso,
+    setUnidadPeso,
+  ] = useState("kg");
 
   const [
     contingencia,
     setContingencia,
   ] = useState("0");
-
-  const [tipoCambio, setTipoCambio] =
-    useState("");
 
   const [
     recomendacion,
@@ -114,24 +173,108 @@ function App() {
     setErrorDatos,
   ] = useState("");
 
-  const [mensaje, setMensaje] =
-    useState("");
+  const [
+    mensaje,
+    setMensaje,
+  ] = useState("");
 
-  const [resultado, setResultado] =
-    useState(null);
+  const [
+    resultado,
+    setResultado,
+  ] = useState(null);
 
-  const [errores, setErrores] =
-    useState({
-      origen: false,
-      destino: false,
-      pesoCarga: false,
-      contingencia: false,
-      tipoCambio: false,
-    });
+  const [
+    errores,
+    setErrores,
+  ] = useState({
+    origen: false,
+    destino: false,
+    pesoCarga: false,
+    contingencia: false,
+  });
 
 
   /* ======================================
-     CERRAR SESIÓN LOCAL
+     FORMATOS
+  ====================================== */
+
+  const formatearUSD = (
+    valor
+  ) =>
+    new Intl.NumberFormat(
+      "es-CL",
+      {
+        maximumFractionDigits: 0,
+      }
+    ).format(
+      Number(valor)
+    );
+
+
+  const formatearCLP = (
+    valor
+  ) =>
+    new Intl.NumberFormat(
+      "es-CL",
+      {
+        maximumFractionDigits: 0,
+      }
+    ).format(
+      Number(valor)
+    );
+
+
+  const formatearNumero = (
+    valor
+  ) =>
+    new Intl.NumberFormat(
+      "es-CL",
+      {
+        maximumFractionDigits: 3,
+      }
+    ).format(
+      Number(valor)
+    );
+
+
+  const formatearTipoCambio = (
+    valor
+  ) =>
+    new Intl.NumberFormat(
+      "es-CL",
+      {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }
+    ).format(
+      Number(valor)
+    );
+
+
+  const formatearFecha = (
+    fecha
+  ) => {
+    if (!fecha) {
+      return "Sin fecha";
+    }
+
+    const partes =
+      fecha.split("-");
+
+    if (partes.length !== 3) {
+      return fecha;
+    }
+
+    return (
+      `${partes[2]}-` +
+      `${partes[1]}-` +
+      `${partes[0]}`
+    );
+  };
+
+
+  /* ======================================
+     LIMPIAR SESIÓN
   ====================================== */
 
   const limpiarSesion = () => {
@@ -143,21 +286,29 @@ function App() {
     setUsuario(null);
 
     setRutas([]);
+
     setOrigen("");
     setDestino("");
+
     setTipoContenedor("");
 
     setPesoCarga("");
     setUnidadPeso("kg");
 
     setContingencia("0");
-    setTipoCambio("");
 
     setRecomendacion(null);
     setResultado(null);
 
     setMensaje("");
     setErrorDatos("");
+
+    setErrores({
+      origen: false,
+      destino: false,
+      pesoCarga: false,
+      contingencia: false,
+    });
   };
 
 
@@ -201,18 +352,23 @@ function App() {
 
 
   /* ======================================
-     VALIDAR SESIÓN GUARDADA
+     VALIDAR SESIÓN
   ====================================== */
 
   useEffect(() => {
     if (!token) {
-      setVerificandoSesion(false);
+      setVerificandoSesion(
+        false
+      );
+
       return;
     }
 
     const verificarSesion =
       async () => {
-        setVerificandoSesion(true);
+        setVerificandoSesion(
+          true
+        );
 
         try {
           const respuesta =
@@ -237,7 +393,9 @@ function App() {
         } catch {
           limpiarSesion();
         } finally {
-          setVerificandoSesion(false);
+          setVerificandoSesion(
+            false
+          );
         }
       };
 
@@ -266,7 +424,9 @@ function App() {
         return;
       }
 
-      setIniciandoSesion(true);
+      setIniciandoSesion(
+        true
+      );
 
       try {
         const respuesta =
@@ -296,8 +456,10 @@ function App() {
 
         if (!respuesta.ok) {
           throw new Error(
-            datos.detail ||
-            "No fue posible iniciar sesión."
+            extraerMensajeError(
+              datos,
+              "No fue posible iniciar sesión."
+            )
           );
         }
 
@@ -322,7 +484,9 @@ function App() {
           error.message
         );
       } finally {
-        setIniciandoSesion(false);
+        setIniciandoSesion(
+          false
+        );
       }
     };
 
@@ -348,7 +512,7 @@ function App() {
           );
         } catch {
           // La sesión local igualmente
-          // debe eliminarse.
+          // debe finalizar.
         }
       }
 
@@ -357,7 +521,7 @@ function App() {
 
 
   /* ======================================
-     CARGAR RUTAS
+     RUTAS
   ====================================== */
 
   useEffect(() => {
@@ -370,7 +534,9 @@ function App() {
 
     const cargarRutas =
       async () => {
-        setCargandoDatos(true);
+        setCargandoDatos(
+          true
+        );
 
         try {
           const respuesta =
@@ -378,14 +544,17 @@ function App() {
               `${API_URL}/rutas/`
             );
 
-          if (!respuesta.ok) {
-            throw new Error(
-              "No fue posible cargar la información del cotizador."
-            );
-          }
-
           const datos =
             await respuesta.json();
+
+          if (!respuesta.ok) {
+            throw new Error(
+              extraerMensajeError(
+                datos,
+                "No fue posible cargar la información del cotizador."
+              )
+            );
+          }
 
           setRutas(datos);
           setErrorDatos("");
@@ -396,7 +565,9 @@ function App() {
             );
           }
         } finally {
-          setCargandoDatos(false);
+          setCargandoDatos(
+            false
+          );
         }
       };
 
@@ -408,7 +579,7 @@ function App() {
 
 
   /* ======================================
-     PUERTOS Y RUTA
+     RUTA SELECCIONADA
   ====================================== */
 
   const puertosOrigen =
@@ -477,52 +648,13 @@ function App() {
 
 
   /* ======================================
-     FORMATOS
-  ====================================== */
-
-  const formatearUSD =
-    (valor) =>
-      new Intl.NumberFormat(
-        "es-CL",
-        {
-          maximumFractionDigits: 0,
-        }
-      ).format(
-        Number(valor)
-      );
-
-
-  const formatearCLP =
-    (valor) =>
-      new Intl.NumberFormat(
-        "es-CL",
-        {
-          maximumFractionDigits: 0,
-        }
-      ).format(
-        Number(valor)
-      );
-
-
-  const formatearNumero =
-    (valor) =>
-      new Intl.NumberFormat(
-        "es-CL",
-        {
-          maximumFractionDigits: 2,
-        }
-      ).format(
-        Number(valor)
-      );
-
-
-  /* ======================================
-     OPCIONES DE CONTENEDORES
+     OPCIONES DE CONTENEDOR
   ====================================== */
 
   useEffect(() => {
     setRecomendacion(null);
     setTipoContenedor("");
+
     setResultado(null);
     setMensaje("");
 
@@ -590,8 +722,10 @@ function App() {
 
             if (!respuesta.ok) {
               throw new Error(
-                datos.detail ||
-                "No fue posible obtener las opciones."
+                extraerMensajeError(
+                  datos,
+                  "No fue posible obtener las opciones de contenedor."
+                )
               );
             }
 
@@ -674,7 +808,6 @@ function App() {
       setUnidadPeso("kg");
 
       setContingencia("0");
-      setTipoCambio("");
 
       setRecomendacion(null);
 
@@ -686,7 +819,6 @@ function App() {
         destino: false,
         pesoCarga: false,
         contingencia: false,
-        tipoCambio: false,
       });
 
       window.scrollTo({
@@ -707,20 +839,23 @@ function App() {
       setMensaje("");
       setResultado(null);
 
-
       const nuevosErrores = {
-        origen: !origen,
-        destino: !destino,
+        origen:
+          !origen,
+
+        destino:
+          !destino,
+
         pesoCarga:
           !pesoCarga,
-        contingencia: false,
-        tipoCambio: false,
+
+        contingencia:
+          false,
       };
 
       setErrores(
         nuevosErrores
       );
-
 
       if (
         nuevosErrores.origen ||
@@ -734,7 +869,6 @@ function App() {
         return;
       }
 
-
       if (
         !rutaSeleccionada
       ) {
@@ -744,7 +878,6 @@ function App() {
 
         return;
       }
-
 
       const pesoNumero =
         Number(pesoCarga);
@@ -769,7 +902,6 @@ function App() {
         return;
       }
 
-
       if (
         !recomendacion ||
         !tipoContenedor
@@ -781,12 +913,10 @@ function App() {
         return;
       }
 
-
       const contingenciaNumero =
         Number(
           contingencia
-        ) || 0;
-
+        );
 
       if (
         !Number.isInteger(
@@ -808,39 +938,9 @@ function App() {
         return;
       }
 
-
-      if (
-        tipoCambio !== ""
-      ) {
-        const cambio =
-          Number(
-            tipoCambio
-          );
-
-        if (
-          !Number.isFinite(
-            cambio
-          ) ||
-          cambio <= 0
-        ) {
-          setErrores(
-            (actuales) => ({
-              ...actuales,
-              tipoCambio: true,
-            })
-          );
-
-          setMensaje(
-            "El tipo de cambio debe ser mayor que cero."
-          );
-
-          return;
-        }
-      }
-
-
-      setCotizando(true);
-
+      setCotizando(
+        true
+      );
 
       try {
         const respuesta =
@@ -870,54 +970,40 @@ function App() {
 
                   contingencia:
                     contingenciaNumero,
-
-                  tipo_cambio:
-                    tipoCambio === ""
-                      ? null
-                      : tipoCambio,
                 }),
             }
           );
 
-
         const datos =
           await respuesta.json();
 
-
         if (!respuesta.ok) {
-          const detalle =
-            datos.detail ||
-            Object.values(
-              datos
-            )
-              .flat()
-              .join(" ");
-
           throw new Error(
-            detalle ||
-            "No fue posible generar la cotización."
+            extraerMensajeError(
+              datos,
+              "No fue posible generar la cotización."
+            )
           );
         }
-
 
         setResultado(
           datos
         );
-
 
         setErrores({
           origen: false,
           destino: false,
           pesoCarga: false,
           contingencia: false,
-          tipoCambio: false,
         });
       } catch (error) {
         setMensaje(
           error.message
         );
       } finally {
-        setCotizando(false);
+        setCotizando(
+          false
+        );
       }
     };
 
@@ -1098,7 +1184,7 @@ function App() {
 
 
   /* ======================================
-     COTIZADOR AUTENTICADO
+     COTIZADOR
   ====================================== */
 
   return (
@@ -1150,7 +1236,6 @@ function App() {
         }}
       >
         <div className="hero-overlay"></div>
-
         <div className="hero-accent"></div>
 
         <div className="hero-content">
@@ -1160,7 +1245,6 @@ function App() {
 
           <h1>
             Cotiza tus operaciones
-
             <br />
 
             <strong>
@@ -1528,8 +1612,7 @@ function App() {
                                 opcion.cantidad
                               )}{" "}
                               contenedor
-                              {opcion.cantidad !==
-                              1
+                              {opcion.cantidad !== 1
                                 ? "es"
                                 : ""}
                             </div>
@@ -1600,62 +1683,6 @@ function App() {
 
                     <span>
                       días
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </section>
-
-
-            <section className="form-section">
-              <div className="section-heading">
-                <span className="section-line"></span>
-
-                <div>
-                  <h3>
-                    Conversión monetaria
-                  </h3>
-                </div>
-              </div>
-
-
-              <div className="form-grid single">
-                <div className="form-group">
-                  <label>
-                    Tipo de cambio
-
-                    <span className="optional">
-                      Opcional
-                    </span>
-                  </label>
-
-                  <div className="input-with-unit">
-                    <input
-                      className={
-                        errores.tipoCambio
-                          ? "campo-error"
-                          : ""
-                      }
-                      type="number"
-                      min="0"
-                      step="any"
-                      value={tipoCambio}
-                      onChange={(e) => {
-                        setTipoCambio(
-                          e.target.value
-                        );
-
-                        limpiarError(
-                          "tipoCambio"
-                        );
-
-                        limpiarResultado();
-                      }}
-                      placeholder="Ej: 950"
-                    />
-
-                    <span>
-                      CLP/USD
                     </span>
                   </div>
                 </div>
@@ -1840,10 +1867,10 @@ function App() {
               </div>
 
 
-              {resultado.tipoCambio && (
+              {resultado.conversionDisponible ? (
                 <div className="conversion-box">
                   <span>
-                    TOTAL EN CLP
+                    EQUIVALENTE AUTOMÁTICO EN CLP
                   </span>
 
                   <strong>
@@ -1856,7 +1883,70 @@ function App() {
                       resultado.totalMaxCLP
                     )}
                   </strong>
+
+                  <div className="exchange-rate-details">
+                    <div className="exchange-rate-row">
+                      <span>
+                        Dólar observado
+                      </span>
+
+                      <strong>
+                        $
+                        {formatearTipoCambio(
+                          resultado.tipoCambio
+                        )}{" "}
+                        CLP/USD
+                      </strong>
+                    </div>
+
+                    <div className="exchange-rate-row">
+                      <span>
+                        Fecha de referencia
+                      </span>
+
+                      <strong>
+                        {formatearFecha(
+                          resultado.fechaTipoCambio
+                        )}
+                      </strong>
+                    </div>
+
+                    <div className="exchange-rate-row">
+                      <span>
+                        Estado
+                      </span>
+
+                      <strong>
+                        {resultado.modoTipoCambio ===
+                        "respaldo"
+                          ? "Último valor disponible"
+                          : resultado.modoTipoCambio ===
+                            "cache"
+                          ? "valor automático vigente"
+                          : "Actualizado automáticamente"}
+                      </strong>
+                    </div>
+
+                    <div className="exchange-rate-source">
+                      {resultado.fuenteTipoCambio ||
+                        "Fuente de tipo de cambio no informada"}
+                    </div>
+                  </div>
                 </div>
+              ) : (
+                resultado.mensajeConversion && (
+                  <div className="message-box conversion-warning">
+                    <span className="message-icon">
+                      !
+                    </span>
+
+                    <p>
+                      {
+                        resultado.mensajeConversion
+                      }
+                    </p>
+                  </div>
+                )
               )}
 
 
@@ -1927,7 +2017,7 @@ function App() {
 
               <div className="result-item source-item">
                 <span>
-                  Fuente
+                  Fuente tarifa
                 </span>
 
                 <strong>

@@ -2356,3 +2356,76 @@ form {
     font-size: 9px;
   }
 }
+
+/* ========================================
+   TIPO DE CAMBIO AUTOMÁTICO
+======================================== */
+
+.exchange-rate-details {
+  margin-top: 10px;
+
+  padding-top: 10px;
+
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 6px;
+
+  border-top:
+    1px solid
+    var(--gray-300);
+}
+
+
+.exchange-rate-row {
+  display: flex;
+
+  justify-content:
+    space-between;
+
+  align-items:
+    flex-start;
+
+  gap: 15px;
+}
+
+
+.exchange-rate-row span {
+  color:
+    var(--text-soft);
+
+  font-size: 10px;
+
+  font-weight: 500;
+}
+
+
+.exchange-rate-row strong {
+  color:
+    var(--text-main);
+
+  font-size: 10px;
+
+  font-weight: 600;
+
+  text-align: right;
+}
+
+
+.exchange-rate-source {
+  margin-top: 3px;
+
+  color:
+    var(--text-soft);
+
+  font-size: 9px;
+
+  line-height: 1.4;
+}
+
+
+.conversion-warning {
+  margin:
+    12px 0;
+}

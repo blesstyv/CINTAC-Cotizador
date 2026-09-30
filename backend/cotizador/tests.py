@@ -1,10 +1,10 @@
 from datetime import timedelta
 from decimal import Decimal
+from unittest.mock import patch
 
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.core.management import call_command
-from django.db import IntegrityError, transaction
 from django.test import TestCase
 from django.utils import timezone
 
@@ -12,12 +12,19 @@ from rest_framework.authtoken.models import Token
 from rest_framework.test import APIClient
 
 from .models import (
-    PerfilUsuario,
     Puerto,
     Ruta,
     Tarifa,
     TiempoTransito,
+    TipoCambio,
     TipoContenedor,
+)
+
+from .services.tipo_cambio import (
+    TipoCambioNoDisponible,
+    convertir_clp_a_usd,
+    convertir_usd_a_clp,
+    obtener_tipo_cambio,
 )
 
 
@@ -166,8 +173,11 @@ class AutenticacionTests(BaseCotizadorTestCase):
         respuesta = cliente.post(
             "/api/login/",
             {
-                "username": "usuario_test",
-                "password": "incorrecta",
+                "username":
+                    "usuario_test",
+
+                "password":
+                    "incorrecta",
             },
             format="json",
         )
@@ -275,12 +285,14 @@ class ModeloTests(BaseCotizadorTestCase):
             tarifa.full_clean()
 
     def test_transito_maximo_no_puede_ser_menor(self):
+        otro_destino = Puerto.objects.create(
+            nombre="San Antonio",
+            pais="Chile",
+        )
+
         otra_ruta = Ruta.objects.create(
             puerto_origen=self.origen,
-            puerto_destino=Puerto.objects.create(
-                nombre="San Antonio",
-                pais="Chile",
-            ),
+            puerto_destino=otro_destino,
             tipo_ruta="Directo",
         )
 
@@ -307,6 +319,36 @@ class ModeloTests(BaseCotizadorTestCase):
         ):
             ruta.full_clean()
 
+    def test_tipo_cambio_cero_es_invalido(self):
+        cambio = TipoCambio(
+            moneda_origen="USD",
+            moneda_destino="CLP",
+            valor=Decimal("0"),
+            fecha_referencia=
+                timezone.localdate(),
+            fuente="Prueba",
+        )
+
+        with self.assertRaises(
+            ValidationError
+        ):
+            cambio.full_clean()
+
+    def test_tipo_cambio_no_permite_misma_moneda(self):
+        cambio = TipoCambio(
+            moneda_origen="USD",
+            moneda_destino="USD",
+            valor=Decimal("950"),
+            fecha_referencia=
+                timezone.localdate(),
+            fuente="Prueba",
+        )
+
+        with self.assertRaises(
+            ValidationError
+        ):
+            cambio.full_clean()
+
 
 class OpcionesContenedorTests(
     BaseCotizadorTestCase
@@ -315,9 +357,14 @@ class OpcionesContenedorTests(
         respuesta = self.client.post(
             "/api/opciones-contenedores/",
             {
-                "ruta_id": self.ruta.id,
-                "peso_carga": 25,
-                "unidad_peso": "tn",
+                "ruta_id":
+                    self.ruta.id,
+
+                "peso_carga":
+                    25,
+
+                "unidad_peso":
+                    "tn",
             },
             format="json",
         )
@@ -329,7 +376,9 @@ class OpcionesContenedorTests(
 
         self.assertEqual(
             Decimal(
-                respuesta.data["pesoTN"]
+                respuesta.data[
+                    "pesoTN"
+                ]
             ),
             Decimal("25"),
         )
@@ -346,9 +395,14 @@ class OpcionesContenedorTests(
         respuesta = self.client.post(
             "/api/opciones-contenedores/",
             {
-                "ruta_id": self.ruta.id,
-                "peso_carga": 25000,
-                "unidad_peso": "kg",
+                "ruta_id":
+                    self.ruta.id,
+
+                "peso_carga":
+                    25000,
+
+                "unidad_peso":
+                    "kg",
             },
             format="json",
         )
@@ -360,7 +414,9 @@ class OpcionesContenedorTests(
 
         self.assertEqual(
             Decimal(
-                respuesta.data["pesoTN"]
+                respuesta.data[
+                    "pesoTN"
+                ]
             ),
             Decimal("25"),
         )
@@ -369,9 +425,14 @@ class OpcionesContenedorTests(
         respuesta = self.client.post(
             "/api/opciones-contenedores/",
             {
-                "ruta_id": self.ruta.id,
-                "peso_carga": 50,
-                "unidad_peso": "tn",
+                "ruta_id":
+                    self.ruta.id,
+
+                "peso_carga":
+                    50,
+
+                "unidad_peso":
+                    "tn",
             },
             format="json",
         )
@@ -393,9 +454,14 @@ class OpcionesContenedorTests(
         respuesta = self.client.post(
             "/api/opciones-contenedores/",
             {
-                "ruta_id": self.ruta.id,
-                "peso_carga": 25.001,
-                "unidad_peso": "tn",
+                "ruta_id":
+                    self.ruta.id,
+
+                "peso_carga":
+                    25.001,
+
+                "unidad_peso":
+                    "tn",
             },
             format="json",
         )
@@ -417,9 +483,14 @@ class OpcionesContenedorTests(
         respuesta = self.client.post(
             "/api/opciones-contenedores/",
             {
-                "ruta_id": self.ruta.id,
-                "peso_carga": 0,
-                "unidad_peso": "kg",
+                "ruta_id":
+                    self.ruta.id,
+
+                "peso_carga":
+                    0,
+
+                "unidad_peso":
+                    "kg",
             },
             format="json",
         )
@@ -433,9 +504,14 @@ class OpcionesContenedorTests(
         respuesta = self.client.post(
             "/api/opciones-contenedores/",
             {
-                "ruta_id": self.ruta.id,
-                "peso_carga": -25,
-                "unidad_peso": "tn",
+                "ruta_id":
+                    self.ruta.id,
+
+                "peso_carga":
+                    -25,
+
+                "unidad_peso":
+                    "tn",
             },
             format="json",
         )
@@ -449,9 +525,14 @@ class OpcionesContenedorTests(
         respuesta = self.client.post(
             "/api/opciones-contenedores/",
             {
-                "ruta_id": self.ruta.id,
-                "peso_carga": "hola",
-                "unidad_peso": "kg",
+                "ruta_id":
+                    self.ruta.id,
+
+                "peso_carga":
+                    "hola",
+
+                "unidad_peso":
+                    "kg",
             },
             format="json",
         )
@@ -465,9 +546,14 @@ class OpcionesContenedorTests(
         respuesta = self.client.post(
             "/api/opciones-contenedores/",
             {
-                "ruta_id": self.ruta.id,
-                "peso_carga": 25,
-                "unidad_peso": "lb",
+                "ruta_id":
+                    self.ruta.id,
+
+                "peso_carga":
+                    25,
+
+                "unidad_peso":
+                    "lb",
             },
             format="json",
         )
@@ -481,9 +567,14 @@ class OpcionesContenedorTests(
         respuesta = self.client.post(
             "/api/opciones-contenedores/",
             {
-                "ruta_id": 999999,
-                "peso_carga": 25,
-                "unidad_peso": "tn",
+                "ruta_id":
+                    999999,
+
+                "peso_carga":
+                    25,
+
+                "unidad_peso":
+                    "tn",
             },
             format="json",
         )
@@ -497,10 +588,17 @@ class OpcionesContenedorTests(
         respuesta = self.client.post(
             "/api/opciones-contenedores/",
             {
-                "ruta_id": self.ruta.id,
-                "peso_carga": 25,
-                "unidad_peso": "tn",
-                "campo_inventado": "prueba",
+                "ruta_id":
+                    self.ruta.id,
+
+                "peso_carga":
+                    25,
+
+                "unidad_peso":
+                    "tn",
+
+                "campo_inventado":
+                    "prueba",
             },
             format="json",
         )
@@ -512,7 +610,27 @@ class OpcionesContenedorTests(
 
 
 class CotizacionTests(BaseCotizadorTestCase):
-    def test_cotizacion_20_pies_25_tn(self):
+    @patch(
+        "cotizador.views.obtener_tipo_cambio"
+    )
+    def test_cotizacion_20_pies_25_tn(
+        self,
+        mock_tipo_cambio,
+    ):
+        mock_tipo_cambio.return_value = {
+            "valor":
+                Decimal("970.46"),
+
+            "fecha":
+                timezone.localdate(),
+
+            "fuente":
+                "Fuente prueba",
+
+            "modo":
+                "en_linea",
+        }
+
         respuesta = self.client.post(
             "/api/cotizar/",
             {
@@ -562,7 +680,27 @@ class CotizacionTests(BaseCotizadorTestCase):
             Decimal("2850"),
         )
 
-    def test_cotizacion_40_pies_50_tn(self):
+    @patch(
+        "cotizador.views.obtener_tipo_cambio"
+    )
+    def test_cotizacion_40_pies_50_tn(
+        self,
+        mock_tipo_cambio,
+    ):
+        mock_tipo_cambio.return_value = {
+            "valor":
+                Decimal("970.46"),
+
+            "fecha":
+                timezone.localdate(),
+
+            "fuente":
+                "Fuente prueba",
+
+            "modo":
+                "en_linea",
+        }
+
         respuesta = self.client.post(
             "/api/cotizar/",
             {
@@ -612,7 +750,27 @@ class CotizacionTests(BaseCotizadorTestCase):
             Decimal("7700"),
         )
 
-    def test_contingencia_modifica_solo_transito(self):
+    @patch(
+        "cotizador.views.obtener_tipo_cambio"
+    )
+    def test_contingencia_modifica_solo_transito(
+        self,
+        mock_tipo_cambio,
+    ):
+        mock_tipo_cambio.return_value = {
+            "valor":
+                Decimal("970.46"),
+
+            "fecha":
+                timezone.localdate(),
+
+            "fuente":
+                "Fuente prueba",
+
+            "modo":
+                "en_linea",
+        }
+
         respuesta = self.client.post(
             "/api/cotizar/",
             {
@@ -786,6 +944,320 @@ class CotizacionTests(BaseCotizadorTestCase):
             respuesta.status_code,
             400,
         )
+
+    def test_usuario_no_puede_enviar_tipo_cambio(self):
+        respuesta = self.client.post(
+            "/api/cotizar/",
+            {
+                "ruta_id":
+                    self.ruta.id,
+
+                "peso_carga":
+                    25,
+
+                "unidad_peso":
+                    "tn",
+
+                "tipo_contenedor":
+                    "20",
+
+                "contingencia":
+                    0,
+
+                "tipo_cambio":
+                    1,
+            },
+            format="json",
+        )
+
+        self.assertEqual(
+            respuesta.status_code,
+            400,
+        )
+
+        self.assertIn(
+            "campos_no_permitidos",
+            respuesta.data,
+        )
+
+    @patch(
+        "cotizador.views.obtener_tipo_cambio"
+    )
+    def test_cotizacion_convierte_usd_a_clp(
+        self,
+        mock_tipo_cambio,
+    ):
+        mock_tipo_cambio.return_value = {
+            "valor":
+                Decimal("970.46"),
+
+            "fecha":
+                timezone.localdate(),
+
+            "fuente":
+                "Fuente prueba",
+
+            "modo":
+                "en_linea",
+        }
+
+        respuesta = self.client.post(
+            "/api/cotizar/",
+            {
+                "ruta_id":
+                    self.ruta.id,
+
+                "peso_carga":
+                    25,
+
+                "unidad_peso":
+                    "tn",
+
+                "tipo_contenedor":
+                    "20",
+
+                "contingencia":
+                    0,
+            },
+            format="json",
+        )
+
+        self.assertEqual(
+            respuesta.status_code,
+            200,
+        )
+
+        self.assertTrue(
+            respuesta.data[
+                "conversionDisponible"
+            ]
+        )
+
+        self.assertEqual(
+            Decimal(
+                respuesta.data[
+                    "tipoCambio"
+                ]
+            ),
+            Decimal("970.46"),
+        )
+
+        self.assertEqual(
+            Decimal(
+                respuesta.data[
+                    "totalMinCLP"
+                ]
+            ),
+            Decimal("1601259"),
+        )
+
+        self.assertEqual(
+            Decimal(
+                respuesta.data[
+                    "totalMaxCLP"
+                ]
+            ),
+            Decimal("2765811"),
+        )
+
+    @patch(
+        "cotizador.views.obtener_tipo_cambio"
+    )
+    def test_cotizacion_sigue_si_no_hay_conversion(
+        self,
+        mock_tipo_cambio,
+    ):
+        mock_tipo_cambio.side_effect = (
+            TipoCambioNoDisponible(
+                "Sin tipo de cambio"
+            )
+        )
+
+        respuesta = self.client.post(
+            "/api/cotizar/",
+            {
+                "ruta_id":
+                    self.ruta.id,
+
+                "peso_carga":
+                    25,
+
+                "unidad_peso":
+                    "tn",
+
+                "tipo_contenedor":
+                    "20",
+
+                "contingencia":
+                    0,
+            },
+            format="json",
+        )
+
+        self.assertEqual(
+            respuesta.status_code,
+            200,
+        )
+
+        self.assertFalse(
+            respuesta.data[
+                "conversionDisponible"
+            ]
+        )
+
+        self.assertIsNone(
+            respuesta.data[
+                "totalMinCLP"
+            ]
+        )
+
+        self.assertIsNotNone(
+            respuesta.data[
+                "mensajeConversion"
+            ]
+        )
+
+
+class TipoCambioTests(TestCase):
+    def test_conversion_usd_a_clp(self):
+        resultado = convertir_usd_a_clp(
+            Decimal("1000"),
+            Decimal("970.46"),
+        )
+
+        self.assertEqual(
+            resultado,
+            Decimal("970460.00"),
+        )
+
+    def test_conversion_clp_a_usd(self):
+        resultado = convertir_clp_a_usd(
+            Decimal("970460"),
+            Decimal("970.46"),
+        )
+
+        self.assertEqual(
+            resultado,
+            Decimal("1000"),
+        )
+
+    def test_conversion_rechaza_tasa_cero(self):
+        with self.assertRaises(
+            ValueError
+        ):
+            convertir_usd_a_clp(
+                Decimal("1000"),
+                Decimal("0"),
+            )
+
+    def test_conversion_rechaza_monto_negativo(self):
+        with self.assertRaises(
+            ValueError
+        ):
+            convertir_clp_a_usd(
+                Decimal("-1000"),
+                Decimal("970.46"),
+            )
+
+    @patch(
+        "cotizador.services.tipo_cambio."
+        "_obtener_desde_internet"
+    )
+    def test_cache_reciente_evitar_consulta_internet(
+        self,
+        mock_internet,
+    ):
+        TipoCambio.objects.create(
+            moneda_origen="USD",
+            moneda_destino="CLP",
+            valor=Decimal("970.46"),
+            fecha_referencia=
+                timezone.localdate(),
+            fuente="Fuente cache",
+        )
+
+        resultado = (
+            obtener_tipo_cambio()
+        )
+
+        self.assertEqual(
+            resultado["modo"],
+            "cache",
+        )
+
+        self.assertEqual(
+            resultado["valor"],
+            Decimal("970.46"),
+        )
+
+        mock_internet.assert_not_called()
+
+    @patch(
+        "cotizador.services.tipo_cambio."
+        "_obtener_desde_internet"
+    )
+    def test_respaldo_si_falla_internet(
+        self,
+        mock_internet,
+    ):
+        registro = TipoCambio.objects.create(
+            moneda_origen="USD",
+            moneda_destino="CLP",
+            valor=Decimal("950.00"),
+            fecha_referencia=(
+                timezone.localdate()
+                - timedelta(days=1)
+            ),
+            fuente="Fuente respaldo",
+        )
+
+        TipoCambio.objects.filter(
+            pk=registro.pk
+        ).update(
+            obtenido_en=(
+                timezone.now()
+                - timedelta(hours=2)
+            )
+        )
+
+        mock_internet.side_effect = (
+            TipoCambioNoDisponible(
+                "Sin conexión"
+            )
+        )
+
+        resultado = (
+            obtener_tipo_cambio()
+        )
+
+        self.assertEqual(
+            resultado["modo"],
+            "respaldo",
+        )
+
+        self.assertEqual(
+            resultado["valor"],
+            Decimal("950.00"),
+        )
+
+    @patch(
+        "cotizador.services.tipo_cambio."
+        "_obtener_desde_internet"
+    )
+    def test_error_si_no_hay_internet_ni_respaldo(
+        self,
+        mock_internet,
+    ):
+        mock_internet.side_effect = (
+            TipoCambioNoDisponible(
+                "Sin conexión"
+            )
+        )
+
+        with self.assertRaises(
+            TipoCambioNoDisponible
+        ):
+            obtener_tipo_cambio()
 
 
 class SeedTests(BaseCotizadorTestCase):

@@ -1,8 +1,10 @@
 import json
+from datetime import timedelta
 from decimal import Decimal, InvalidOperation
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
+from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 
 from cotizador.models import TipoCambio
@@ -16,13 +18,10 @@ FUENTE_DOLAR = (
 
 TIMEOUT_SEGUNDOS = 5
 
+CACHE_MINUTOS = 60
+
 
 class TipoCambioNoDisponible(Exception):
-    """
-    Se utiliza cuando no es posible obtener
-    un tipo de cambio válido.
-    """
-
     pass
 
 
@@ -30,19 +29,71 @@ def _guardar_tipo_cambio(
     valor,
     fecha_referencia,
 ):
-    registro, _ = (
+    registro, creado = (
         TipoCambio.objects.update_or_create(
             moneda_origen="USD",
             moneda_destino="CLP",
-            fecha_referencia=fecha_referencia,
+            fecha_referencia=
+                fecha_referencia,
             defaults={
-                "valor": valor,
-                "fuente": FUENTE_DOLAR,
+                "valor":
+                    valor,
+
+                "fuente":
+                    FUENTE_DOLAR,
             },
         )
     )
 
+    if not creado:
+        TipoCambio.objects.filter(
+            pk=registro.pk
+        ).update(
+            obtenido_en=
+                timezone.now()
+        )
+
+        registro.refresh_from_db()
+
     return registro
+
+
+def _obtener_cache_reciente():
+    limite = (
+        timezone.now()
+        - timedelta(
+            minutes=CACHE_MINUTOS
+        )
+    )
+
+    return (
+        TipoCambio.objects
+        .filter(
+            moneda_origen="USD",
+            moneda_destino="CLP",
+            obtenido_en__gte=limite,
+        )
+        .order_by(
+            "-fecha_referencia",
+            "-obtenido_en",
+        )
+        .first()
+    )
+
+
+def _obtener_ultimo_respaldo():
+    return (
+        TipoCambio.objects
+        .filter(
+            moneda_origen="USD",
+            moneda_destino="CLP",
+        )
+        .order_by(
+            "-fecha_referencia",
+            "-obtenido_en",
+        )
+        .first()
+    )
 
 
 def _obtener_desde_internet():
@@ -81,7 +132,6 @@ def _obtener_desde_internet():
             )
         ) from error
 
-
     try:
         datos = json.loads(
             contenido
@@ -95,7 +145,6 @@ def _obtener_desde_internet():
             )
         ) from error
 
-
     serie = datos.get(
         "serie"
     )
@@ -105,7 +154,7 @@ def _obtener_desde_internet():
             serie,
             list,
         )
-        or len(serie) == 0
+        or not serie
     ):
         raise TipoCambioNoDisponible(
             (
@@ -114,9 +163,9 @@ def _obtener_desde_internet():
             )
         )
 
-
-    ultimo_registro = serie[0]
-
+    ultimo_registro = (
+        serie[0]
+    )
 
     try:
         valor = Decimal(
@@ -140,7 +189,6 @@ def _obtener_desde_internet():
             )
         ) from error
 
-
     if valor <= 0:
         raise TipoCambioNoDisponible(
             (
@@ -148,7 +196,6 @@ def _obtener_desde_internet():
                 "debe ser mayor que cero."
             )
         )
-
 
     fecha_texto = (
         ultimo_registro.get(
@@ -164,13 +211,11 @@ def _obtener_desde_internet():
             )
         )
 
-
     fecha_datetime = (
         parse_datetime(
             fecha_texto
         )
     )
-
 
     if fecha_datetime is None:
         raise TipoCambioNoDisponible(
@@ -181,39 +226,32 @@ def _obtener_desde_internet():
             )
         )
 
-
     return _guardar_tipo_cambio(
         valor=valor,
-        fecha_referencia=(
-            fecha_datetime.date()
-        ),
-    )
-
-
-def _obtener_desde_respaldo():
-    return (
-        TipoCambio.objects
-        .filter(
-            moneda_origen="USD",
-            moneda_destino="CLP",
-        )
-        .order_by(
-            "-fecha_referencia",
-            "-obtenido_en",
-        )
-        .first()
+        fecha_referencia=
+            fecha_datetime.date(),
     )
 
 
 def obtener_tipo_cambio():
-    """
-    Intenta obtener primero el Dólar Observado
-    desde Internet.
+    cache = (
+        _obtener_cache_reciente()
+    )
 
-    Si la fuente externa no está disponible,
-    utiliza el último valor válido almacenado
-    en SQLite.
-    """
+    if cache is not None:
+        return {
+            "valor":
+                cache.valor,
+
+            "fecha":
+                cache.fecha_referencia,
+
+            "fuente":
+                cache.fuente,
+
+            "modo":
+                "cache",
+        }
 
     try:
         registro = (
@@ -235,11 +273,11 @@ def obtener_tipo_cambio():
         }
 
     except TipoCambioNoDisponible:
-        registro = (
-            _obtener_desde_respaldo()
+        respaldo = (
+            _obtener_ultimo_respaldo()
         )
 
-        if registro is None:
+        if respaldo is None:
             raise TipoCambioNoDisponible(
                 (
                     "No fue posible obtener "
@@ -251,13 +289,13 @@ def obtener_tipo_cambio():
 
         return {
             "valor":
-                registro.valor,
+                respaldo.valor,
 
             "fecha":
-                registro.fecha_referencia,
+                respaldo.fecha_referencia,
 
             "fuente":
-                registro.fuente,
+                respaldo.fuente,
 
             "modo":
                 "respaldo",
@@ -278,10 +316,7 @@ def convertir_usd_a_clp(
 
     if monto < 0:
         raise ValueError(
-            (
-                "El monto no puede "
-                "ser negativo."
-            )
+            "El monto no puede ser negativo."
         )
 
     if tasa <= 0:
@@ -309,10 +344,7 @@ def convertir_clp_a_usd(
 
     if monto < 0:
         raise ValueError(
-            (
-                "El monto no puede "
-                "ser negativo."
-            )
+            "El monto no puede ser negativo."
         )
 
     if tasa <= 0:
