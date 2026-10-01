@@ -1,5 +1,6 @@
 import {
   useEffect,
+  useRef,
   useState,
 } from "react";
 
@@ -89,6 +90,18 @@ function AdminDatos({
     setErrorResumen,
   ] = useState("");
 
+  /* ======================================
+   BLOQUEOS DE PETICIONES
+====================================== */
+
+  const resumenEnCursoRef =
+    useRef(false);
+
+  const validacionEnCursoRef =
+    useRef(false);
+
+  const importacionEnCursoRef =
+    useRef(false);
 
   /* ======================================
      COMPROBAR PERMISO
@@ -117,54 +130,64 @@ function AdminDatos({
   ====================================== */
 
   const cargarResumen =
-    async () => {
-      if (cargandoResumen) {
+  async () => {
+    if (
+      resumenEnCursoRef.current
+    ) {
+      return;
+    }
+
+    resumenEnCursoRef.current =
+      true;
+
+    setCargandoResumen(
+      true
+    );
+
+    setErrorResumen("");
+
+    try {
+      const respuesta =
+        await peticionAutenticada(
+          `${apiUrl}/administracion/resumen/`
+        );
+
+      if (
+        !comprobarPermiso(
+          respuesta
+        )
+      ) {
         return;
       }
 
-      setCargandoResumen(
-        true
-      );
+      const datos =
+        await respuesta.json();
 
-      setErrorResumen("");
-
-      try {
-        const respuesta =
-          await peticionAutenticada(
-            `${apiUrl}/administracion/resumen/`
-          );
-
-        if (
-          !comprobarPermiso(
-            respuesta
-          )
-        ) {
-          return;
-        }
-
-        const datos =
-          await respuesta.json();
-
-        if (!respuesta.ok) {
-          throw new Error(
-            datos.detail ||
-            "No fue posible consultar los datos maestros."
-          );
-        }
-
-        setResumen(
-          datos
-        );
-      } catch (error) {
-        setErrorResumen(
-          error.message
-        );
-      } finally {
-        setCargandoResumen(
-          false
+      if (!respuesta.ok) {
+        throw new Error(
+          datos.detail ||
+          "No fue posible consultar los datos maestros."
         );
       }
-    };
+
+      setResumen(
+        datos
+      );
+
+    } catch (error) {
+      setErrorResumen(
+        error.message
+      );
+
+    } finally {
+      resumenEnCursoRef.current =
+        false;
+
+      setCargandoResumen(
+        false
+      );
+    }
+  };
 
 
   /* ======================================
@@ -266,86 +289,108 @@ function AdminDatos({
   ====================================== */
 
   const validarExcel =
-    async () => {
+  async () => {
+    if (
+      validacionEnCursoRef.current ||
+      importacionEnCursoRef.current
+    ) {
+      return;
+    }
+
+    if (!archivo) {
+      setErrores([
+        "Seleccione un archivo Excel antes de continuar.",
+      ]);
+
+      return;
+    }
+
+
+    /*
+     * Bloqueo inmediato.
+     */
+    validacionEnCursoRef.current =
+      true;
+
+    setValidando(
+      true
+    );
+
+    setValidacion(null);
+    setErrores([]);
+    setMensaje("");
+
+
+    const formulario =
+      new FormData();
+
+    formulario.append(
+      "archivo",
+      archivo
+    );
+
+
+    try {
+      const respuesta =
+        await peticionAutenticada(
+          `${apiUrl}/administracion/validar-excel/`,
+          {
+            method:
+              "POST",
+
+            body:
+              formulario,
+          }
+        );
+
+
       if (
-        validando ||
-        importando
+        !comprobarPermiso(
+          respuesta
+        )
       ) {
         return;
       }
 
-      if (!archivo) {
-        setErrores([
-          "Seleccione un archivo Excel antes de continuar.",
-        ]);
+
+      const datos =
+        await respuesta.json();
+
+
+      if (!respuesta.ok) {
+        setErrores(
+          obtenerErrores(
+            datos
+          )
+        );
 
         return;
       }
 
+
+      setValidacion(
+        datos
+      );
+
+
+      setMensaje(
+        "El archivo superó todas las validaciones."
+      );
+
+    } catch (error) {
+      setErrores([
+        error.message,
+      ]);
+
+    } finally {
+      validacionEnCursoRef.current =
+        false;
+
       setValidando(
-        true
+        false
       );
-
-      setValidacion(null);
-      setErrores([]);
-      setMensaje("");
-
-      const formulario =
-        new FormData();
-
-      formulario.append(
-        "archivo",
-        archivo
-      );
-
-      try {
-        const respuesta =
-          await peticionAutenticada(
-            `${apiUrl}/administracion/validar-excel/`,
-            {
-              method: "POST",
-              body: formulario,
-            }
-          );
-
-        if (
-          !comprobarPermiso(
-            respuesta
-          )
-        ) {
-          return;
-        }
-
-        const datos =
-          await respuesta.json();
-
-        if (!respuesta.ok) {
-          setErrores(
-            obtenerErrores(
-              datos
-            )
-          );
-
-          return;
-        }
-
-        setValidacion(
-          datos
-        );
-
-        setMensaje(
-          "El archivo superó todas las validaciones."
-        );
-      } catch (error) {
-        setErrores([
-          error.message,
-        ]);
-      } finally {
-        setValidando(
-          false
-        );
-      }
-    };
+    }
+  };
 
 
   /* ======================================
@@ -353,121 +398,150 @@ function AdminDatos({
   ====================================== */
 
   const aplicarImportacion =
-    async () => {
-      if (
-        validando ||
-        importando
-      ) {
-        return;
-      }
+  async () => {
+    if (
+      importacionEnCursoRef.current ||
+      validacionEnCursoRef.current
+    ) {
+      return;
+    }
 
-      if (
-        !archivo ||
-        !validacion?.valido
-      ) {
-        setErrores([
-          "El archivo debe validarse correctamente antes de actualizar los datos.",
-        ]);
 
-        return;
-      }
+    if (
+      !archivo ||
+      !validacion?.valido
+    ) {
+      setErrores([
+        "El archivo debe validarse correctamente antes de actualizar los datos.",
+      ]);
 
-      const confirmado =
-        window.confirm(
-          "Se actualizarán los datos maestros utilizados por el cotizador. Antes de aplicar los cambios se generará un respaldo de la base de datos. ¿Desea continuar?"
+      return;
+    }
+
+
+    /*
+     * Reservamos la operación antes
+     * incluso de continuar con el diálogo.
+     */
+    importacionEnCursoRef.current =
+      true;
+
+
+    const confirmado =
+      window.confirm(
+        "Se actualizarán los datos maestros utilizados por el cotizador. Antes de aplicar los cambios se generará un respaldo de la base de datos. ¿Desea continuar?"
+      );
+
+
+    if (!confirmado) {
+      importacionEnCursoRef.current =
+        false;
+
+      return;
+    }
+
+
+    setImportando(
+      true
+    );
+
+    setErrores([]);
+    setMensaje("");
+
+
+    const formulario =
+      new FormData();
+
+    formulario.append(
+      "archivo",
+      archivo
+    );
+
+
+    try {
+      const respuesta =
+        await peticionAutenticada(
+          `${apiUrl}/administracion/importar-excel/`,
+          {
+            method:
+              "POST",
+
+            body:
+              formulario,
+          }
         );
 
-      if (!confirmado) {
+
+      if (
+        !comprobarPermiso(
+          respuesta
+        )
+      ) {
         return;
       }
+
+
+      const datos =
+        await respuesta.json();
+
+
+      if (!respuesta.ok) {
+        setErrores(
+          obtenerErrores(
+            datos
+          )
+        );
+
+        return;
+      }
+
+
+      setMensaje(
+        datos.detail ||
+        "Los datos maestros fueron actualizados correctamente."
+      );
+
+
+      setValidacion(null);
+
+      setArchivo(null);
+
+
+      const inputArchivo =
+        document.getElementById(
+          "archivo-datos-cintac"
+        );
+
+
+      if (inputArchivo) {
+        inputArchivo.value =
+          "";
+      }
+
+
+      await cargarResumen();
+
+
+      if (
+        onDatosActualizados
+      ) {
+        onDatosActualizados();
+      }
+
+    } catch (error) {
+      setErrores([
+        error.message,
+      ]);
+
+    } finally {
+      importacionEnCursoRef.current =
+        false;
 
       setImportando(
-        true
+        false
       );
-
-      setErrores([]);
-      setMensaje("");
-
-      const formulario =
-        new FormData();
-
-      formulario.append(
-        "archivo",
-        archivo
-      );
-
-      try {
-        const respuesta =
-          await peticionAutenticada(
-            `${apiUrl}/administracion/importar-excel/`,
-            {
-              method: "POST",
-              body: formulario,
-            }
-          );
-
-        if (
-          !comprobarPermiso(
-            respuesta
-          )
-        ) {
-          return;
-        }
-
-        const datos =
-          await respuesta.json();
-
-        if (!respuesta.ok) {
-          setErrores(
-            obtenerErrores(
-              datos
-            )
-          );
-
-          return;
-        }
-
-        setMensaje(
-          datos.detail ||
-          "Los datos maestros fueron actualizados correctamente."
-        );
-
-        setValidacion(null);
-        setArchivo(null);
-
-        const inputArchivo =
-          document.getElementById(
-            "archivo-datos-cintac"
-          );
-
-        if (
-          inputArchivo
-        ) {
-          inputArchivo.value =
-            "";
-        }
-
-        setCargandoResumen(
-          false
-        );
-
-        await cargarResumen();
-
-        if (
-          onDatosActualizados
-        ) {
-          onDatosActualizados();
-        }
-      } catch (error) {
-        setErrores([
-          error.message,
-        ]);
-      } finally {
-        setImportando(
-          false
-        );
-      }
-    };
+    }
+  };
 
 
   /* ======================================

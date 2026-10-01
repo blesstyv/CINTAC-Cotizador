@@ -29,11 +29,12 @@
     background-color 0.2s ease;
 }
 
-.admin-header-button:hover {
-  border-color: var(--cintac-orange);
-  color: var(--cintac-orange);
-}
-
+.admin-header-button:hover:not(:disabled) {
+  .admin-header-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+  }
 
 /* ========================================
    HERO ADMINISTRACIÓN
@@ -741,4 +742,5 @@
   .admin-summary-grid {
     grid-template-columns: 1fr;
   }
+}
 }

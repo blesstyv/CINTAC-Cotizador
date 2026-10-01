@@ -2,6 +2,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 
@@ -324,6 +325,15 @@ function App() {
 
   const usuarioId =
     usuario?.id ?? null;
+
+  const loginEnCursoRef =
+    useRef(false);
+
+  const cotizacionEnCursoRef =
+    useRef(false);
+  
+  const claveOpcionesRef = 
+    useRef("");
 
 
   /* ======================================
@@ -789,133 +799,128 @@ useEffect(() => {
   ====================================== */
 
   const iniciarSesion =
-    async (e) => {
-      e.preventDefault();
+  async (e) => {
+    e.preventDefault();
 
+    if (
+      loginEnCursoRef.current ||
+      iniciandoSesion
+    ) {
+      return;
+    }
 
-      if (
-        iniciandoSesion
-      ) {
-        return;
-      }
+    setLoginError("");
 
-
-      setLoginError("");
-
-
-      if (
-        !loginUsuario.trim() ||
-        !loginPassword
-      ) {
-        setLoginError(
-          "Ingrese usuario y contraseña."
-        );
-
-        return;
-      }
-
-
-      setIniciandoSesion(
-        true
+    if (
+      !loginUsuario.trim() ||
+      !loginPassword
+    ) {
+      setLoginError(
+        "Ingrese usuario y contraseña."
       );
 
+      return;
+    }
+
+    /*
+     * El ref se modifica inmediatamente.
+     * Un segundo clic ya no puede entrar
+     * aunque React todavía no haya renderizado.
+     */
+    loginEnCursoRef.current =
+      true;
+
+    setIniciandoSesion(
+      true
+    );
+
+    try {
+      const respuesta =
+        await fetch(
+          `${API_URL}/login/`,
+          {
+            method:
+              "POST",
+
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+
+            body:
+              JSON.stringify({
+                username:
+                  loginUsuario.trim(),
+
+                password:
+                  loginPassword,
+              }),
+          }
+        );
+
+      let datos = null;
 
       try {
-        const respuesta =
-          await fetch(
-            `${API_URL}/login/`,
-            {
-              method:
-                "POST",
+        datos =
+          await respuesta.json();
+      } catch {
+        datos = null;
+      }
 
-              headers: {
-                "Content-Type":
-                  "application/json",
-              },
-
-              body:
-                JSON.stringify({
-                  username:
-                    loginUsuario.trim(),
-
-                  password:
-                    loginPassword,
-                }),
-            }
-          );
-
-
-        let datos = null;
-
-
-        try {
-          datos =
-            await respuesta.json();
-        } catch {
-          datos = null;
-        }
-
-
-        if (!respuesta.ok) {
-          throw new Error(
-            extraerMensajeError(
-              datos,
-              "No fue posible iniciar sesión."
-            )
-          );
-        }
-
-
-        sessionStorage.setItem(
-          TOKEN_KEY,
-          datos.token
-        );
-
-
-        guardarUsuario(
-          datos.usuario
-        );
-
-
-        setToken(
-          datos.token
-        );
-
-
-        setUsuario(
-          datos.usuario
-        );
-
-
-        setVistaActiva(
-          "cotizador"
-        );
-
-
-        setLoginUsuario("");
-
-        setLoginPassword("");
-
-        setLoginError("");
-
-        setErrorSesion("");
-
-        setErrorDatos("");
-
-      } catch (error) {
-        setLoginError(
-          obtenerMensajeError(
-            error,
+      if (!respuesta.ok) {
+        throw new Error(
+          extraerMensajeError(
+            datos,
             "No fue posible iniciar sesión."
           )
         );
-
-      } finally {
-        setIniciandoSesion(
-          false
-        );
       }
-    };
+
+      sessionStorage.setItem(
+        TOKEN_KEY,
+        datos.token
+      );
+
+      guardarUsuario(
+        datos.usuario
+      );
+
+      setToken(
+        datos.token
+      );
+
+      setUsuario(
+        datos.usuario
+      );
+
+      setVistaActiva(
+        "cotizador"
+      );
+
+      setLoginUsuario("");
+      setLoginPassword("");
+      setLoginError("");
+
+      setErrorSesion("");
+      setErrorDatos("");
+
+    } catch (error) {
+      setLoginError(
+        obtenerMensajeError(
+          error,
+          "No fue posible iniciar sesión."
+        )
+      );
+
+    } finally {
+      loginEnCursoRef.current =
+        false;
+
+      setIniciandoSesion(
+        false
+      );
+    }
+  };
 
 
   /* ======================================
@@ -1113,8 +1118,8 @@ useEffect(() => {
 
 
   /* ======================================
-     OPCIONES CONTENEDORES
-  ====================================== */
+   OPCIONES CONTENEDORES
+====================================== */
 
   useEffect(() => {
     if (
@@ -1125,18 +1130,37 @@ useEffect(() => {
       return;
     }
 
-
     const pesoNumero =
       Number(
         pesoCarga
       );
-
 
     if (
       !Number.isFinite(
         pesoNumero
       ) ||
       pesoNumero <= 0
+    ) {
+      return;
+    }
+
+    const claveSolicitud =
+      [
+        versionDatos,
+        rutaSeleccionada.id,
+        pesoCarga,
+        unidadPeso,
+      ].join("|");
+
+
+    /*
+    * Si React intenta repetir exactamente
+    * la misma solicitud, no se vuelve
+    * a consultar el backend.
+    */
+    if (
+      claveOpcionesRef.current ===
+      claveSolicitud
     ) {
       return;
     }
@@ -1149,10 +1173,16 @@ useEffect(() => {
     const temporizador =
       setTimeout(
         async () => {
+          /*
+          * Se registra justo antes de
+          * realizar la petición.
+          */
+          claveOpcionesRef.current =
+            claveSolicitud;
+
           setCargandoOpciones(
             true
           );
-
 
           try {
             const respuesta =
@@ -1199,18 +1229,24 @@ useEffect(() => {
             }
 
 
+            if (
+              controlador
+                .signal
+                .aborted
+            ) {
+              return;
+            }
+
+
             setRecomendacion(
               datos
             );
-
 
             setTipoContenedor(
               datos.sugerida
             );
 
-
             setMensaje("");
-
             setErrorDatos("");
 
           } catch (error) {
@@ -1218,6 +1254,20 @@ useEffect(() => {
               error.name !==
               "AbortError"
             ) {
+              /*
+              * Permitimos reintentar exactamente
+              * los mismos datos si la petición
+              * realmente falló.
+              */
+              if (
+                claveOpcionesRef
+                  .current ===
+                claveSolicitud
+              ) {
+                claveOpcionesRef.current =
+                  "";
+              }
+
               setMensaje(
                 obtenerMensajeError(
                   error,
@@ -1238,7 +1288,12 @@ useEffect(() => {
             }
           }
         },
-        250
+
+        /*
+        * Evita consultar en cada tecla mientras
+        * el usuario todavía está escribiendo.
+        */
+        450
       );
 
 
@@ -1246,7 +1301,6 @@ useEffect(() => {
       clearTimeout(
         temporizador
       );
-
 
       controlador.abort();
     };
@@ -1256,6 +1310,7 @@ useEffect(() => {
     rutaSeleccionada,
     pesoCarga,
     unidadPeso,
+    versionDatos,
     peticionAutenticada,
   ]);
 
@@ -1266,18 +1321,21 @@ useEffect(() => {
 
   const reiniciarOpcionesContenedor =
     () => {
-      setRecomendacion(null);
+      claveOpcionesRef.current =
+        "";
 
-      setTipoContenedor("");
+        setRecomendacion(null);
 
-      setResultado(null);
+        setTipoContenedor("");
 
-      setMensaje("");
+        setResultado(null);
 
-      setCargandoOpciones(
-        false
-      );
-    };
+        setMensaje("");
+
+        setCargandoOpciones(
+          false
+        );
+    }; 
 
 
   const limpiarResultado =
@@ -1466,222 +1524,231 @@ useEffect(() => {
   ====================================== */
 
   const cotizar =
-    async (e) => {
-      e.preventDefault();
+  async (e) => {
+    e.preventDefault();
+
+    /*
+     * Bloqueo sincrónico.
+     */
+    if (
+      cotizacionEnCursoRef.current ||
+      cotizando
+    ) {
+      return;
+    }
 
 
-      if (cotizando) {
-        return;
-      }
+    setMensaje("");
+    setResultado(null);
 
 
-      setMensaje("");
+    const nuevosErrores = {
+      origen:
+        !origen,
 
-      setResultado(null);
+      destino:
+        !destino,
 
+      pesoCarga:
+        !pesoCarga,
 
-      const nuevosErrores = {
-        origen:
-          !origen,
-
-        destino:
-          !destino,
-
-        pesoCarga:
-          !pesoCarga,
-
-        contingencia:
-          false,
-      };
+      contingencia:
+        false,
+    };
 
 
+    setErrores(
+      nuevosErrores
+    );
+
+
+    if (
+      nuevosErrores.origen ||
+      nuevosErrores.destino ||
+      nuevosErrores.pesoCarga
+    ) {
+      setMensaje(
+        "Complete los campos obligatorios para realizar la cotización."
+      );
+
+      return;
+    }
+
+
+    if (!rutaSeleccionada) {
+      setMensaje(
+        "No existe información para la ruta seleccionada."
+      );
+
+      return;
+    }
+
+
+    const pesoNumero =
+      Number(
+        pesoCarga
+      );
+
+
+    if (
+      !Number.isFinite(
+        pesoNumero
+      ) ||
+      pesoNumero <= 0
+    ) {
       setErrores(
-        nuevosErrores
+        (actuales) => ({
+          ...actuales,
+
+          pesoCarga:
+            true,
+        })
       );
 
 
-      if (
-        nuevosErrores.origen ||
-        nuevosErrores.destino ||
-        nuevosErrores.pesoCarga
-      ) {
-        setMensaje(
-          "Complete los campos obligatorios para realizar la cotización."
-        );
+      setMensaje(
+        "El peso total debe ser mayor que cero."
+      );
 
-        return;
-      }
+      return;
+    }
 
 
-      if (
-        !rutaSeleccionada
-      ) {
-        setMensaje(
-          "No existe información para la ruta seleccionada."
-        );
+    if (
+      !recomendacion ||
+      !tipoContenedor
+    ) {
+      setMensaje(
+        "Seleccione una opción de contenedor."
+      );
 
-        return;
-      }
-
-
-      const pesoNumero =
-        Number(
-          pesoCarga
-        );
+      return;
+    }
 
 
-      if (
-        !Number.isFinite(
-          pesoNumero
-        ) ||
-        pesoNumero <= 0
-      ) {
-        setErrores(
-          (actuales) => ({
-            ...actuales,
-
-            pesoCarga:
-              true,
-          })
-        );
-
-
-        setMensaje(
-          "El peso total debe ser mayor que cero."
-        );
-
-
-        return;
-      }
-
-
-      if (
-        !recomendacion ||
-        !tipoContenedor
-      ) {
-        setMensaje(
-          "Seleccione una opción de contenedor."
-        );
-
-        return;
-      }
-
-
-      const contingenciaNumero =
-        Number(
-          contingencia
-        );
-
-
-      if (
-        !Number.isInteger(
-          contingenciaNumero
-        ) ||
-        contingenciaNumero < 0
-      ) {
-        setErrores(
-          (actuales) => ({
-            ...actuales,
-
-            contingencia:
-              true,
-          })
-        );
-
-
-        setMensaje(
-          "El margen de contingencia debe ser un número entero igual o mayor que cero."
-        );
-
-
-        return;
-      }
-
-
-      setCotizando(
-        true
+    const contingenciaNumero =
+      Number(
+        contingencia
       );
 
 
-      try {
-        const respuesta =
-          await peticionAutenticada(
-            `${API_URL}/cotizar/`,
-            {
-              method:
-                "POST",
+    if (
+      !Number.isInteger(
+        contingenciaNumero
+      ) ||
+      contingenciaNumero < 0
+    ) {
+      setErrores(
+        (actuales) => ({
+          ...actuales,
 
-              headers: {
-                "Content-Type":
-                  "application/json",
-              },
-
-              body:
-                JSON.stringify({
-                  ruta_id:
-                    rutaSeleccionada.id,
-
-                  peso_carga:
-                    pesoCarga,
-
-                  unidad_peso:
-                    unidadPeso,
-
-                  tipo_contenedor:
-                    tipoContenedor,
-
-                  contingencia:
-                    contingenciaNumero,
-                }),
-            }
-          );
+          contingencia:
+            true,
+        })
+      );
 
 
-        const datos =
-          await respuesta.json();
+      setMensaje(
+        "El margen de contingencia debe ser un número entero igual o mayor que cero."
+      );
+
+      return;
+    }
 
 
-        if (!respuesta.ok) {
-          throw new Error(
-            extraerMensajeError(
-              datos,
-              "No fue posible generar la cotización."
-            )
-          );
-        }
+    /*
+     * A partir de aquí existe una petición
+     * válida y se activa el lock antes
+     * de cualquier await.
+     */
+    cotizacionEnCursoRef.current =
+      true;
+
+    setCotizando(
+      true
+    );
 
 
-        setResultado(
-          datos
+    try {
+      const respuesta =
+        await peticionAutenticada(
+          `${API_URL}/cotizar/`,
+          {
+            method:
+              "POST",
+
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+
+            body:
+              JSON.stringify({
+                ruta_id:
+                  rutaSeleccionada.id,
+
+                peso_carga:
+                  pesoCarga,
+
+                unidad_peso:
+                  unidadPeso,
+
+                tipo_contenedor:
+                  tipoContenedor,
+
+                contingencia:
+                  contingenciaNumero,
+              }),
+          }
         );
 
 
-        setMensaje("");
+      const datos =
+        await respuesta.json();
 
-        setErrorDatos("");
 
-
-        setErrores({
-          origen: false,
-          destino: false,
-          pesoCarga: false,
-          contingencia: false,
-        });
-
-      } catch (error) {
-        setMensaje(
-          obtenerMensajeError(
-            error,
+      if (!respuesta.ok) {
+        throw new Error(
+          extraerMensajeError(
+            datos,
             "No fue posible generar la cotización."
           )
         );
-
-      } finally {
-        setCotizando(
-          false
-        );
       }
-    };
+
+
+      setResultado(
+        datos
+      );
+
+      setMensaje("");
+      setErrorDatos("");
+
+
+      setErrores({
+        origen: false,
+        destino: false,
+        pesoCarga: false,
+        contingencia: false,
+      });
+
+    } catch (error) {
+      setMensaje(
+        obtenerMensajeError(
+          error,
+          "No fue posible generar la cotización."
+        )
+      );
+
+    } finally {
+      cotizacionEnCursoRef.current =
+        false;
+
+      setCotizando(
+        false
+      );
+    }
+  };
 
 
   /* ======================================

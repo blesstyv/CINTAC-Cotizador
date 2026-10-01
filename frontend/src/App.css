@@ -1677,6 +1677,26 @@ form {
   }
 }
 
+.primary-button:disabled,
+.secondary-button:disabled,
+.logout-button:disabled {
+  opacity: 0.5;
+
+  cursor: not-allowed;
+
+  pointer-events: none;
+
+  transform: none;
+}
+
+
+.logout-button:hover:not(:disabled) {
+  background:
+    var(--cintac-orange);
+
+  color: white;
+}
+
 /* ========================================
    AUTENTICACIÓN CINTAC
 ======================================== */
@@ -2242,15 +2262,6 @@ form {
     background-color 0.2s ease,
     color 0.2s ease;
 }
-
-
-.logout-button:hover {
-  background:
-    var(--cintac-orange);
-
-  color: white;
-}
-
 
 /* ========================================
    CARGA DE OPCIONES
