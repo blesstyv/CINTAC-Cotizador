@@ -16,6 +16,15 @@ const API_URL =
 
 const TOKEN_KEY = "cintac_token";
 
+const USER_KEY = "cintac_usuario";
+
+const MENSAJE_SERVIDOR_NO_DISPONIBLE =
+  "No fue posible conectar con el servidor. Verifique la conexión e intente nuevamente.";
+
+
+/* ======================================
+   UTILIDADES
+====================================== */
 
 function recopilarMensajes(valor) {
   if (
@@ -78,6 +87,67 @@ function extraerMensajeError(
 }
 
 
+function obtenerMensajeError(
+  error,
+  mensajePredeterminado,
+) {
+  if (
+    error instanceof TypeError ||
+    error?.message ===
+      "Failed to fetch"
+  ) {
+    return (
+      MENSAJE_SERVIDOR_NO_DISPONIBLE
+    );
+  }
+
+  return (
+    error?.message ||
+    mensajePredeterminado
+  );
+}
+
+
+function cargarUsuarioGuardado() {
+  try {
+    const contenido =
+      sessionStorage.getItem(
+        USER_KEY
+      );
+
+    if (!contenido) {
+      return null;
+    }
+
+    return JSON.parse(
+      contenido
+    );
+  } catch {
+    sessionStorage.removeItem(
+      USER_KEY
+    );
+
+    return null;
+  }
+}
+
+
+function guardarUsuario(
+  usuario
+) {
+  if (!usuario) {
+    return;
+  }
+
+  sessionStorage.setItem(
+    USER_KEY,
+    JSON.stringify(
+      usuario
+    )
+  );
+}
+
+
 function App() {
   /* ======================================
      AUTENTICACIÓN
@@ -91,8 +161,13 @@ function App() {
         ) || ""
     );
 
+
   const [usuario, setUsuario] =
-    useState(null);
+    useState(
+      () =>
+        cargarUsuarioGuardado()
+    );
+
 
   const [
     verificandoSesion,
@@ -101,20 +176,36 @@ function App() {
     Boolean(token)
   );
 
+
+  const [
+    reintentoSesion,
+    setReintentoSesion,
+  ] = useState(0);
+
+
+  const [
+    errorSesion,
+    setErrorSesion,
+  ] = useState("");
+
+
   const [
     loginUsuario,
     setLoginUsuario,
   ] = useState("");
+
 
   const [
     loginPassword,
     setLoginPassword,
   ] = useState("");
 
+
   const [
     loginError,
     setLoginError,
   ] = useState("");
+
 
   const [
     iniciandoSesion,
@@ -123,13 +214,14 @@ function App() {
 
 
   /* ======================================
-     NAVEGACIÓN INTERNA
+     NAVEGACIÓN
   ====================================== */
 
   const [
     vistaActiva,
     setVistaActiva,
   ] = useState("cotizador");
+
 
   const [
     versionDatos,
@@ -144,66 +236,80 @@ function App() {
   const [rutas, setRutas] =
     useState([]);
 
+
   const [origen, setOrigen] =
     useState("");
 
+
   const [destino, setDestino] =
     useState("");
+
 
   const [
     tipoContenedor,
     setTipoContenedor,
   ] = useState("");
 
+
   const [
     pesoCarga,
     setPesoCarga,
   ] = useState("");
+
 
   const [
     unidadPeso,
     setUnidadPeso,
   ] = useState("kg");
 
+
   const [
     contingencia,
     setContingencia,
   ] = useState("0");
+
 
   const [
     recomendacion,
     setRecomendacion,
   ] = useState(null);
 
+
   const [
     cargandoDatos,
     setCargandoDatos,
   ] = useState(false);
+
 
   const [
     cargandoOpciones,
     setCargandoOpciones,
   ] = useState(false);
 
+
   const [
     cotizando,
     setCotizando,
   ] = useState(false);
+
 
   const [
     errorDatos,
     setErrorDatos,
   ] = useState("");
 
+
   const [
     mensaje,
     setMensaje,
   ] = useState("");
 
+
   const [
     resultado,
     setResultado,
   ] = useState(null);
+
 
   const [
     errores,
@@ -282,7 +388,9 @@ function App() {
       const partes =
         fecha.split("-");
 
-      if (partes.length !== 3) {
+      if (
+        partes.length !== 3
+      ) {
         return fecha;
       }
 
@@ -304,10 +412,19 @@ function App() {
         TOKEN_KEY
       );
 
+      sessionStorage.removeItem(
+        USER_KEY
+      );
+
       setToken("");
+
       setUsuario(null);
 
-      setVerificandoSesion(false);
+      setVerificandoSesion(
+        false
+      );
+
+      setErrorSesion("");
 
       setVistaActiva(
         "cotizador"
@@ -316,23 +433,29 @@ function App() {
       setRutas([]);
 
       setOrigen("");
+
       setDestino("");
 
       setTipoContenedor("");
 
       setPesoCarga("");
+
       setUnidadPeso("kg");
 
       setContingencia("0");
 
       setRecomendacion(null);
+
       setResultado(null);
 
       setMensaje("");
+
       setErrorDatos("");
 
       setCargandoDatos(false);
+
       setCargandoOpciones(false);
+
       setCotizando(false);
 
       setErrores({
@@ -354,32 +477,60 @@ function App() {
         url,
         opciones = {}
       ) => {
-        const respuesta =
-          await fetch(
-            url,
-            {
-              ...opciones,
+        try {
+          const respuesta =
+            await fetch(
+              url,
+              {
+                ...opciones,
 
-              headers: {
-                ...opciones.headers,
+                headers: {
+                  ...opciones.headers,
 
-                Authorization:
-                  `Token ${token}`,
-              },
-            }
-          );
+                  Authorization:
+                    `Token ${token}`,
+                },
+              }
+            );
 
-        if (
-          respuesta.status === 401
-        ) {
-          limpiarSesion();
 
-          throw new Error(
-            "La sesión expiró o ya no es válida."
-          );
+          if (
+            respuesta.status ===
+            401
+          ) {
+            limpiarSesion();
+
+            throw new Error(
+              "La sesión expiró o ya no es válida."
+            );
+          }
+
+
+          return respuesta;
+
+        } catch (error) {
+          if (
+            error?.name ===
+            "AbortError"
+          ) {
+            throw error;
+          }
+
+
+          if (
+            error instanceof
+              TypeError ||
+            error?.message ===
+              "Failed to fetch"
+          ) {
+            throw new Error(
+              MENSAJE_SERVIDOR_NO_DISPONIBLE
+            );
+          }
+
+
+          throw error;
         }
-
-        return respuesta;
       },
       [
         token,
@@ -388,69 +539,124 @@ function App() {
     );
 
 
-  /* ======================================
-     VALIDAR SESIÓN
-  ====================================== */
+    /* ======================================
+   VALIDAR SESIÓN
+====================================== */
 
-  useEffect(() => {
-    if (!token) {
-      return;
-    }
+useEffect(() => {
+  if (!token) {
+    return;
+  }
 
-    let activo = true;
+  let activo = true;
 
-    const verificarSesion =
-      async () => {
-        try {
-          const respuesta =
-            await fetch(
-              `${API_URL}/sesion/`,
-              {
-                headers: {
-                  Authorization:
-                    `Token ${token}`,
-                },
-              }
-            );
+  const verificarSesion =
+    async () => {
+      setVerificandoSesion(
+        true
+      );
 
-          if (!respuesta.ok) {
-            throw new Error();
-          }
+      try {
+        const respuesta =
+          await fetch(
+            `${API_URL}/sesion/`,
+            {
+              headers: {
+                Authorization:
+                  `Token ${token}`,
+              },
+            }
+          );
 
-          const datos =
-            await respuesta.json();
 
-          if (activo) {
-            setUsuario(
-              datos
-            );
-          }
-        } catch {
+        if (
+          respuesta.status === 401 ||
+          respuesta.status === 403
+        ) {
           if (activo) {
             limpiarSesion();
           }
-        } finally {
-          if (activo) {
-            setVerificandoSesion(
-              false
-            );
-          }
+
+          return;
         }
-      };
 
-    void verificarSesion();
 
-    return () => {
-      activo = false;
+        if (!respuesta.ok) {
+          throw new Error(
+            "No fue posible validar la sesión."
+          );
+        }
+
+
+        const datos =
+          await respuesta.json();
+
+
+        if (activo) {
+          setUsuario(
+            datos
+          );
+
+          guardarUsuario(
+            datos
+          );
+
+          setErrorSesion("");
+
+          setErrorDatos("");
+        }
+
+      } catch (error) {
+        if (!activo) {
+          return;
+        }
+
+
+        const texto =
+          obtenerMensajeError(
+            error,
+            "No fue posible validar la sesión."
+          );
+
+
+        setErrorSesion(
+          texto
+        );
+
+
+        /*
+         * Un problema de red no invalida
+         * el token almacenado localmente.
+         */
+        setErrorDatos(
+          texto
+        );
+
+      } finally {
+        if (activo) {
+          setVerificandoSesion(
+            false
+          );
+        }
+      }
     };
-  }, [
-    token,
-    limpiarSesion,
-  ]);
+
+
+  void verificarSesion();
+
+
+  return () => {
+    activo = false;
+  };
+}, [
+  token,
+  limpiarSesion,
+  reintentoSesion,
+]);
 
 
   /* ======================================
-     ACTUALIZAR PERMISOS DE SESIÓN
+     ACTUALIZAR PERMISOS
   ====================================== */
 
   useEffect(() => {
@@ -460,6 +666,7 @@ function App() {
     ) {
       return;
     }
+
 
     const actualizarPermisos =
       async () => {
@@ -475,23 +682,42 @@ function App() {
               }
             );
 
+
           if (
-            respuesta.status === 401
+            respuesta.status ===
+              401 ||
+            respuesta.status ===
+              403
           ) {
             limpiarSesion();
+
             return;
           }
+
 
           if (!respuesta.ok) {
             return;
           }
 
+
           const datos =
             await respuesta.json();
+
 
           setUsuario(
             datos
           );
+
+
+          guardarUsuario(
+            datos
+          );
+
+
+          setErrorSesion("");
+
+          setErrorDatos("");
+
 
           if (
             !datos
@@ -501,9 +727,34 @@ function App() {
               "cotizador"
             );
           }
-        } catch {
-          // Una falla temporal de conexión
-          // no elimina la sesión local.
+
+
+          /*
+           * Si el servidor vuelve a estar
+           * disponible, se recargan las
+           * rutas automáticamente.
+           */
+          setVersionDatos(
+            (actual) =>
+              actual + 1
+          );
+
+        } catch (error) {
+          const texto =
+            obtenerMensajeError(
+              error,
+              MENSAJE_SERVIDOR_NO_DISPONIBLE
+            );
+
+
+          setErrorSesion(
+            texto
+          );
+
+
+          setErrorDatos(
+            texto
+          );
         }
       };
 
@@ -541,11 +792,16 @@ function App() {
     async (e) => {
       e.preventDefault();
 
-      if (iniciandoSesion) {
+
+      if (
+        iniciandoSesion
+      ) {
         return;
       }
 
+
       setLoginError("");
+
 
       if (
         !loginUsuario.trim() ||
@@ -558,16 +814,19 @@ function App() {
         return;
       }
 
+
       setIniciandoSesion(
         true
       );
+
 
       try {
         const respuesta =
           await fetch(
             `${API_URL}/login/`,
             {
-              method: "POST",
+              method:
+                "POST",
 
               headers: {
                 "Content-Type":
@@ -585,8 +844,17 @@ function App() {
             }
           );
 
-        const datos =
-          await respuesta.json();
+
+        let datos = null;
+
+
+        try {
+          datos =
+            await respuesta.json();
+        } catch {
+          datos = null;
+        }
+
 
         if (!respuesta.ok) {
           throw new Error(
@@ -597,30 +865,51 @@ function App() {
           );
         }
 
+
         sessionStorage.setItem(
           TOKEN_KEY,
           datos.token
         );
 
+
+        guardarUsuario(
+          datos.usuario
+        );
+
+
         setToken(
           datos.token
         );
+
 
         setUsuario(
           datos.usuario
         );
 
+
         setVistaActiva(
           "cotizador"
         );
 
+
         setLoginUsuario("");
+
         setLoginPassword("");
+
         setLoginError("");
+
+        setErrorSesion("");
+
+        setErrorDatos("");
+
       } catch (error) {
         setLoginError(
-          error.message
+          obtenerMensajeError(
+            error,
+            "No fue posible iniciar sesión."
+          )
         );
+
       } finally {
         setIniciandoSesion(
           false
@@ -640,7 +929,8 @@ function App() {
           await fetch(
             `${API_URL}/logout/`,
             {
-              method: "POST",
+              method:
+                "POST",
 
               headers: {
                 Authorization:
@@ -649,10 +939,14 @@ function App() {
             }
           );
         } catch {
-          // La sesión local se finaliza
-          // igualmente.
+          /*
+           * Aunque el backend no responda,
+           * el usuario puede cerrar su
+           * sesión local.
+           */
         }
       }
+
 
       limpiarSesion();
     };
@@ -670,11 +964,13 @@ function App() {
       return;
     }
 
+
     const cargarRutas =
       async () => {
         setCargandoDatos(
           true
         );
+
 
         try {
           const respuesta =
@@ -682,8 +978,17 @@ function App() {
               `${API_URL}/rutas/`
             );
 
-          const datos =
-            await respuesta.json();
+
+          let datos = null;
+
+
+          try {
+            datos =
+              await respuesta.json();
+          } catch {
+            datos = null;
+          }
+
 
           if (!respuesta.ok) {
             throw new Error(
@@ -694,17 +999,24 @@ function App() {
             );
           }
 
+
           setRutas(
             datos
           );
 
+
           setErrorDatos("");
+
         } catch (error) {
           if (token) {
             setErrorDatos(
-              error.message
+              obtenerMensajeError(
+                error,
+                "No fue posible cargar la información del cotizador."
+              )
             );
           }
+
         } finally {
           setCargandoDatos(
             false
@@ -712,7 +1024,9 @@ function App() {
         }
       };
 
+
     void cargarRutas();
+
   }, [
     token,
     usuarioId,
@@ -722,7 +1036,7 @@ function App() {
 
 
   /* ======================================
-     RUTA SELECCIONADA
+     PUERTOS
   ====================================== */
 
   const puertosOrigen =
@@ -745,6 +1059,7 @@ function App() {
         if (!origen) {
           return [];
         }
+
 
         return [
           ...new Set(
@@ -778,6 +1093,7 @@ function App() {
           return null;
         }
 
+
         return (
           rutas.find(
             (ruta) =>
@@ -797,7 +1113,7 @@ function App() {
 
 
   /* ======================================
-     OPCIONES DE CONTENEDOR
+     OPCIONES CONTENEDORES
   ====================================== */
 
   useEffect(() => {
@@ -809,10 +1125,12 @@ function App() {
       return;
     }
 
+
     const pesoNumero =
       Number(
         pesoCarga
       );
+
 
     if (
       !Number.isFinite(
@@ -823,8 +1141,10 @@ function App() {
       return;
     }
 
+
     const controlador =
       new AbortController();
+
 
     const temporizador =
       setTimeout(
@@ -832,6 +1152,7 @@ function App() {
           setCargandoOpciones(
             true
           );
+
 
           try {
             const respuesta =
@@ -863,8 +1184,10 @@ function App() {
                 }
               );
 
+
             const datos =
               await respuesta.json();
+
 
             if (!respuesta.ok) {
               throw new Error(
@@ -875,22 +1198,34 @@ function App() {
               );
             }
 
+
             setRecomendacion(
               datos
             );
 
+
             setTipoContenedor(
               datos.sugerida
             );
+
+
+            setMensaje("");
+
+            setErrorDatos("");
+
           } catch (error) {
             if (
               error.name !==
               "AbortError"
             ) {
               setMensaje(
-                error.message
+                obtenerMensajeError(
+                  error,
+                  "No fue posible obtener las opciones de contenedor."
+                )
               );
             }
+
           } finally {
             if (
               !controlador
@@ -912,8 +1247,10 @@ function App() {
         temporizador
       );
 
+
       controlador.abort();
     };
+
   }, [
     token,
     rutaSeleccionada,
@@ -930,18 +1267,23 @@ function App() {
   const reiniciarOpcionesContenedor =
     () => {
       setRecomendacion(null);
+
       setTipoContenedor("");
 
       setResultado(null);
+
       setMensaje("");
 
-      setCargandoOpciones(false);
+      setCargandoOpciones(
+        false
+      );
     };
 
 
   const limpiarResultado =
     () => {
       setResultado(null);
+
       setMensaje("");
     };
 
@@ -951,19 +1293,22 @@ function App() {
       setErrores(
         (actuales) => ({
           ...actuales,
-          [campo]: false,
+
+          [campo]:
+            false,
         })
       );
     };
 
 
   /* ======================================
-     ABRIR ADMINISTRACIÓN
+     ADMINISTRACIÓN
   ====================================== */
 
   const abrirAdministracion =
     async () => {
       setMensaje("");
+
 
       try {
         const respuesta =
@@ -971,8 +1316,10 @@ function App() {
             `${API_URL}/sesion/`
           );
 
+
         const datos =
           await respuesta.json();
+
 
         if (!respuesta.ok) {
           throw new Error(
@@ -983,9 +1330,16 @@ function App() {
           );
         }
 
+
         setUsuario(
           datos
         );
+
+
+        guardarUsuario(
+          datos
+        );
+
 
         if (
           !datos
@@ -995,26 +1349,33 @@ function App() {
             "cotizador"
           );
 
+
           setMensaje(
             "El usuario no tiene permiso para administrar los datos maestros."
           );
 
+
           return;
         }
+
 
         setVistaActiva(
           "administracion"
         );
+
       } catch (error) {
         setMensaje(
-          error.message
+          obtenerMensajeError(
+            error,
+            "No fue posible acceder a Administración."
+          )
         );
       }
     };
 
 
   /* ======================================
-     PERMISO ADMINISTRACIÓN REVOCADO
+     PERMISO ADMIN REVOCADO
   ====================================== */
 
   const manejarPermisoRevocado =
@@ -1026,19 +1387,29 @@ function App() {
               `${API_URL}/sesion/`
             );
 
+
           if (
             respuesta.ok
           ) {
             const datos =
               await respuesta.json();
 
+
             setUsuario(
               datos
             );
+
+
+            guardarUsuario(
+              datos
+            );
           }
+
         } catch {
-          // Un 401 ya es gestionado
-          // por peticionAutenticada.
+          /*
+           * Si existe un error de conexión,
+           * no eliminamos la sesión.
+           */
         } finally {
           setVistaActiva(
             "cotizador"
@@ -1051,14 +1422,20 @@ function App() {
     );
 
 
+  /* ======================================
+     NUEVA COTIZACIÓN
+  ====================================== */
+
   const nuevaCotizacion =
     () => {
       setOrigen("");
+
       setDestino("");
 
       setTipoContenedor("");
 
       setPesoCarga("");
+
       setUnidadPeso("kg");
 
       setContingencia("0");
@@ -1066,6 +1443,7 @@ function App() {
       setRecomendacion(null);
 
       setMensaje("");
+
       setResultado(null);
 
       setErrores({
@@ -1074,6 +1452,7 @@ function App() {
         pesoCarga: false,
         contingencia: false,
       });
+
 
       window.scrollTo({
         top: 0,
@@ -1090,12 +1469,16 @@ function App() {
     async (e) => {
       e.preventDefault();
 
+
       if (cotizando) {
         return;
       }
 
+
       setMensaje("");
+
       setResultado(null);
+
 
       const nuevosErrores = {
         origen:
@@ -1111,9 +1494,11 @@ function App() {
           false,
       };
 
+
       setErrores(
         nuevosErrores
       );
+
 
       if (
         nuevosErrores.origen ||
@@ -1127,6 +1512,7 @@ function App() {
         return;
       }
 
+
       if (
         !rutaSeleccionada
       ) {
@@ -1137,10 +1523,12 @@ function App() {
         return;
       }
 
+
       const pesoNumero =
         Number(
           pesoCarga
         );
+
 
       if (
         !Number.isFinite(
@@ -1151,16 +1539,21 @@ function App() {
         setErrores(
           (actuales) => ({
             ...actuales,
-            pesoCarga: true,
+
+            pesoCarga:
+              true,
           })
         );
+
 
         setMensaje(
           "El peso total debe ser mayor que cero."
         );
 
+
         return;
       }
+
 
       if (
         !recomendacion ||
@@ -1173,10 +1566,12 @@ function App() {
         return;
       }
 
+
       const contingenciaNumero =
         Number(
           contingencia
         );
+
 
       if (
         !Number.isInteger(
@@ -1187,20 +1582,26 @@ function App() {
         setErrores(
           (actuales) => ({
             ...actuales,
-            contingencia: true,
+
+            contingencia:
+              true,
           })
         );
+
 
         setMensaje(
           "El margen de contingencia debe ser un número entero igual o mayor que cero."
         );
 
+
         return;
       }
+
 
       setCotizando(
         true
       );
+
 
       try {
         const respuesta =
@@ -1235,8 +1636,10 @@ function App() {
             }
           );
 
+
         const datos =
           await respuesta.json();
+
 
         if (!respuesta.ok) {
           throw new Error(
@@ -1247,9 +1650,16 @@ function App() {
           );
         }
 
+
         setResultado(
           datos
         );
+
+
+        setMensaje("");
+
+        setErrorDatos("");
+
 
         setErrores({
           origen: false,
@@ -1257,10 +1667,15 @@ function App() {
           pesoCarga: false,
           contingencia: false,
         });
+
       } catch (error) {
         setMensaje(
-          error.message
+          obtenerMensajeError(
+            error,
+            "No fue posible generar la cotización."
+          )
         );
+
       } finally {
         setCotizando(
           false
@@ -1293,6 +1708,61 @@ function App() {
 
 
   /* ======================================
+     TOKEN EXISTE, PERO NO PODEMOS
+     VALIDAR USUARIO POR CONEXIÓN
+  ====================================== */
+
+  if (
+    token &&
+    !usuario &&
+    errorSesion
+  ) {
+    return (
+      <div className="session-screen">
+        <div className="session-loader">
+          <div className="cintac-wordmark login-wordmark">
+            CINTAC
+          </div>
+
+          <h2>
+            Servidor no disponible
+          </h2>
+
+          <p>
+            {errorSesion}
+          </p>
+
+          <button
+            type="button"
+            className="primary-button"
+            onClick={() => {
+              setErrorSesion("");
+
+              setReintentoSesion(
+                (actual) =>
+                  actual + 1
+              );
+            }}
+          >
+            REINTENTAR
+          </button>
+
+          <button
+            type="button"
+            className="secondary-button"
+            onClick={
+              limpiarSesion
+            }
+          >
+            VOLVER AL LOGIN
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+
+  /* ======================================
      LOGIN
   ====================================== */
 
@@ -1308,7 +1778,9 @@ function App() {
             `url(${heroImage})`,
         }}
       >
-        <div className="login-overlay"></div>
+        <div className="login-overlay">
+        </div>
+
 
         <div className="login-shell">
           <div className="login-brand-panel">
@@ -1449,7 +1921,7 @@ function App() {
 
 
   /* ======================================
-     ADMINISTRACIÓN COMEX
+     ADMINISTRACIÓN
   ====================================== */
 
   if (
@@ -1463,26 +1935,32 @@ function App() {
         apiUrl={
           API_URL
         }
+
         usuario={
           usuario
         }
+
         peticionAutenticada={
           peticionAutenticada
         }
+
         onVolver={() => {
           setVistaActiva(
             "cotizador"
           );
         }}
+
         onCerrarSesion={
           cerrarSesion
         }
+
         onDatosActualizados={() => {
           setVersionDatos(
             (actual) =>
               actual + 1
           );
         }}
+
         onPermisoRevocado={
           manejarPermisoRevocado
         }
@@ -1563,9 +2041,12 @@ function App() {
             `url(${heroImage})`,
         }}
       >
-        <div className="hero-overlay"></div>
+        <div className="hero-overlay">
+        </div>
 
-        <div className="hero-accent"></div>
+        <div className="hero-accent">
+        </div>
+
 
         <div className="hero-content">
           <div className="hero-kicker">
@@ -1659,7 +2140,8 @@ function App() {
 
             <section className="form-section">
               <div className="section-heading">
-                <span className="section-line"></span>
+                <span className="section-line">
+                </span>
 
                 <div>
                   <h3>
@@ -1690,13 +2172,16 @@ function App() {
                         ? "campo-error"
                         : ""
                     }
+
                     value={
                       origen
                     }
+
                     disabled={
                       cargandoDatos ||
                       rutas.length === 0
                     }
+
                     onChange={(e) => {
                       setOrigen(
                         e.target.value
@@ -1754,12 +2239,15 @@ function App() {
                         ? "campo-error"
                         : ""
                     }
+
                     value={
                       destino
                     }
+
                     disabled={
                       !origen
                     }
+
                     onChange={(e) => {
                       setDestino(
                         e.target.value
@@ -1804,7 +2292,8 @@ function App() {
 
             <section className="form-section">
               <div className="section-heading">
-                <span className="section-line"></span>
+                <span className="section-line">
+                </span>
 
                 <div>
                   <h3>
@@ -1831,12 +2320,15 @@ function App() {
                           ? "campo-error"
                           : ""
                       }
+
                       type="number"
                       min="0"
                       step="any"
+
                       value={
                         pesoCarga
                       }
+
                       onChange={(e) => {
                         setPesoCarga(
                           e.target.value
@@ -1848,13 +2340,16 @@ function App() {
 
                         reiniciarOpcionesContenedor();
                       }}
+
                       placeholder="Ej: 25000"
                     />
+
 
                     <select
                       value={
                         unidadPeso
                       }
+
                       onChange={(e) => {
                         setUnidadPeso(
                           e.target.value
@@ -1899,7 +2394,8 @@ function App() {
                     <div className="load-summary">
                       {
                         formatearNumero(
-                          recomendacion.pesoTN
+                          recomendacion
+                            .pesoTN
                         )
                       }{" "}
                       TN
@@ -1921,12 +2417,15 @@ function App() {
                               opcion.codigo ===
                               tipoContenedor;
 
+
                             return (
                               <button
                                 key={
                                   opcion.codigo
                                 }
+
                                 type="button"
+
                                 className={[
                                   "recommendation-option",
 
@@ -1944,6 +2443,7 @@ function App() {
                                   .join(
                                     " "
                                   )}
+
                                 onClick={() => {
                                   setTipoContenedor(
                                     opcion.codigo
@@ -1958,6 +2458,7 @@ function App() {
                                       opcion.nombre
                                     }
                                   </strong>
+
 
                                   <div className="option-labels">
                                     {sugerida && (
@@ -1998,7 +2499,9 @@ function App() {
                                       opcion.totalMin
                                     )
                                   }
+
                                   {" - "}
+
                                   US${" "}
                                   {
                                     formatearUSD(
@@ -2019,7 +2522,8 @@ function App() {
 
             <section className="form-section">
               <div className="section-heading">
-                <span className="section-line"></span>
+                <span className="section-line">
+                </span>
 
                 <div>
                   <h3>
@@ -2042,12 +2546,15 @@ function App() {
                           ? "campo-error"
                           : ""
                       }
+
                       type="number"
                       min="0"
                       step="1"
+
                       value={
                         contingencia
                       }
+
                       onChange={(e) => {
                         setContingencia(
                           e.target.value
@@ -2088,6 +2595,7 @@ function App() {
                 * Campos obligatorios
               </span>
 
+
               <div className="buttons-container">
                 <button
                   type="button"
@@ -2101,6 +2609,7 @@ function App() {
                 >
                   LIMPIAR
                 </button>
+
 
                 <button
                   type="submit"
@@ -2177,7 +2686,9 @@ function App() {
                   {
                     resultado.origen
                   }
+
                   {" → "}
+
                   {
                     resultado.destino
                   }
@@ -2187,7 +2698,9 @@ function App() {
                   {
                     resultado.pais
                   }
+
                   {" · "}
+
                   {
                     resultado.tipoRuta
                   }
@@ -2220,7 +2733,9 @@ function App() {
                   {
                     resultado.cantidad
                   }
+
                   {" × "}
+
                   {
                     resultado
                       .tipoContenedor
@@ -2242,7 +2757,9 @@ function App() {
                       resultado.tarifaMin
                     )
                   }
+
                   {" - "}
+
                   US${" "}
                   {
                     formatearUSD(
@@ -2265,7 +2782,9 @@ function App() {
                       resultado.totalMin
                     )
                   }
+
                   {" - "}
+
                   US${" "}
                   {
                     formatearUSD(
@@ -2293,7 +2812,9 @@ function App() {
                               .totalMinCLP
                           )
                         }
+
                         {" - $"}
+
                         {
                           formatearCLP(
                             resultado
@@ -2301,6 +2822,7 @@ function App() {
                           )
                         }
                       </strong>
+
 
                       <div className="exchange-rate-details">
                         <div className="exchange-rate-row">
@@ -2320,6 +2842,7 @@ function App() {
                           </strong>
                         </div>
 
+
                         <div className="exchange-rate-row">
                           <span>
                             Fecha de referencia
@@ -2334,6 +2857,7 @@ function App() {
                             }
                           </strong>
                         </div>
+
 
                         <div className="exchange-rate-row">
                           <span>
@@ -2354,6 +2878,7 @@ function App() {
                             }
                           </strong>
                         </div>
+
 
                         <div className="exchange-rate-source">
                           {
@@ -2404,7 +2929,9 @@ function App() {
                             resultado
                               .transitoOriginalMin
                           }
+
                           {" - "}
+
                           {
                             resultado
                               .transitoOriginalMax
@@ -2440,7 +2967,9 @@ function App() {
                             resultado
                               .transitoMin
                           }
+
                           {" - "}
+
                           {
                             resultado
                               .transitoMax
@@ -2492,7 +3021,8 @@ function App() {
 
 
           <div className="result-footer">
-            <span></span>
+            <span>
+            </span>
 
             Información referencial para
             la operación logística
@@ -2508,8 +3038,8 @@ function App() {
           </div>
 
           <div className="footer-copy">
-            Cotizador Logístico · Comercio
-            Exterior
+            Cotizador Logístico ·
+            Comercio Exterior
           </div>
         </div>
       </footer>
