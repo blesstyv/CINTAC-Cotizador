@@ -1,4 +1,5 @@
 import sqlite3
+
 from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
@@ -83,7 +84,9 @@ def _validar_texto(
     numero_fila,
     errores,
 ):
-    texto = _texto(valor)
+    texto = _texto(
+        valor
+    )
 
     if not texto:
         errores.append(
@@ -114,8 +117,13 @@ def _convertir_decimal(
     nombre_campo,
     numero_fila,
     errores,
+    max_decimales=None,
+    max_digitos=None,
 ):
-    if valor is None or valor == "":
+    if (
+        valor is None
+        or valor == ""
+    ):
         errores.append(
             (
                 f"Fila {numero_fila}: "
@@ -125,7 +133,10 @@ def _convertir_decimal(
 
         return None
 
-    if isinstance(valor, bool):
+    if isinstance(
+        valor,
+        bool,
+    ):
         errores.append(
             (
                 f"Fila {numero_fila}: "
@@ -140,9 +151,13 @@ def _convertir_decimal(
             valor,
             str,
         ):
-            texto = valor.strip()
+            texto = (
+                valor.strip()
+            )
 
-            if texto.startswith("="):
+            if texto.startswith(
+                "="
+            ):
                 errores.append(
                     (
                         f"Fila {numero_fila}: "
@@ -196,6 +211,17 @@ def _convertir_decimal(
 
         return None
 
+    if not numero.is_finite():
+        errores.append(
+            (
+                f"Fila {numero_fila}: "
+                f"'{nombre_campo}' debe "
+                "contener un número finito."
+            )
+        )
+
+        return None
+
     if numero <= 0:
         errores.append(
             (
@@ -207,6 +233,71 @@ def _convertir_decimal(
 
         return None
 
+    if (
+        max_decimales
+        is not None
+    ):
+        exponente = (
+            numero
+            .as_tuple()
+            .exponent
+        )
+
+        decimales = max(
+            -exponente,
+            0,
+        )
+
+        if (
+            decimales
+            > max_decimales
+        ):
+            errores.append(
+                (
+                    f"Fila {numero_fila}: "
+                    f"'{nombre_campo}' no puede "
+                    f"tener más de "
+                    f"{max_decimales} decimales."
+                )
+            )
+
+            return None
+
+    if (
+        max_digitos
+        is not None
+    ):
+        (
+            _,
+            digitos,
+            exponente,
+        ) = numero.as_tuple()
+
+        cantidad_digitos = len(
+            digitos
+        )
+
+        if exponente > 0:
+            cantidad_digitos += (
+                exponente
+            )
+
+        if (
+            cantidad_digitos
+            > max_digitos
+        ):
+            errores.append(
+                (
+                    f"Fila {numero_fila}: "
+                    f"'{nombre_campo}' supera "
+                    f"el máximo de "
+                    f"{max_digitos} dígitos "
+                    "permitidos."
+                )
+            )
+
+            return None
+
     return numero
 
 
@@ -216,17 +307,22 @@ def _convertir_entero(
     numero_fila,
     errores,
 ):
-    numero = _convertir_decimal(
-        valor,
-        nombre_campo,
-        numero_fila,
-        errores,
+    numero = (
+        _convertir_decimal(
+            valor,
+            nombre_campo,
+            numero_fila,
+            errores,
+        )
     )
 
     if numero is None:
         return None
 
-    if numero != numero.to_integral_value():
+    if (
+        numero
+        != numero.to_integral_value()
+    ):
         errores.append(
             (
                 f"Fila {numero_fila}: "
@@ -237,10 +333,14 @@ def _convertir_entero(
 
         return None
 
-    return int(numero)
+    return int(
+        numero
+    )
 
 
-def _fila_vacia(valores):
+def _fila_vacia(
+    valores,
+):
     return all(
         valor is None
         or (
@@ -250,7 +350,8 @@ def _fila_vacia(valores):
             )
             and not valor.strip()
         )
-        for valor in valores
+        for valor
+        in valores
     )
 
 
@@ -281,7 +382,10 @@ def validar_archivo_excel(
             ]
         )
 
-    if ruta.suffix.lower() != ".xlsx":
+    if (
+        ruta.suffix.lower()
+        != ".xlsx"
+    ):
         raise ErrorImportacionExcel(
             [
                 (
@@ -309,11 +413,14 @@ def validar_archivo_excel(
         ) from error
 
     try:
-        if NOMBRE_HOJA not in libro.sheetnames:
+        if (
+            NOMBRE_HOJA
+            not in libro.sheetnames
+        ):
             raise ErrorImportacionExcel(
                 [
                     (
-                        f"No existe la hoja "
+                        "No existe la hoja "
                         f"'{NOMBRE_HOJA}'."
                     )
                 ]
@@ -324,12 +431,17 @@ def validar_archivo_excel(
         ]
 
         encabezados = [
-            _texto(celda.value)
+            _texto(
+                celda.value
+            )
             for celda
             in hoja[1]
         ]
 
-        if encabezados != COLUMNAS_ESPERADAS:
+        if (
+            encabezados
+            != COLUMNAS_ESPERADAS
+        ):
             errores = [
                 (
                     "La estructura de columnas "
@@ -386,7 +498,10 @@ def validar_archivo_excel(
         rutas_vistas = {}
         pais_por_origen = {}
 
-        for numero_fila, fila in enumerate(
+        for (
+            numero_fila,
+            fila,
+        ) in enumerate(
             hoja.iter_rows(
                 min_row=2,
                 max_col=len(
@@ -420,46 +535,58 @@ def validar_archivo_excel(
                 valor_fuente,
             ) = fila
 
-            clave = _validar_texto(
-                valor_clave,
-                "Clave",
-                numero_fila,
-                errores,
+            clave = (
+                _validar_texto(
+                    valor_clave,
+                    "Clave",
+                    numero_fila,
+                    errores,
+                )
             )
 
-            origen = _validar_texto(
-                valor_origen,
-                "Puerto Origen",
-                numero_fila,
-                errores,
+            origen = (
+                _validar_texto(
+                    valor_origen,
+                    "Puerto Origen",
+                    numero_fila,
+                    errores,
+                )
             )
 
-            pais = _validar_texto(
-                valor_pais,
-                "Pais Origen",
-                numero_fila,
-                errores,
+            pais = (
+                _validar_texto(
+                    valor_pais,
+                    "Pais Origen",
+                    numero_fila,
+                    errores,
+                )
             )
 
-            destino = _validar_texto(
-                valor_destino,
-                "Puerto Destino",
-                numero_fila,
-                errores,
+            destino = (
+                _validar_texto(
+                    valor_destino,
+                    "Puerto Destino",
+                    numero_fila,
+                    errores,
+                )
             )
 
-            tipo_ruta = _validar_texto(
-                valor_tipo_ruta,
-                "Tipo de Ruta",
-                numero_fila,
-                errores,
+            tipo_ruta = (
+                _validar_texto(
+                    valor_tipo_ruta,
+                    "Tipo de Ruta",
+                    numero_fila,
+                    errores,
+                )
             )
 
-            fuente = _validar_texto(
-                valor_fuente,
-                "Fuente",
-                numero_fila,
-                errores,
+            fuente = (
+                _validar_texto(
+                    valor_fuente,
+                    "Fuente",
+                    numero_fila,
+                    errores,
+                )
             )
 
             tarifa20_min = (
@@ -468,6 +595,8 @@ def validar_archivo_excel(
                     "Tarifa 20' Min (US$)",
                     numero_fila,
                     errores,
+                    max_decimales=2,
+                    max_digitos=12,
                 )
             )
 
@@ -477,6 +606,8 @@ def validar_archivo_excel(
                     "Tarifa 20' Max (US$)",
                     numero_fila,
                     errores,
+                    max_decimales=2,
+                    max_digitos=12,
                 )
             )
 
@@ -486,6 +617,8 @@ def validar_archivo_excel(
                     "Tarifa 40' Min (US$)",
                     numero_fila,
                     errores,
+                    max_decimales=2,
+                    max_digitos=12,
                 )
             )
 
@@ -495,6 +628,8 @@ def validar_archivo_excel(
                     "Tarifa 40' Max (US$)",
                     numero_fila,
                     errores,
+                    max_decimales=2,
+                    max_digitos=12,
                 )
             )
 
@@ -525,7 +660,7 @@ def validar_archivo_excel(
                     (
                         f"Fila {numero_fila}: "
                         "'Tipo de Ruta' posee "
-                        f"un valor no permitido: "
+                        "un valor no permitido: "
                         f"'{tipo_ruta}'."
                     )
                 )
@@ -571,17 +706,21 @@ def validar_archivo_excel(
                     )
 
             if clave:
-                if clave in claves_vistas:
+                if (
+                    clave
+                    in claves_vistas
+                ):
                     errores.append(
                         (
                             f"Fila {numero_fila}: "
                             f"la clave '{clave}' "
                             "está duplicada. "
                             "Ya apareció en la "
-                            f"fila "
+                            "fila "
                             f"{claves_vistas[clave]}."
                         )
                     )
+
                 else:
                     claves_vistas[
                         clave
@@ -608,10 +747,11 @@ def validar_archivo_excel(
                             f"{destino}' "
                             "está duplicada. "
                             "Ya apareció en la "
-                            f"fila "
+                            "fila "
                             f"{rutas_vistas[identificador_ruta]}."
                         )
                     )
+
                 else:
                     rutas_vistas[
                         identificador_ruta
@@ -654,7 +794,7 @@ def validar_archivo_excel(
                                 "anteriormente fue "
                                 "asociado al país "
                                 f"'{pais_anterior}' "
-                                f"en la fila "
+                                "en la fila "
                                 f"{fila_anterior}."
                             )
                         )
@@ -668,8 +808,10 @@ def validar_archivo_excel(
                     )
 
             if (
-                tarifa20_min is not None
-                and tarifa20_max is not None
+                tarifa20_min
+                is not None
+                and tarifa20_max
+                is not None
                 and tarifa20_max
                 < tarifa20_min
             ):
@@ -683,8 +825,10 @@ def validar_archivo_excel(
                 )
 
             if (
-                tarifa40_min is not None
-                and tarifa40_max is not None
+                tarifa40_min
+                is not None
+                and tarifa40_max
+                is not None
                 and tarifa40_max
                 < tarifa40_min
             ):
@@ -698,8 +842,10 @@ def validar_archivo_excel(
                 )
 
             if (
-                transito_min is not None
-                and transito_max is not None
+                transito_min
+                is not None
+                and transito_max
+                is not None
                 and transito_max
                 < transito_min
             ):
@@ -713,7 +859,9 @@ def validar_archivo_excel(
                 )
 
             if (
-                len(errores)
+                len(
+                    errores
+                )
                 == errores_antes
             ):
                 filas_validas.append(
@@ -791,7 +939,9 @@ def crear_respaldo_sqlite():
         return None
 
     carpeta_respaldos = (
-        Path(settings.BASE_DIR)
+        Path(
+            settings.BASE_DIR
+        )
         / "backups"
     )
 
@@ -816,11 +966,15 @@ def crear_respaldo_sqlite():
     )
 
     origen = sqlite3.connect(
-        str(ruta_bd)
+        str(
+            ruta_bd
+        )
     )
 
     destino = sqlite3.connect(
-        str(ruta_respaldo)
+        str(
+            ruta_respaldo
+        )
     )
 
     try:
@@ -880,8 +1034,11 @@ def aplicar_importacion(
     for fila in filas:
         origen, creado = (
             Puerto.objects.get_or_create(
-                nombre=fila.origen,
-                pais=fila.pais_origen,
+                nombre=
+                    fila.origen,
+
+                pais=
+                    fila.pais_origen,
             )
         )
 
@@ -892,8 +1049,11 @@ def aplicar_importacion(
 
         destino, creado = (
             Puerto.objects.get_or_create(
-                nombre=fila.destino,
-                pais=PAIS_DESTINO,
+                nombre=
+                    fila.destino,
+
+                pais=
+                    PAIS_DESTINO,
             )
         )
 
@@ -904,8 +1064,12 @@ def aplicar_importacion(
 
         ruta, creada = (
             Ruta.objects.update_or_create(
-                puerto_origen=origen,
-                puerto_destino=destino,
+                puerto_origen=
+                    origen,
+
+                puerto_destino=
+                    destino,
+
                 defaults={
                     "tipo_ruta":
                         fila.tipo_ruta,
@@ -917,6 +1081,7 @@ def aplicar_importacion(
             resumen[
                 "rutas_creadas"
             ] += 1
+
         else:
             resumen[
                 "rutas_actualizadas"
@@ -940,8 +1105,12 @@ def aplicar_importacion(
         ]:
             _, creada = (
                 Tarifa.objects.update_or_create(
-                    ruta=ruta,
-                    tipo_contenedor=codigo,
+                    ruta=
+                        ruta,
+
+                    tipo_contenedor=
+                        codigo,
+
                     defaults={
                         "valor_minimo":
                             minimo,
@@ -959,6 +1128,7 @@ def aplicar_importacion(
                 resumen[
                     "tarifas_creadas"
                 ] += 1
+
             else:
                 resumen[
                     "tarifas_actualizadas"
@@ -967,7 +1137,9 @@ def aplicar_importacion(
         _, creado = (
             TiempoTransito.objects
             .update_or_create(
-                ruta=ruta,
+                ruta=
+                    ruta,
+
                 defaults={
                     "dias_minimos":
                         fila.transito_min,
@@ -982,6 +1154,7 @@ def aplicar_importacion(
             resumen[
                 "transitos_creados"
             ] += 1
+
         else:
             resumen[
                 "transitos_actualizados"
