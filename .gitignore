@@ -1,5 +1,9 @@
+# ==========================================
+# CINTAC Cotizador - Archivos ignorados
+# ==========================================
+
 # Logs
-logs
+logs/
 *.log
 npm-debug.log*
 yarn-debug.log*
@@ -7,31 +11,77 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
+# ==========================================
+# FRONTEND
+# ==========================================
+
+node_modules/
+dist/
+dist-ssr/
 *.local
 
-# Editor directories and files
+# ==========================================
+# PYTHON / ENTORNOS VIRTUALES
+# ==========================================
+
+.venv/
+.venv*/
+venv/
+venv*/
+env/
+env*/
+
+__pycache__/
+*.py[cod]
+*$py.class
+
+.pytest_cache/
+.coverage
+htmlcov/
+
+# ==========================================
+# DJANGO
+# ==========================================
+
+backend/db.sqlite3
+backend/staticfiles/
+backend/backups/
+
+# ==========================================
+# VARIABLES DE ENTORNO
+# ==========================================
+
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# La plantilla sí debe conservarse
+!.env.example
+
+# ==========================================
+# EDITORES / SISTEMA OPERATIVO
+# ==========================================
+
 .vscode/*
 !.vscode/extensions.json
-.idea
+
+.idea/
 .DS_Store
+Thumbs.db
+
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
 
-# Python
-.venv/
-__pycache__/
-*.py[cod]
+# ==========================================
+# ARCHIVOS TEMPORALES
+# ==========================================
 
-# Django
-backend/db.sqlite3
-backend/staticfiles/
-backend/backups/
-
-# Variables de entorno
-.env
+*.tmp
+*.temp
+*.bak
+~$*

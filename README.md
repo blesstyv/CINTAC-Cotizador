@@ -1,16 +1,41 @@
-# React + Vite
+# CINTAC — Cotizador Logístico
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Sistema web interno desarrollado para apoyar el proceso de cotización logística de importaciones del área de Comercio Exterior de CINTAC.
 
-Currently, two official plugins are available:
+El prototipo centraliza información referencial de rutas, tarifas marítimas, tiempos de tránsito y tipos de contenedor, permitiendo generar una estimación de flete de forma rápida y controlada.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Funcionalidades principales
 
-## React Compiler
+- Autenticación de usuarios.
+- Control de autorización y permisos.
+- Cotización de operaciones de importación.
+- Selección de puerto de origen y destino.
+- Contenedores de 20' y 40'.
+- Conversión de peso entre kg y toneladas.
+- Cálculo automático de cantidad de contenedores.
+- Rango mínimo y máximo de flete.
+- Tiempo base y margen de contingencia.
+- Conversión automática de USD a CLP.
+- Administración de datos maestros.
+- Validación de archivos Excel antes de importar.
+- Vista previa de información a actualizar.
+- Actualización transaccional de datos.
+- Creación de respaldo de SQLite antes de una importación.
+- Gestión dinámica de permisos.
+- Manejo de pérdida de conexión con el backend.
+- Diseño responsive.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Arquitectura
 
-## Expanding the Oxlint configuration
+El proyecto utiliza una arquitectura cliente-servidor:
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+```text
+Usuario
+   ↓
+React + Vite
+   ↓ HTTP / JSON
+Django REST Framework
+   ↓
+Lógica de negocio
+   ↓
+SQLite
