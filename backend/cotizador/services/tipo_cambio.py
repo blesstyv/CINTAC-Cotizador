@@ -1,16 +1,36 @@
 import json
+
 from datetime import timedelta
-from decimal import Decimal, InvalidOperation
-from urllib.error import HTTPError, URLError
-from urllib.request import Request, urlopen
+
+from decimal import (
+    Decimal,
+    InvalidOperation,
+)
+
+from urllib.error import (
+    HTTPError,
+    URLError,
+)
+
+from urllib.request import (
+    Request,
+    urlopen,
+)
 
 from django.utils import timezone
-from django.utils.dateparse import parse_datetime
 
-from cotizador.models import TipoCambio
+from django.utils.dateparse import (
+    parse_datetime,
+)
+
+from cotizador.models import (
+    TipoCambio,
+)
 
 
-URL_DOLAR = "https://mindicador.cl/api/dolar"
+URL_DOLAR = (
+    "https://mindicador.cl/api/dolar"
+)
 
 FUENTE_DOLAR = (
     "Mindicador - Dólar Observado"
@@ -21,7 +41,9 @@ TIMEOUT_SEGUNDOS = 5
 CACHE_MINUTOS = 60
 
 
-class TipoCambioNoDisponible(Exception):
+class TipoCambioNoDisponible(
+    Exception
+):
     pass
 
 
@@ -113,10 +135,8 @@ def _obtener_desde_internet():
             solicitud,
             timeout=TIMEOUT_SEGUNDOS,
         ) as respuesta:
-            contenido = (
-                respuesta
-                .read()
-                .decode("utf-8")
+            contenido_bytes = (
+                respuesta.read()
             )
 
     except (
@@ -132,6 +152,23 @@ def _obtener_desde_internet():
             )
         ) from error
 
+
+    try:
+        contenido = (
+            contenido_bytes
+            .decode("utf-8")
+        )
+
+    except UnicodeDecodeError as error:
+        raise TipoCambioNoDisponible(
+            (
+                "La fuente del tipo de cambio "
+                "entregó contenido con una "
+                "codificación inválida."
+            )
+        ) from error
+
+
     try:
         datos = json.loads(
             contenido
@@ -144,6 +181,19 @@ def _obtener_desde_internet():
                 "entregó una respuesta inválida."
             )
         ) from error
+
+
+    if not isinstance(
+        datos,
+        dict,
+    ):
+        raise TipoCambioNoDisponible(
+            (
+                "La fuente del tipo de cambio "
+                "entregó una estructura inválida."
+            )
+        )
+
 
     serie = datos.get(
         "serie"
@@ -163,9 +213,23 @@ def _obtener_desde_internet():
             )
         )
 
+
     ultimo_registro = (
         serie[0]
     )
+
+    if not isinstance(
+        ultimo_registro,
+        dict,
+    ):
+        raise TipoCambioNoDisponible(
+            (
+                "La información recibida "
+                "para el dólar no tiene "
+                "una estructura válida."
+            )
+        )
+
 
     try:
         valor = Decimal(
@@ -189,7 +253,31 @@ def _obtener_desde_internet():
             )
         ) from error
 
-    if valor <= 0:
+
+    if not valor.is_finite():
+        raise TipoCambioNoDisponible(
+            (
+                "El valor recibido para "
+                "el dólar no es válido."
+            )
+        )
+
+
+    try:
+        valor_invalido = (
+            valor <= 0
+        )
+
+    except InvalidOperation as error:
+        raise TipoCambioNoDisponible(
+            (
+                "El valor recibido para "
+                "el dólar no es válido."
+            )
+        ) from error
+
+
+    if valor_invalido:
         raise TipoCambioNoDisponible(
             (
                 "El tipo de cambio recibido "
@@ -197,19 +285,27 @@ def _obtener_desde_internet():
             )
         )
 
+
     fecha_texto = (
         ultimo_registro.get(
             "fecha"
         )
     )
 
-    if not fecha_texto:
+    if (
+        not fecha_texto
+        or not isinstance(
+            fecha_texto,
+            str,
+        )
+    ):
         raise TipoCambioNoDisponible(
             (
                 "La fuente no entregó "
                 "una fecha válida."
             )
         )
+
 
     fecha_datetime = (
         parse_datetime(
@@ -225,6 +321,7 @@ def _obtener_desde_internet():
                 "tiene un formato válido."
             )
         )
+
 
     return _guardar_tipo_cambio(
         valor=valor,
@@ -252,6 +349,7 @@ def obtener_tipo_cambio():
             "modo":
                 "cache",
         }
+
 
     try:
         registro = (
@@ -306,18 +404,39 @@ def convertir_usd_a_clp(
     monto_usd,
     tipo_cambio,
 ):
-    monto = Decimal(
-        str(monto_usd)
-    )
+    try:
+        monto = Decimal(
+            str(monto_usd)
+        )
 
-    tasa = Decimal(
-        str(tipo_cambio)
-    )
+        tasa = Decimal(
+            str(tipo_cambio)
+        )
+
+    except (
+        TypeError,
+        ValueError,
+        InvalidOperation,
+    ) as error:
+        raise ValueError(
+            "El monto o tipo de cambio no es válido."
+        ) from error
+
+
+    if (
+        not monto.is_finite()
+        or not tasa.is_finite()
+    ):
+        raise ValueError(
+            "El monto o tipo de cambio no es válido."
+        )
+
 
     if monto < 0:
         raise ValueError(
             "El monto no puede ser negativo."
         )
+
 
     if tasa <= 0:
         raise ValueError(
@@ -327,25 +446,49 @@ def convertir_usd_a_clp(
             )
         )
 
-    return monto * tasa
+
+    return (
+        monto * tasa
+    )
 
 
 def convertir_clp_a_usd(
     monto_clp,
     tipo_cambio,
 ):
-    monto = Decimal(
-        str(monto_clp)
-    )
+    try:
+        monto = Decimal(
+            str(monto_clp)
+        )
 
-    tasa = Decimal(
-        str(tipo_cambio)
-    )
+        tasa = Decimal(
+            str(tipo_cambio)
+        )
+
+    except (
+        TypeError,
+        ValueError,
+        InvalidOperation,
+    ) as error:
+        raise ValueError(
+            "El monto o tipo de cambio no es válido."
+        ) from error
+
+
+    if (
+        not monto.is_finite()
+        or not tasa.is_finite()
+    ):
+        raise ValueError(
+            "El monto o tipo de cambio no es válido."
+        )
+
 
     if monto < 0:
         raise ValueError(
             "El monto no puede ser negativo."
         )
+
 
     if tasa <= 0:
         raise ValueError(
@@ -355,4 +498,7 @@ def convertir_clp_a_usd(
             )
         )
 
-    return monto / tasa
+
+    return (
+        monto / tasa
+    )
