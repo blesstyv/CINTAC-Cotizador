@@ -17,6 +17,10 @@ class PerfilUsuario(models.Model):
         default=False,
     )
 
+    puede_gestionar_datos = models.BooleanField(
+        default=False,
+    )
+
     def __str__(self):
         estado = (
             "Autorizado"

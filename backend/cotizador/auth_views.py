@@ -22,6 +22,66 @@ from .throttles import (
 )
 
 
+def obtener_permisos_usuario(
+    usuario,
+):
+    if (
+        not usuario
+        or not usuario.is_authenticated
+        or not usuario.is_active
+    ):
+        return {
+            "autorizado": False,
+            "puedeGestionarDatos": False,
+        }
+
+    if usuario.is_superuser:
+        return {
+            "autorizado": True,
+            "puedeGestionarDatos": True,
+        }
+
+    perfil = (
+        PerfilUsuario.objects
+        .filter(
+            usuario_id=usuario.id
+        )
+        .values(
+            "autorizado",
+            "puede_gestionar_datos",
+        )
+        .first()
+    )
+
+    if not perfil:
+        return {
+            "autorizado": False,
+            "puedeGestionarDatos": False,
+        }
+
+    autorizado = bool(
+        perfil["autorizado"]
+    )
+
+    puede_gestionar = (
+        autorizado
+        and
+        bool(
+            perfil[
+                "puede_gestionar_datos"
+            ]
+        )
+    )
+
+    return {
+        "autorizado":
+            autorizado,
+
+        "puedeGestionarDatos":
+            puede_gestionar,
+    }
+
+
 @api_view(["POST"])
 @permission_classes([AllowAny])
 @throttle_classes(
@@ -49,12 +109,14 @@ def iniciar_sesion(request):
         return Response(
             {
                 "detail":
-                    "Debe ingresar usuario y contraseña."
+                    (
+                        "Debe ingresar usuario "
+                        "y contraseña."
+                    )
             },
             status=
                 status.HTTP_400_BAD_REQUEST,
         )
-
 
     usuario = authenticate(
         request=request,
@@ -62,68 +124,66 @@ def iniciar_sesion(request):
         password=password,
     )
 
-
     if usuario is None:
         return Response(
             {
                 "detail":
-                    "Usuario o contraseña incorrectos."
+                    (
+                        "Usuario o contraseña "
+                        "incorrectos."
+                    )
             },
             status=
                 status.HTTP_400_BAD_REQUEST,
         )
 
-
     if not usuario.is_active:
         return Response(
             {
                 "detail":
-                    "El usuario no se encuentra activo."
+                    (
+                        "El usuario no se "
+                        "encuentra activo."
+                    )
             },
             status=
                 status.HTTP_403_FORBIDDEN,
         )
 
-
-    if not usuario.is_superuser:
-        autorizado = (
-            PerfilUsuario.objects
-            .filter(
-                usuario=usuario,
-                autorizado=True,
-            )
-            .exists()
+    permisos = (
+        obtener_permisos_usuario(
+            usuario
         )
+    )
 
-        if not autorizado:
-            return Response(
-                {
-                    "detail":
-                        (
-                            "El usuario no está autorizado "
-                            "para acceder al cotizador."
-                        )
-                },
-                status=
-                    status.HTTP_403_FORBIDDEN,
-            )
-
+    if not permisos[
+        "autorizado"
+    ]:
+        return Response(
+            {
+                "detail":
+                    (
+                        "El usuario no está "
+                        "autorizado para acceder "
+                        "al cotizador."
+                    )
+            },
+            status=
+                status.HTTP_403_FORBIDDEN,
+        )
 
     Token.objects.filter(
         user=usuario
     ).delete()
 
-
     token = Token.objects.create(
         user=usuario
     )
-
 
     nombre = (
         usuario.get_full_name()
         or usuario.username
     )
-
 
     return Response(
         {
@@ -139,6 +199,14 @@ def iniciar_sesion(request):
 
                 "nombre":
                     nombre,
+
+                "autorizado":
+                    True,
+
+                "puedeGestionarDatos":
+                    permisos[
+                        "puedeGestionarDatos"
+                    ],
             },
         },
         status=
@@ -149,6 +217,12 @@ def iniciar_sesion(request):
 @api_view(["GET"])
 def sesion_actual(request):
     usuario = request.user
+
+    permisos = (
+        obtener_permisos_usuario(
+            usuario
+        )
+    )
 
     return Response(
         {
@@ -165,8 +239,17 @@ def sesion_actual(request):
                 ),
 
             "autorizado":
-                True,
-        }
+                permisos[
+                    "autorizado"
+                ],
+
+            "puedeGestionarDatos":
+                permisos[
+                    "puedeGestionarDatos"
+                ],
+        },
+        status=
+            status.HTTP_200_OK,
     )
 
 
@@ -178,7 +261,10 @@ def cerrar_sesion(request):
     return Response(
         {
             "detail":
-                "Sesión cerrada correctamente."
+                (
+                    "Sesión cerrada "
+                    "correctamente."
+                )
         },
         status=
             status.HTTP_200_OK,

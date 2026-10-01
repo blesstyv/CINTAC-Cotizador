@@ -5,6 +5,7 @@ import {
 } from "react";
 
 import heroImage from "./assets/hero-cintac.jpg";
+import AdminDatos from "./AdminDatos";
 import "./App.css";
 
 
@@ -16,7 +17,10 @@ const TOKEN_KEY = "cintac_token";
 
 
 function recopilarMensajes(valor) {
-  if (valor === null || valor === undefined) {
+  if (
+    valor === null ||
+    valor === undefined
+  ) {
     return [];
   }
 
@@ -92,7 +96,9 @@ function App() {
   const [
     verificandoSesion,
     setVerificandoSesion,
-  ] = useState(Boolean(token));
+  ] = useState(
+    Boolean(token)
+  );
 
   const [
     loginUsuario,
@@ -113,6 +119,21 @@ function App() {
     iniciandoSesion,
     setIniciandoSesion,
   ] = useState(false);
+
+
+  /* ======================================
+     NAVEGACIÓN INTERNA
+  ====================================== */
+
+  const [
+    vistaActiva,
+    setVistaActiva,
+  ] = useState("cotizador");
+
+  const [
+    versionDatos,
+    setVersionDatos,
+  ] = useState(0);
 
 
   /* ======================================
@@ -277,39 +298,44 @@ function App() {
      LIMPIAR SESIÓN
   ====================================== */
 
-  const limpiarSesion = () => {
-    sessionStorage.removeItem(
-      TOKEN_KEY
-    );
+  const limpiarSesion =
+    () => {
+      sessionStorage.removeItem(
+        TOKEN_KEY
+      );
 
-    setToken("");
-    setUsuario(null);
+      setToken("");
+      setUsuario(null);
 
-    setRutas([]);
+      setVistaActiva(
+        "cotizador"
+      );
 
-    setOrigen("");
-    setDestino("");
+      setRutas([]);
 
-    setTipoContenedor("");
+      setOrigen("");
+      setDestino("");
 
-    setPesoCarga("");
-    setUnidadPeso("kg");
+      setTipoContenedor("");
 
-    setContingencia("0");
+      setPesoCarga("");
+      setUnidadPeso("kg");
 
-    setRecomendacion(null);
-    setResultado(null);
+      setContingencia("0");
 
-    setMensaje("");
-    setErrorDatos("");
+      setRecomendacion(null);
+      setResultado(null);
 
-    setErrores({
-      origen: false,
-      destino: false,
-      pesoCarga: false,
-      contingencia: false,
-    });
-  };
+      setMensaje("");
+      setErrorDatos("");
+
+      setErrores({
+        origen: false,
+        destino: false,
+        pesoCarga: false,
+        contingencia: false,
+      });
+    };
 
 
   /* ======================================
@@ -337,13 +363,12 @@ function App() {
         );
 
       if (
-        respuesta.status === 401 ||
-        respuesta.status === 403
+        respuesta.status === 401
       ) {
         limpiarSesion();
 
         throw new Error(
-          "La sesión no es válida o el usuario ya no está autorizado."
+          "La sesión expiró o ya no es válida."
         );
       }
 
@@ -351,7 +376,7 @@ function App() {
     };
 
 
-  /* ======================================
+    /* ======================================
      VALIDAR SESIÓN
   ====================================== */
 
@@ -389,7 +414,9 @@ function App() {
           const datos =
             await respuesta.json();
 
-          setUsuario(datos);
+          setUsuario(
+            datos
+          );
         } catch {
           limpiarSesion();
         } finally {
@@ -401,6 +428,90 @@ function App() {
 
     verificarSesion();
   }, [token]);
+
+
+  /* ======================================
+     ACTUALIZAR PERMISOS DE SESIÓN
+  ====================================== */
+
+  useEffect(() => {
+    if (
+      !token ||
+      !usuario
+    ) {
+      return;
+    }
+
+    const actualizarPermisos =
+      async () => {
+        try {
+          const respuesta =
+            await fetch(
+              `${API_URL}/sesion/`,
+              {
+                headers: {
+                  Authorization:
+                    `Token ${token}`,
+                },
+              }
+            );
+
+          if (
+            respuesta.status === 401
+          ) {
+            limpiarSesion();
+            return;
+          }
+
+          if (!respuesta.ok) {
+            return;
+          }
+
+          const datos =
+            await respuesta.json();
+
+          setUsuario(
+            datos
+          );
+
+          if (
+            !datos
+              .puedeGestionarDatos
+          ) {
+            setVistaActiva(
+              "cotizador"
+            );
+          }
+        } catch {
+          // Si existe un problema temporal
+          // de conexión no se destruye
+          // automáticamente la sesión.
+        }
+      };
+
+
+    const manejarFoco =
+      () => {
+        actualizarPermisos();
+      };
+
+
+    window.addEventListener(
+      "focus",
+      manejarFoco
+    );
+
+
+    return () => {
+      window.removeEventListener(
+        "focus",
+        manejarFoco
+      );
+    };
+  }, [
+    token,
+    usuario?.id,
+  ]);
 
 
   /* ======================================
@@ -476,6 +587,10 @@ function App() {
           datos.usuario
         );
 
+        setVistaActiva(
+          "cotizador"
+        );
+
         setLoginUsuario("");
         setLoginPassword("");
         setLoginError("");
@@ -511,8 +626,8 @@ function App() {
             }
           );
         } catch {
-          // La sesión local igualmente
-          // debe finalizar.
+          // La sesión local se finaliza
+          // igualmente.
         }
       }
 
@@ -556,7 +671,10 @@ function App() {
             );
           }
 
-          setRutas(datos);
+          setRutas(
+            datos
+          );
+
           setErrorDatos("");
         } catch (error) {
           if (token) {
@@ -575,6 +693,7 @@ function App() {
   }, [
     token,
     usuario,
+    versionDatos,
   ]);
 
 
@@ -597,54 +716,60 @@ function App() {
 
 
   const puertosDestino =
-    useMemo(() => {
-      if (!origen) {
-        return [];
-      }
+    useMemo(
+      () => {
+        if (!origen) {
+          return [];
+        }
 
-      return [
-        ...new Set(
-          rutas
-            .filter(
-              (ruta) =>
-                ruta.origen ===
-                origen
-            )
-            .map(
-              (ruta) =>
-                ruta.destino
-            )
-        ),
-      ];
-    }, [
-      rutas,
-      origen,
-    ]);
+        return [
+          ...new Set(
+            rutas
+              .filter(
+                (ruta) =>
+                  ruta.origen ===
+                  origen
+              )
+              .map(
+                (ruta) =>
+                  ruta.destino
+              )
+          ),
+        ];
+      },
+      [
+        rutas,
+        origen,
+      ]
+    );
 
 
   const rutaSeleccionada =
-    useMemo(() => {
-      if (
-        !origen ||
-        !destino
-      ) {
-        return null;
-      }
+    useMemo(
+      () => {
+        if (
+          !origen ||
+          !destino
+        ) {
+          return null;
+        }
 
-      return (
-        rutas.find(
-          (ruta) =>
-            ruta.origen ===
-              origen &&
-            ruta.destino ===
-              destino
-        ) || null
-      );
-    }, [
-      rutas,
-      origen,
-      destino,
-    ]);
+        return (
+          rutas.find(
+            (ruta) =>
+              ruta.origen ===
+                origen &&
+              ruta.destino ===
+                destino
+          ) || null
+        );
+      },
+      [
+        rutas,
+        origen,
+        destino,
+      ]
+    );
 
 
   /* ======================================
@@ -667,7 +792,9 @@ function App() {
     }
 
     const pesoNumero =
-      Number(pesoCarga);
+      Number(
+        pesoCarga
+      );
 
     if (
       !Number.isFinite(
@@ -693,7 +820,8 @@ function App() {
               await peticionAutenticada(
                 `${API_URL}/opciones-contenedores/`,
                 {
-                  method: "POST",
+                  method:
+                    "POST",
 
                   headers: {
                     "Content-Type":
@@ -760,6 +888,7 @@ function App() {
         250
       );
 
+
     return () => {
       clearTimeout(
         temporizador
@@ -794,6 +923,62 @@ function App() {
           [campo]: false,
         })
       );
+    };
+
+
+  /* ======================================
+     ABRIR ADMINISTRACIÓN
+  ====================================== */
+
+  const abrirAdministracion =
+    async () => {
+      setMensaje("");
+
+      try {
+        const respuesta =
+          await peticionAutenticada(
+            `${API_URL}/sesion/`
+          );
+
+        const datos =
+          await respuesta.json();
+
+        if (!respuesta.ok) {
+          throw new Error(
+            extraerMensajeError(
+              datos,
+              "No fue posible comprobar los permisos del usuario."
+            )
+          );
+        }
+
+        setUsuario(
+          datos
+        );
+
+        if (
+          !datos
+            .puedeGestionarDatos
+        ) {
+          setVistaActiva(
+            "cotizador"
+          );
+
+          setMensaje(
+            "El usuario no tiene permiso para administrar los datos maestros."
+          );
+
+          return;
+        }
+
+        setVistaActiva(
+          "administracion"
+        );
+      } catch (error) {
+        setMensaje(
+          error.message
+        );
+      }
     };
 
 
@@ -880,7 +1065,9 @@ function App() {
       }
 
       const pesoNumero =
-        Number(pesoCarga);
+        Number(
+          pesoCarga
+        );
 
       if (
         !Number.isFinite(
@@ -947,7 +1134,8 @@ function App() {
           await peticionAutenticada(
             `${API_URL}/cotizar/`,
             {
-              method: "POST",
+              method:
+                "POST",
 
               headers: {
                 "Content-Type":
@@ -1012,7 +1200,9 @@ function App() {
      VALIDANDO SESIÓN
   ====================================== */
 
-  if (verificandoSesion) {
+  if (
+    verificandoSesion
+  ) {
     return (
       <div className="session-screen">
         <div className="session-loader">
@@ -1165,9 +1355,11 @@ function App() {
                   iniciandoSesion
                 }
               >
-                {iniciandoSesion
-                  ? "INGRESANDO..."
-                  : "INGRESAR"}
+                {
+                  iniciandoSesion
+                    ? "INGRESANDO..."
+                    : "INGRESAR"
+                }
               </button>
             </form>
 
@@ -1179,6 +1371,74 @@ function App() {
           </div>
         </div>
       </div>
+    );
+  }
+
+
+  /* ======================================
+     ADMINISTRACIÓN COMEX
+  ====================================== */
+
+  if (
+    vistaActiva ===
+      "administracion" &&
+    usuario
+      .puedeGestionarDatos
+  ) {
+    return (
+      <AdminDatos
+        apiUrl={
+          API_URL
+        }
+        usuario={
+          usuario
+        }
+        peticionAutenticada={
+          peticionAutenticada
+        }
+        onVolver={() => {
+          setVistaActiva(
+            "cotizador"
+          );
+        }}
+        onCerrarSesion={
+          cerrarSesion
+        }
+        onDatosActualizados={() => {
+          setVersionDatos(
+            (actual) =>
+              actual + 1
+          );
+        }}
+        onPermisoRevocado={
+          async () => {
+            try {
+              const respuesta =
+                await peticionAutenticada(
+                  `${API_URL}/sesion/`
+                );
+
+              if (
+                respuesta.ok
+              ) {
+                const datos =
+                  await respuesta.json();
+
+                setUsuario(
+                  datos
+                );
+              }
+            } catch {
+              // Un 401 ya es gestionado
+              // por peticionAutenticada.
+            } finally {
+              setVistaActiva(
+                "cotizador"
+              );
+            }
+          }
+        }
+      />
     );
   }
 
@@ -1209,10 +1469,30 @@ function App() {
               </span>
 
               <strong>
-                {usuario.nombre ||
-                  usuario.username}
+                {
+                  usuario.nombre ||
+                  usuario.username
+                }
               </strong>
             </div>
+
+
+            {
+              usuario
+                .puedeGestionarDatos &&
+              (
+                <button
+                  type="button"
+                  className="admin-header-button"
+                  onClick={
+                    abrirAdministracion
+                  }
+                >
+                  ADMINISTRACIÓN
+                </button>
+              )
+            }
+
 
             <button
               type="button"
@@ -1236,6 +1516,7 @@ function App() {
         }}
       >
         <div className="hero-overlay"></div>
+
         <div className="hero-accent"></div>
 
         <div className="hero-content">
@@ -1310,7 +1591,11 @@ function App() {
           </div>
 
 
-          <form onSubmit={cotizar}>
+          <form
+            onSubmit={
+              cotizar
+            }
+          >
             {errorDatos && (
               <div className="message-box">
                 <span className="message-icon">
@@ -1357,7 +1642,9 @@ function App() {
                         ? "campo-error"
                         : ""
                     }
-                    value={origen}
+                    value={
+                      origen
+                    }
                     disabled={
                       cargandoDatos ||
                       rutas.length === 0
@@ -1384,16 +1671,22 @@ function App() {
                       Seleccione puerto
                     </option>
 
-                    {puertosOrigen.map(
-                      (puerto) => (
-                        <option
-                          key={puerto}
-                          value={puerto}
-                        >
-                          {puerto}
-                        </option>
+                    {
+                      puertosOrigen.map(
+                        (puerto) => (
+                          <option
+                            key={
+                              puerto
+                            }
+                            value={
+                              puerto
+                            }
+                          >
+                            {puerto}
+                          </option>
+                        )
                       )
-                    )}
+                    }
                   </select>
                 </div>
 
@@ -1413,8 +1706,12 @@ function App() {
                         ? "campo-error"
                         : ""
                     }
-                    value={destino}
-                    disabled={!origen}
+                    value={
+                      destino
+                    }
+                    disabled={
+                      !origen
+                    }
                     onChange={(e) => {
                       setDestino(
                         e.target.value
@@ -1428,21 +1725,29 @@ function App() {
                     }}
                   >
                     <option value="">
-                      {origen
-                        ? "Seleccione puerto"
-                        : "Seleccione primero el origen"}
+                      {
+                        origen
+                          ? "Seleccione puerto"
+                          : "Seleccione primero el origen"
+                      }
                     </option>
 
-                    {puertosDestino.map(
-                      (puerto) => (
-                        <option
-                          key={puerto}
-                          value={puerto}
-                        >
-                          {puerto}
-                        </option>
+                    {
+                      puertosDestino.map(
+                        (puerto) => (
+                          <option
+                            key={
+                              puerto
+                            }
+                            value={
+                              puerto
+                            }
+                          >
+                            {puerto}
+                          </option>
+                        )
                       )
-                    )}
+                    }
                   </select>
                 </div>
               </div>
@@ -1481,7 +1786,9 @@ function App() {
                       type="number"
                       min="0"
                       step="any"
-                      value={pesoCarga}
+                      value={
+                        pesoCarga
+                      }
                       onChange={(e) => {
                         setPesoCarga(
                           e.target.value
@@ -1497,7 +1804,9 @@ function App() {
                     />
 
                     <select
-                      value={unidadPeso}
+                      value={
+                        unidadPeso
+                      }
                       onChange={(e) => {
                         setUnidadPeso(
                           e.target.value
@@ -1540,99 +1849,120 @@ function App() {
                     </div>
 
                     <div className="load-summary">
-                      {formatearNumero(
-                        recomendacion.pesoTN
-                      )}{" "}
+                      {
+                        formatearNumero(
+                          recomendacion.pesoTN
+                        )
+                      }{" "}
                       TN
                     </div>
                   </div>
 
 
                   <div className="recommendation-options">
-                    {recomendacion.opciones.map(
-                      (opcion) => {
-                        const sugerida =
-                          opcion.codigo ===
-                          recomendacion.sugerida;
+                    {
+                      recomendacion
+                        .opciones
+                        .map(
+                          (opcion) => {
+                            const sugerida =
+                              opcion.codigo ===
+                              recomendacion.sugerida;
 
-                        const seleccionada =
-                          opcion.codigo ===
-                          tipoContenedor;
+                            const seleccionada =
+                              opcion.codigo ===
+                              tipoContenedor;
 
-                        return (
-                          <button
-                            key={
-                              opcion.codigo
-                            }
-                            type="button"
-                            className={[
-                              "recommendation-option",
+                            return (
+                              <button
+                                key={
+                                  opcion.codigo
+                                }
+                                type="button"
+                                className={[
+                                  "recommendation-option",
 
-                              sugerida
-                                ? "suggested"
-                                : "",
+                                  sugerida
+                                    ? "suggested"
+                                    : "",
 
-                              seleccionada
-                                ? "selected"
-                                : "",
-                            ]
-                              .filter(Boolean)
-                              .join(" ")}
-                            onClick={() => {
-                              setTipoContenedor(
-                                opcion.codigo
-                              );
+                                  seleccionada
+                                    ? "selected"
+                                    : "",
+                                ]
+                                  .filter(
+                                    Boolean
+                                  )
+                                  .join(
+                                    " "
+                                  )}
+                                onClick={() => {
+                                  setTipoContenedor(
+                                    opcion.codigo
+                                  );
 
-                              limpiarResultado();
-                            }}
-                          >
-                            <div className="option-top">
-                              <strong>
-                                {opcion.nombre}
-                              </strong>
+                                  limpiarResultado();
+                                }}
+                              >
+                                <div className="option-top">
+                                  <strong>
+                                    {
+                                      opcion.nombre
+                                    }
+                                  </strong>
 
-                              <div className="option-labels">
-                                {sugerida && (
-                                  <span className="suggested-label">
-                                    SUGERIDO
-                                  </span>
-                                )}
+                                  <div className="option-labels">
+                                    {sugerida && (
+                                      <span className="suggested-label">
+                                        SUGERIDO
+                                      </span>
+                                    )}
 
-                                {seleccionada && (
-                                  <span className="selected-label">
-                                    SELECCIONADO
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-
-
-                            <div className="option-quantity">
-                              {formatearNumero(
-                                opcion.cantidad
-                              )}{" "}
-                              contenedor
-                              {opcion.cantidad !== 1
-                                ? "es"
-                                : ""}
-                            </div>
+                                    {seleccionada && (
+                                      <span className="selected-label">
+                                        SELECCIONADO
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
 
 
-                            <div className="option-price">
-                              US${" "}
-                              {formatearUSD(
-                                opcion.totalMin
-                              )}
-                              {" - "}
-                              US${" "}
-                              {formatearUSD(
-                                opcion.totalMax
-                              )}
-                            </div>
-                          </button>
-                        );
-                      }
-                    )}
+                                <div className="option-quantity">
+                                  {
+                                    formatearNumero(
+                                      opcion.cantidad
+                                    )
+                                  }{" "}
+                                  contenedor
+                                  {
+                                    opcion.cantidad !==
+                                    1
+                                      ? "es"
+                                      : ""
+                                  }
+                                </div>
+
+
+                                <div className="option-price">
+                                  US${" "}
+                                  {
+                                    formatearUSD(
+                                      opcion.totalMin
+                                    )
+                                  }
+                                  {" - "}
+                                  US${" "}
+                                  {
+                                    formatearUSD(
+                                      opcion.totalMax
+                                    )
+                                  }
+                                </div>
+                              </button>
+                            );
+                          }
+                        )
+                    }
                   </div>
                 </div>
               )}
@@ -1667,7 +1997,9 @@ function App() {
                       type="number"
                       min="0"
                       step="1"
-                      value={contingencia}
+                      value={
+                        contingencia
+                      }
                       onChange={(e) => {
                         setContingencia(
                           e.target.value
@@ -1732,9 +2064,11 @@ function App() {
                   }
                 >
                   <span>
-                    {cotizando
-                      ? "COTIZANDO..."
-                      : "COTIZAR OPERACIÓN"}
+                    {
+                      cotizando
+                        ? "COTIZANDO..."
+                        : "COTIZAR OPERACIÓN"
+                    }
                   </span>
 
                   <span className="button-arrow">
@@ -1789,15 +2123,23 @@ function App() {
                 </span>
 
                 <strong>
-                  {resultado.origen}
+                  {
+                    resultado.origen
+                  }
                   {" → "}
-                  {resultado.destino}
+                  {
+                    resultado.destino
+                  }
                 </strong>
 
                 <small>
-                  {resultado.pais}
+                  {
+                    resultado.pais
+                  }
                   {" · "}
-                  {resultado.tipoRuta}
+                  {
+                    resultado.tipoRuta
+                  }
                 </small>
               </div>
 
@@ -1808,9 +2150,11 @@ function App() {
                 </span>
 
                 <strong>
-                  {formatearNumero(
-                    resultado.pesoTN
-                  )}{" "}
+                  {
+                    formatearNumero(
+                      resultado.pesoTN
+                    )
+                  }{" "}
                   TN
                 </strong>
               </div>
@@ -1822,9 +2166,15 @@ function App() {
                 </span>
 
                 <strong>
-                  {resultado.cantidad}
+                  {
+                    resultado.cantidad
+                  }
                   {" × "}
-                  {resultado.tipoContenedor}'
+                  {
+                    resultado
+                      .tipoContenedor
+                  }
+                  '
                 </strong>
               </div>
 
@@ -1836,14 +2186,18 @@ function App() {
 
                 <strong>
                   US${" "}
-                  {formatearUSD(
-                    resultado.tarifaMin
-                  )}
+                  {
+                    formatearUSD(
+                      resultado.tarifaMin
+                    )
+                  }
                   {" - "}
                   US${" "}
-                  {formatearUSD(
-                    resultado.tarifaMax
-                  )}
+                  {
+                    formatearUSD(
+                      resultado.tarifaMax
+                    )
+                  }
                 </strong>
               </div>
 
@@ -1855,164 +2209,208 @@ function App() {
 
                 <strong>
                   US${" "}
-                  {formatearUSD(
-                    resultado.totalMin
-                  )}
+                  {
+                    formatearUSD(
+                      resultado.totalMin
+                    )
+                  }
                   {" - "}
                   US${" "}
-                  {formatearUSD(
-                    resultado.totalMax
-                  )}
+                  {
+                    formatearUSD(
+                      resultado.totalMax
+                    )
+                  }
                 </strong>
               </div>
 
 
-              {resultado.conversionDisponible ? (
-                <div className="conversion-box">
-                  <span>
-                    EQUIVALENTE AUTOMÁTICO EN CLP
-                  </span>
-
-                  <strong>
-                    $
-                    {formatearCLP(
-                      resultado.totalMinCLP
-                    )}
-                    {" - $"}
-                    {formatearCLP(
-                      resultado.totalMaxCLP
-                    )}
-                  </strong>
-
-                  <div className="exchange-rate-details">
-                    <div className="exchange-rate-row">
+              {
+                resultado
+                  .conversionDisponible
+                  ? (
+                    <div className="conversion-box">
                       <span>
-                        Dólar observado
+                        EQUIVALENTE AUTOMÁTICO EN CLP
                       </span>
 
                       <strong>
                         $
-                        {formatearTipoCambio(
-                          resultado.tipoCambio
-                        )}{" "}
-                        CLP/USD
+                        {
+                          formatearCLP(
+                            resultado
+                              .totalMinCLP
+                          )
+                        }
+                        {" - $"}
+                        {
+                          formatearCLP(
+                            resultado
+                              .totalMaxCLP
+                          )
+                        }
                       </strong>
-                    </div>
 
-                    <div className="exchange-rate-row">
+                      <div className="exchange-rate-details">
+                        <div className="exchange-rate-row">
+                          <span>
+                            Dólar observado
+                          </span>
+
+                          <strong>
+                            $
+                            {
+                              formatearTipoCambio(
+                                resultado
+                                  .tipoCambio
+                              )
+                            }{" "}
+                            CLP/USD
+                          </strong>
+                        </div>
+
+                        <div className="exchange-rate-row">
+                          <span>
+                            Fecha de referencia
+                          </span>
+
+                          <strong>
+                            {
+                              formatearFecha(
+                                resultado
+                                  .fechaTipoCambio
+                              )
+                            }
+                          </strong>
+                        </div>
+
+                        <div className="exchange-rate-row">
+                          <span>
+                            Estado
+                          </span>
+
+                          <strong>
+                            {
+                              resultado
+                                .modoTipoCambio ===
+                              "respaldo"
+                                ? "Último valor disponible"
+                                : resultado
+                                    .modoTipoCambio ===
+                                  "cache"
+                                ? "valor automático vigente"
+                                : "Actualizado automáticamente"
+                            }
+                          </strong>
+                        </div>
+
+                        <div className="exchange-rate-source">
+                          {
+                            resultado
+                              .fuenteTipoCambio ||
+                            "Fuente de tipo de cambio no informada"
+                          }
+                        </div>
+                      </div>
+                    </div>
+                  )
+                  : (
+                    resultado
+                      .mensajeConversion && (
+                      <div className="message-box conversion-warning">
+                        <span className="message-icon">
+                          !
+                        </span>
+
+                        <p>
+                          {
+                            resultado
+                              .mensajeConversion
+                          }
+                        </p>
+                      </div>
+                    )
+                  )
+              }
+
+
+              {
+                resultado
+                  .transitoOriginalMin !==
+                  null &&
+                resultado
+                  .transitoOriginalMax !==
+                  null
+                  ? (
+                    <>
+                      <div className="result-item">
+                        <span>
+                          Tránsito base
+                        </span>
+
+                        <strong>
+                          {
+                            resultado
+                              .transitoOriginalMin
+                          }
+                          {" - "}
+                          {
+                            resultado
+                              .transitoOriginalMax
+                          }{" "}
+                          días
+                        </strong>
+                      </div>
+
+
+                      {
+                        resultado
+                          .contingencia >
+                          0 && (
+                          <div className="contingency-info">
+                            +{" "}
+                            {
+                              resultado
+                                .contingencia
+                            }{" "}
+                            días
+                          </div>
+                        )
+                      }
+
+
+                      <div className="result-item">
+                        <span>
+                          Tránsito estimado
+                        </span>
+
+                        <strong>
+                          {
+                            resultado
+                              .transitoMin
+                          }
+                          {" - "}
+                          {
+                            resultado
+                              .transitoMax
+                          }{" "}
+                          días
+                        </strong>
+                      </div>
+                    </>
+                  )
+                  : (
+                    <div className="result-item">
                       <span>
-                        Fecha de referencia
+                        Tránsito
                       </span>
 
                       <strong>
-                        {formatearFecha(
-                          resultado.fechaTipoCambio
-                        )}
+                        Sin información disponible
                       </strong>
                     </div>
-
-                    <div className="exchange-rate-row">
-                      <span>
-                        Estado
-                      </span>
-
-                      <strong>
-                        {resultado.modoTipoCambio ===
-                        "respaldo"
-                          ? "Último valor disponible"
-                          : resultado.modoTipoCambio ===
-                            "cache"
-                          ? "valor automático vigente"
-                          : "Actualizado automáticamente"}
-                      </strong>
-                    </div>
-
-                    <div className="exchange-rate-source">
-                      {resultado.fuenteTipoCambio ||
-                        "Fuente de tipo de cambio no informada"}
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                resultado.mensajeConversion && (
-                  <div className="message-box conversion-warning">
-                    <span className="message-icon">
-                      !
-                    </span>
-
-                    <p>
-                      {
-                        resultado.mensajeConversion
-                      }
-                    </p>
-                  </div>
-                )
-              )}
-
-
-              {resultado.transitoOriginalMin !==
-                null &&
-              resultado.transitoOriginalMax !==
-                null ? (
-                <>
-                  <div className="result-item">
-                    <span>
-                      Tránsito base
-                    </span>
-
-                    <strong>
-                      {
-                        resultado.transitoOriginalMin
-                      }
-                      {" - "}
-                      {
-                        resultado.transitoOriginalMax
-                      }{" "}
-                      días
-                    </strong>
-                  </div>
-
-
-                  {resultado.contingencia >
-                    0 && (
-                    <div className="contingency-info">
-                      +{" "}
-                      {
-                        resultado.contingencia
-                      }{" "}
-                      días
-                    </div>
-                  )}
-
-
-                  <div className="result-item">
-                    <span>
-                      Tránsito estimado
-                    </span>
-
-                    <strong>
-                      {
-                        resultado.transitoMin
-                      }
-                      {" - "}
-                      {
-                        resultado.transitoMax
-                      }{" "}
-                      días
-                    </strong>
-                  </div>
-                </>
-              ) : (
-                <div className="result-item">
-                  <span>
-                    Tránsito
-                  </span>
-
-                  <strong>
-                    Sin información disponible
-                  </strong>
-                </div>
-              )}
+                  )
+              }
 
 
               <div className="result-item source-item">
@@ -2021,8 +2419,10 @@ function App() {
                 </span>
 
                 <strong>
-                  {resultado.fuente ||
-                    "Sin referencia registrada"}
+                  {
+                    resultado.fuente ||
+                    "Sin referencia registrada"
+                  }
                 </strong>
               </div>
 

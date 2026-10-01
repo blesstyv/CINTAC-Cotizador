@@ -16,10 +16,12 @@ class PerfilUsuarioAdmin(admin.ModelAdmin):
     list_display = (
         "usuario",
         "autorizado",
+        "puede_gestionar_datos",
     )
 
     list_editable = (
         "autorizado",
+        "puede_gestionar_datos",
     )
 
     search_fields = (
@@ -30,6 +32,7 @@ class PerfilUsuarioAdmin(admin.ModelAdmin):
 
     list_filter = (
         "autorizado",
+        "puede_gestionar_datos",
     )
 
 

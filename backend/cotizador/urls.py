@@ -6,6 +6,12 @@ from .auth_views import (
     sesion_actual,
 )
 
+from .gestion_views import (
+    importar_excel,
+    resumen_datos_maestros,
+    validar_excel,
+)
+
 from .views import (
     cotizar_operacion,
     listar_rutas,
@@ -55,5 +61,23 @@ urlpatterns = [
         "cotizar/",
         cotizar_operacion,
         name="cotizar",
+    ),
+
+    path(
+        "administracion/resumen/",
+        resumen_datos_maestros,
+        name="administracion-resumen",
+    ),
+
+    path(
+        "administracion/validar-excel/",
+        validar_excel,
+        name="administracion-validar-excel",
+    ),
+
+    path(
+        "administracion/importar-excel/",
+        importar_excel,
+        name="administracion-importar-excel",
     ),
 ]
