@@ -1,4 +1,5 @@
 import {
+  useCallback,
   useEffect,
   useMemo,
   useState,
@@ -215,83 +216,82 @@ function App() {
   });
 
 
+  const usuarioId =
+    usuario?.id ?? null;
+
+
   /* ======================================
      FORMATOS
   ====================================== */
 
-  const formatearUSD = (
-    valor
-  ) =>
-    new Intl.NumberFormat(
-      "es-CL",
-      {
-        maximumFractionDigits: 0,
+  const formatearUSD =
+    (valor) =>
+      new Intl.NumberFormat(
+        "es-CL",
+        {
+          maximumFractionDigits: 0,
+        }
+      ).format(
+        Number(valor)
+      );
+
+
+  const formatearCLP =
+    (valor) =>
+      new Intl.NumberFormat(
+        "es-CL",
+        {
+          maximumFractionDigits: 0,
+        }
+      ).format(
+        Number(valor)
+      );
+
+
+  const formatearNumero =
+    (valor) =>
+      new Intl.NumberFormat(
+        "es-CL",
+        {
+          maximumFractionDigits: 3,
+        }
+      ).format(
+        Number(valor)
+      );
+
+
+  const formatearTipoCambio =
+    (valor) =>
+      new Intl.NumberFormat(
+        "es-CL",
+        {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        }
+      ).format(
+        Number(valor)
+      );
+
+
+  const formatearFecha =
+    (fecha) => {
+      if (!fecha) {
+        return "Sin fecha";
       }
-    ).format(
-      Number(valor)
-    );
 
+      const partes =
+        fecha.split("-");
 
-  const formatearCLP = (
-    valor
-  ) =>
-    new Intl.NumberFormat(
-      "es-CL",
-      {
-        maximumFractionDigits: 0,
+      if (partes.length !== 3) {
+        return fecha;
       }
-    ).format(
-      Number(valor)
-    );
 
-
-  const formatearNumero = (
-    valor
-  ) =>
-    new Intl.NumberFormat(
-      "es-CL",
-      {
-        maximumFractionDigits: 3,
-      }
-    ).format(
-      Number(valor)
-    );
-
-
-  const formatearTipoCambio = (
-    valor
-  ) =>
-    new Intl.NumberFormat(
-      "es-CL",
-      {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      }
-    ).format(
-      Number(valor)
-    );
-
-
-  const formatearFecha = (
-    fecha
-  ) => {
-    if (!fecha) {
-      return "Sin fecha";
-    }
-
-    const partes =
-      fecha.split("-");
-
-    if (partes.length !== 3) {
-      return fecha;
-    }
-
-    return (
-      `${partes[2]}-` +
-      `${partes[1]}-` +
-      `${partes[0]}`
-    );
-  };
+      return (
+        `${partes[2]}-` +
+        `${partes[1]}-` +
+        `${partes[0]}`
+      );
+    };
 
 
   /* ======================================
@@ -299,13 +299,15 @@ function App() {
   ====================================== */
 
   const limpiarSesion =
-    () => {
+    useCallback(() => {
       sessionStorage.removeItem(
         TOKEN_KEY
       );
 
       setToken("");
       setUsuario(null);
+
+      setVerificandoSesion(false);
 
       setVistaActiva(
         "cotizador"
@@ -329,13 +331,17 @@ function App() {
       setMensaje("");
       setErrorDatos("");
 
+      setCargandoDatos(false);
+      setCargandoOpciones(false);
+      setCotizando(false);
+
       setErrores({
         origen: false,
         destino: false,
         pesoCarga: false,
         contingencia: false,
       });
-    };
+    }, []);
 
 
   /* ======================================
@@ -343,58 +349,58 @@ function App() {
   ====================================== */
 
   const peticionAutenticada =
-    async (
-      url,
-      opciones = {}
-    ) => {
-      const respuesta =
-        await fetch(
-          url,
-          {
-            ...opciones,
+    useCallback(
+      async (
+        url,
+        opciones = {}
+      ) => {
+        const respuesta =
+          await fetch(
+            url,
+            {
+              ...opciones,
 
-            headers: {
-              ...opciones.headers,
+              headers: {
+                ...opciones.headers,
 
-              Authorization:
-                `Token ${token}`,
-            },
-          }
-        );
+                Authorization:
+                  `Token ${token}`,
+              },
+            }
+          );
 
-      if (
-        respuesta.status === 401
-      ) {
-        limpiarSesion();
+        if (
+          respuesta.status === 401
+        ) {
+          limpiarSesion();
 
-        throw new Error(
-          "La sesión expiró o ya no es válida."
-        );
-      }
+          throw new Error(
+            "La sesión expiró o ya no es válida."
+          );
+        }
 
-      return respuesta;
-    };
+        return respuesta;
+      },
+      [
+        token,
+        limpiarSesion,
+      ]
+    );
 
 
-    /* ======================================
+  /* ======================================
      VALIDAR SESIÓN
   ====================================== */
 
   useEffect(() => {
     if (!token) {
-      setVerificandoSesion(
-        false
-      );
-
       return;
     }
 
+    let activo = true;
+
     const verificarSesion =
       async () => {
-        setVerificandoSesion(
-          true
-        );
-
         try {
           const respuesta =
             await fetch(
@@ -414,20 +420,33 @@ function App() {
           const datos =
             await respuesta.json();
 
-          setUsuario(
-            datos
-          );
+          if (activo) {
+            setUsuario(
+              datos
+            );
+          }
         } catch {
-          limpiarSesion();
+          if (activo) {
+            limpiarSesion();
+          }
         } finally {
-          setVerificandoSesion(
-            false
-          );
+          if (activo) {
+            setVerificandoSesion(
+              false
+            );
+          }
         }
       };
 
-    verificarSesion();
-  }, [token]);
+    void verificarSesion();
+
+    return () => {
+      activo = false;
+    };
+  }, [
+    token,
+    limpiarSesion,
+  ]);
 
 
   /* ======================================
@@ -437,7 +456,7 @@ function App() {
   useEffect(() => {
     if (
       !token ||
-      !usuario
+      !usuarioId
     ) {
       return;
     }
@@ -483,16 +502,15 @@ function App() {
             );
           }
         } catch {
-          // Si existe un problema temporal
-          // de conexión no se destruye
-          // automáticamente la sesión.
+          // Una falla temporal de conexión
+          // no elimina la sesión local.
         }
       };
 
 
     const manejarFoco =
       () => {
-        actualizarPermisos();
+        void actualizarPermisos();
       };
 
 
@@ -510,7 +528,8 @@ function App() {
     };
   }, [
     token,
-    usuario?.id,
+    usuarioId,
+    limpiarSesion,
   ]);
 
 
@@ -521,6 +540,10 @@ function App() {
   const iniciarSesion =
     async (e) => {
       e.preventDefault();
+
+      if (iniciandoSesion) {
+        return;
+      }
 
       setLoginError("");
 
@@ -642,7 +665,7 @@ function App() {
   useEffect(() => {
     if (
       !token ||
-      !usuario
+      !usuarioId
     ) {
       return;
     }
@@ -689,11 +712,12 @@ function App() {
         }
       };
 
-    cargarRutas();
+    void cargarRutas();
   }, [
     token,
-    usuario,
+    usuarioId,
     versionDatos,
+    peticionAutenticada,
   ]);
 
 
@@ -777,12 +801,6 @@ function App() {
   ====================================== */
 
   useEffect(() => {
-    setRecomendacion(null);
-    setTipoContenedor("");
-
-    setResultado(null);
-    setMensaje("");
-
     if (
       !token ||
       !rutaSeleccionada ||
@@ -901,12 +919,25 @@ function App() {
     rutaSeleccionada,
     pesoCarga,
     unidadPeso,
+    peticionAutenticada,
   ]);
 
 
   /* ======================================
      AUXILIARES
   ====================================== */
+
+  const reiniciarOpcionesContenedor =
+    () => {
+      setRecomendacion(null);
+      setTipoContenedor("");
+
+      setResultado(null);
+      setMensaje("");
+
+      setCargandoOpciones(false);
+    };
+
 
   const limpiarResultado =
     () => {
@@ -982,6 +1013,44 @@ function App() {
     };
 
 
+  /* ======================================
+     PERMISO ADMINISTRACIÓN REVOCADO
+  ====================================== */
+
+  const manejarPermisoRevocado =
+    useCallback(
+      async () => {
+        try {
+          const respuesta =
+            await peticionAutenticada(
+              `${API_URL}/sesion/`
+            );
+
+          if (
+            respuesta.ok
+          ) {
+            const datos =
+              await respuesta.json();
+
+            setUsuario(
+              datos
+            );
+          }
+        } catch {
+          // Un 401 ya es gestionado
+          // por peticionAutenticada.
+        } finally {
+          setVistaActiva(
+            "cotizador"
+          );
+        }
+      },
+      [
+        peticionAutenticada,
+      ]
+    );
+
+
   const nuevaCotizacion =
     () => {
       setOrigen("");
@@ -1020,6 +1089,10 @@ function App() {
   const cotizar =
     async (e) => {
       e.preventDefault();
+
+      if (cotizando) {
+        return;
+      }
 
       setMensaje("");
       setResultado(null);
@@ -1411,32 +1484,7 @@ function App() {
           );
         }}
         onPermisoRevocado={
-          async () => {
-            try {
-              const respuesta =
-                await peticionAutenticada(
-                  `${API_URL}/sesion/`
-                );
-
-              if (
-                respuesta.ok
-              ) {
-                const datos =
-                  await respuesta.json();
-
-                setUsuario(
-                  datos
-                );
-              }
-            } catch {
-              // Un 401 ya es gestionado
-              // por peticionAutenticada.
-            } finally {
-              setVistaActiva(
-                "cotizador"
-              );
-            }
-          }
+          manejarPermisoRevocado
         }
       />
     );
@@ -1664,7 +1712,7 @@ function App() {
                         "destino"
                       );
 
-                      limpiarResultado();
+                      reiniciarOpcionesContenedor();
                     }}
                   >
                     <option value="">
@@ -1721,7 +1769,7 @@ function App() {
                         "destino"
                       );
 
-                      limpiarResultado();
+                      reiniciarOpcionesContenedor();
                     }}
                   >
                     <option value="">
@@ -1798,7 +1846,7 @@ function App() {
                           "pesoCarga"
                         );
 
-                        limpiarResultado();
+                        reiniciarOpcionesContenedor();
                       }}
                       placeholder="Ej: 25000"
                     />
@@ -1812,7 +1860,7 @@ function App() {
                           e.target.value
                         );
 
-                        limpiarResultado();
+                        reiniciarOpcionesContenedor();
                       }}
                     >
                       <option value="kg">
@@ -2046,6 +2094,9 @@ function App() {
                   className="secondary-button"
                   onClick={
                     nuevaCotizacion
+                  }
+                  disabled={
+                    cotizando
                   }
                 >
                   LIMPIAR
@@ -2298,7 +2349,7 @@ function App() {
                                 : resultado
                                     .modoTipoCambio ===
                                   "cache"
-                                ? "valor automático vigente"
+                                ? "Valor automático vigente"
                                 : "Actualizado automáticamente"
                             }
                           </strong>

@@ -14,14 +14,18 @@ function obtenerErrores(datos) {
   }
 
   if (
-    Array.isArray(datos.errores)
+    Array.isArray(
+      datos.errores
+    )
   ) {
     return datos.errores;
   }
 
   if (datos.detail) {
     return [
-      String(datos.detail),
+      String(
+        datos.detail
+      ),
     ];
   }
 
@@ -98,7 +102,7 @@ function AdminDatos({
         if (
           onPermisoRevocado
         ) {
-          onPermisoRevocado();
+          void onPermisoRevocado();
         }
 
         return false;
@@ -109,12 +113,19 @@ function AdminDatos({
 
 
   /* ======================================
-     CARGAR RESUMEN
+     CARGAR RESUMEN MANUALMENTE
   ====================================== */
 
   const cargarResumen =
     async () => {
-      setCargandoResumen(true);
+      if (cargandoResumen) {
+        return;
+      }
+
+      setCargandoResumen(
+        true
+      );
+
       setErrorResumen("");
 
       try {
@@ -156,9 +167,77 @@ function AdminDatos({
     };
 
 
+  /* ======================================
+     CARGA INICIAL DEL RESUMEN
+  ====================================== */
+
   useEffect(() => {
-    cargarResumen();
-  }, []);
+    let activo = true;
+
+    const cargarResumenInicial =
+      async () => {
+        try {
+          const respuesta =
+            await peticionAutenticada(
+              `${apiUrl}/administracion/resumen/`
+            );
+
+          if (
+            respuesta.status === 403
+          ) {
+            if (
+              onPermisoRevocado
+            ) {
+              void onPermisoRevocado();
+            }
+
+            return;
+          }
+
+          const datos =
+            await respuesta.json();
+
+          if (!respuesta.ok) {
+            throw new Error(
+              datos.detail ||
+              "No fue posible consultar los datos maestros."
+            );
+          }
+
+          if (activo) {
+            setResumen(
+              datos
+            );
+
+            setErrorResumen(
+              ""
+            );
+          }
+        } catch (error) {
+          if (activo) {
+            setErrorResumen(
+              error.message
+            );
+          }
+        } finally {
+          if (activo) {
+            setCargandoResumen(
+              false
+            );
+          }
+        }
+      };
+
+    void cargarResumenInicial();
+
+    return () => {
+      activo = false;
+    };
+  }, [
+    apiUrl,
+    peticionAutenticada,
+    onPermisoRevocado,
+  ]);
 
 
   /* ======================================
@@ -168,7 +247,8 @@ function AdminDatos({
   const seleccionarArchivo =
     (event) => {
       const seleccionado =
-        event.target.files?.[0] ||
+        event.target
+          .files?.[0] ||
         null;
 
       setArchivo(
@@ -187,6 +267,13 @@ function AdminDatos({
 
   const validarExcel =
     async () => {
+      if (
+        validando ||
+        importando
+      ) {
+        return;
+      }
+
       if (!archivo) {
         setErrores([
           "Seleccione un archivo Excel antes de continuar.",
@@ -195,7 +282,9 @@ function AdminDatos({
         return;
       }
 
-      setValidando(true);
+      setValidando(
+        true
+      );
 
       setValidacion(null);
       setErrores([]);
@@ -266,6 +355,13 @@ function AdminDatos({
   const aplicarImportacion =
     async () => {
       if (
+        validando ||
+        importando
+      ) {
+        return;
+      }
+
+      if (
         !archivo ||
         !validacion?.valido
       ) {
@@ -285,7 +381,9 @@ function AdminDatos({
         return;
       }
 
-      setImportando(true);
+      setImportando(
+        true
+      );
 
       setErrores([]);
       setMensaje("");
@@ -342,9 +440,16 @@ function AdminDatos({
             "archivo-datos-cintac"
           );
 
-        if (inputArchivo) {
-          inputArchivo.value = "";
+        if (
+          inputArchivo
+        ) {
+          inputArchivo.value =
+            "";
         }
+
+        setCargandoResumen(
+          false
+        );
 
         await cargarResumen();
 
@@ -405,6 +510,10 @@ function AdminDatos({
               onClick={
                 onVolver
               }
+              disabled={
+                validando ||
+                importando
+              }
             >
               VOLVER AL COTIZADOR
             </button>
@@ -415,6 +524,9 @@ function AdminDatos({
               className="logout-button"
               onClick={
                 onCerrarSesion
+              }
+              disabled={
+                importando
               }
             >
               CERRAR SESIÓN
@@ -473,7 +585,9 @@ function AdminDatos({
                 cargarResumen
               }
               disabled={
-                cargandoResumen
+                cargandoResumen ||
+                validando ||
+                importando
               }
             >
               {
