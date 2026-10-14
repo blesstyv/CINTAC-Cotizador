@@ -1010,7 +1010,7 @@ def aplicar_importacion(
                 "Contenedor 20'",
 
             "capacidad_tn":
-                Decimal("25.00"),
+                Decimal("23.00"),
 
             "activo":
                 True,

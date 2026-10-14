@@ -50,7 +50,7 @@ class MatematicaOpcionesTests(
             )
 
 
-    def test_24999_kg_requiere_un_contenedor(
+    def test_22999_kg_requiere_un_contenedor_de_cada_tipo(
         self,
     ):
         respuesta = self.client.post(
@@ -60,7 +60,7 @@ class MatematicaOpcionesTests(
                     self.ruta.id,
 
                 "peso_carga":
-                    24999,
+                    22999,
 
                 "unidad_peso":
                     "kg",
@@ -79,16 +79,28 @@ class MatematicaOpcionesTests(
                     "pesoTN"
                 ]
             ),
-            Decimal("24.999"),
+            Decimal("22.999"),
         )
 
-        for opcion in respuesta.data[
-            "opciones"
-        ]:
-            self.assertEqual(
-                opcion["cantidad"],
-                1,
-            )
+        opciones = {
+            opcion["codigo"]:
+                opcion["cantidad"]
+
+            for opcion
+            in respuesta.data[
+                "opciones"
+            ]
+        }
+
+        self.assertEqual(
+            opciones["20"],
+            1,
+        )
+
+        self.assertEqual(
+            opciones["40"],
+            1,
+        )
 
 
     def test_25001_kg_requiere_dos_contenedores(
@@ -400,7 +412,7 @@ class MatematicaCotizacionTests(
             respuesta.data[
                 "cantidad"
             ],
-            4,
+            5,
         )
 
         self.assertEqual(
@@ -409,7 +421,7 @@ class MatematicaCotizacionTests(
                     "totalMin"
                 ]
             ),
-            Decimal("6600"),
+            Decimal("8250"),
         )
 
         self.assertEqual(
@@ -418,7 +430,7 @@ class MatematicaCotizacionTests(
                     "totalMax"
                 ]
             ),
-            Decimal("11400"),
+            Decimal("14250"),
         )
 
 
@@ -687,7 +699,7 @@ class MatematicaCotizacionTests(
     @patch(
         "cotizador.views.obtener_tipo_cambio"
     )
-    def test_conversion_clp_para_dos_contenedores_es_correcta(
+    def test_conversion_clp_para_tres_contenedores_es_correcta(
         self,
         mock_tipo_cambio,
     ):
@@ -725,7 +737,7 @@ class MatematicaCotizacionTests(
             respuesta.data[
                 "cantidad"
             ],
-            2,
+            3,
         )
 
         self.assertEqual(
@@ -734,7 +746,7 @@ class MatematicaCotizacionTests(
                     "totalMin"
                 ]
             ),
-            Decimal("3300"),
+            Decimal("4950"),
         )
 
         self.assertEqual(
@@ -743,7 +755,7 @@ class MatematicaCotizacionTests(
                     "totalMax"
                 ]
             ),
-            Decimal("5700"),
+            Decimal("8550"),
         )
 
         self.assertEqual(
@@ -752,7 +764,7 @@ class MatematicaCotizacionTests(
                     "totalMinCLP"
                 ]
             ),
-            Decimal("3202518"),
+            Decimal("4803777"),
         )
 
         self.assertEqual(
@@ -761,5 +773,5 @@ class MatematicaCotizacionTests(
                     "totalMaxCLP"
                 ]
             ),
-            Decimal("5531622"),
+            Decimal("8297433"),
         )

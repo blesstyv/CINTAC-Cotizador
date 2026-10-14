@@ -225,7 +225,8 @@ DATOS = [
 class Command(BaseCommand):
     help = (
         "Carga los datos iniciales del cotizador CINTAC "
-        "sin modificar registros existentes."
+        "y mantiene actualizadas las capacidades "
+        "operacionales de los contenedores."
     )
 
     @transaction.atomic
@@ -238,19 +239,22 @@ class Command(BaseCommand):
             "transitos": 0,
         }
 
-        existentes = {
+        actualizados = {
             "contenedores": 0,
+        }
+
+        existentes = {
             "puertos": 0,
             "rutas": 0,
             "tarifas": 0,
             "transitos": 0,
         }
 
-        _, creado = TipoContenedor.objects.get_or_create(
+        _, creado = TipoContenedor.objects.update_or_create(
             codigo="20",
             defaults={
                 "nombre": "Contenedor 20'",
-                "capacidad_tn": 25,
+                "capacidad_tn": 23,
                 "activo": True,
             },
         )
@@ -258,9 +262,9 @@ class Command(BaseCommand):
         if creado:
             creados["contenedores"] += 1
         else:
-            existentes["contenedores"] += 1
+            actualizados["contenedores"] += 1
 
-        _, creado = TipoContenedor.objects.get_or_create(
+        _, creado = TipoContenedor.objects.update_or_create(
             codigo="40",
             defaults={
                 "nombre": "Contenedor 40'",
@@ -272,7 +276,7 @@ class Command(BaseCommand):
         if creado:
             creados["contenedores"] += 1
         else:
-            existentes["contenedores"] += 1
+            actualizados["contenedores"] += 1
 
         for dato in DATOS:
             origen, creado = Puerto.objects.get_or_create(
@@ -379,12 +383,18 @@ class Command(BaseCommand):
 
         self.stdout.write("")
         self.stdout.write(
-            "Registros existentes conservados sin modificar:"
+            "Registros actualizados:"
         )
 
         self.stdout.write(
-            f"  Contenedores: {existentes['contenedores']}"
+            f"  Contenedores: {actualizados['contenedores']}"
         )
+
+        self.stdout.write("")
+        self.stdout.write(
+            "Registros existentes conservados:"
+        )
+
         self.stdout.write(
             f"  Puertos: {existentes['puertos']}"
         )

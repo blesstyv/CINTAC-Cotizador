@@ -44,7 +44,6 @@ class IntegracionFlujosTests(
         )
 
         perfil.autorizado = True
-
         perfil.puede_gestionar_datos = True
 
         perfil.save(
@@ -53,7 +52,6 @@ class IntegracionFlujosTests(
                 "puede_gestionar_datos",
             ]
         )
-
 
     def setUp(self):
         super().setUp()
@@ -67,7 +65,6 @@ class IntegracionFlujosTests(
         self.addCleanup(
             self.temporal.cleanup
         )
-
 
     def crear_excel(
         self,
@@ -122,7 +119,6 @@ class IntegracionFlujosTests(
 
         return ruta_archivo
 
-
     def subir_archivo(
         self,
         cliente,
@@ -141,7 +137,6 @@ class IntegracionFlujosTests(
                 },
                 format="multipart",
             )
-
 
     def iniciar_sesion(
         self,
@@ -189,7 +184,6 @@ class IntegracionFlujosTests(
             token,
         )
 
-
     @patch(
         "cotizador.views.obtener_tipo_cambio"
     )
@@ -218,7 +212,6 @@ class IntegracionFlujosTests(
             )
         )
 
-
         respuesta_sesion = (
             cliente.get(
                 "/api/sesion/"
@@ -241,7 +234,6 @@ class IntegracionFlujosTests(
                 "puedeGestionarDatos"
             ]
         )
-
 
         respuesta_rutas = (
             cliente.get(
@@ -273,7 +265,6 @@ class IntegracionFlujosTests(
                 == "Valparaiso"
             )
         )
-
 
         respuesta_opciones = (
             cliente.post(
@@ -310,9 +301,8 @@ class IntegracionFlujosTests(
             respuesta_opciones.data[
                 "sugerida"
             ],
-            "20",
+            "40",
         )
-
 
         respuesta_cotizacion = (
             cliente.post(
@@ -328,7 +318,7 @@ class IntegracionFlujosTests(
                         "kg",
 
                     "tipo_contenedor":
-                        "20",
+                        "40",
 
                     "contingencia":
                         3,
@@ -355,7 +345,7 @@ class IntegracionFlujosTests(
                     "totalMin"
                 ]
             ),
-            Decimal("1650"),
+            Decimal("2350"),
         )
 
         self.assertEqual(
@@ -364,7 +354,7 @@ class IntegracionFlujosTests(
                     "totalMax"
                 ]
             ),
-            Decimal("2850"),
+            Decimal("3850"),
         )
 
         self.assertEqual(
@@ -393,7 +383,7 @@ class IntegracionFlujosTests(
                     "totalMinCLP"
                 ]
             ),
-            Decimal("1601259"),
+            Decimal("2280581"),
         )
 
         self.assertEqual(
@@ -402,9 +392,8 @@ class IntegracionFlujosTests(
                     "totalMaxCLP"
                 ]
             ),
-            Decimal("2765811"),
+            Decimal("3736271"),
         )
-
 
         respuesta_logout = (
             cliente.post(
@@ -418,7 +407,6 @@ class IntegracionFlujosTests(
             respuesta_logout.status_code,
             200,
         )
-
 
         cliente.credentials(
             HTTP_AUTHORIZATION=(
@@ -436,7 +424,6 @@ class IntegracionFlujosTests(
             respuesta_posterior.status_code,
             401,
         )
-
 
     @patch(
         "cotizador.views.obtener_tipo_cambio"
@@ -472,14 +459,12 @@ class IntegracionFlujosTests(
                 "en_linea",
         }
 
-
         cliente, _ = (
             self.iniciar_sesion(
                 "gestor_integracion",
                 "ClaveGestor123!",
             )
         )
-
 
         respuesta_sesion = (
             cliente.get(
@@ -498,7 +483,6 @@ class IntegracionFlujosTests(
             ]
         )
 
-
         tarifa_antes = (
             Tarifa.objects.get(
                 ruta=self.ruta,
@@ -511,9 +495,7 @@ class IntegracionFlujosTests(
             Decimal("1650.00"),
         )
 
-
         archivo = self.crear_excel()
-
 
         respuesta_validacion = (
             self.subir_archivo(
@@ -544,7 +526,6 @@ class IntegracionFlujosTests(
             1,
         )
 
-
         respuesta_importacion = (
             self.subir_archivo(
                 cliente,
@@ -569,7 +550,6 @@ class IntegracionFlujosTests(
 
         mock_respaldo.assert_called_once()
 
-
         tarifa_despues = (
             Tarifa.objects.get(
                 ruta=self.ruta,
@@ -586,7 +566,6 @@ class IntegracionFlujosTests(
             tarifa_despues.valor_maximo,
             Decimal("3000.00"),
         )
-
 
         respuesta_rutas = (
             cliente.get(
@@ -644,7 +623,6 @@ class IntegracionFlujosTests(
             Decimal("3000.00"),
         )
 
-
         respuesta_cotizacion = (
             cliente.post(
                 "/api/cotizar/",
@@ -676,12 +654,19 @@ class IntegracionFlujosTests(
         )
 
         self.assertEqual(
+            respuesta_cotizacion.data[
+                "cantidad"
+            ],
+            2,
+        )
+
+        self.assertEqual(
             Decimal(
                 respuesta_cotizacion.data[
                     "totalMin"
                 ]
             ),
-            Decimal("1800"),
+            Decimal("3600"),
         )
 
         self.assertEqual(
@@ -690,7 +675,7 @@ class IntegracionFlujosTests(
                     "totalMax"
                 ]
             ),
-            Decimal("3000"),
+            Decimal("6000"),
         )
 
         self.assertEqual(
@@ -714,7 +699,6 @@ class IntegracionFlujosTests(
             "Fuente integración",
         )
 
-
     @patch(
         (
             "cotizador.gestion_views."
@@ -731,7 +715,6 @@ class IntegracionFlujosTests(
                 "ClaveGestor123!",
             )
         )
-
 
         ruta_antes = (
             Ruta.objects.get(
@@ -758,11 +741,9 @@ class IntegracionFlujosTests(
             Tarifa.objects.count()
         )
 
-
         archivo = self.crear_excel(
             tarifa20_min=-100,
         )
-
 
         respuesta_validacion = (
             self.subir_archivo(
@@ -786,7 +767,6 @@ class IntegracionFlujosTests(
             ]
         )
 
-
         respuesta_importacion = (
             self.subir_archivo(
                 cliente,
@@ -809,7 +789,6 @@ class IntegracionFlujosTests(
             ]
         )
 
-
         tarifa_antes.refresh_from_db()
 
         self.assertEqual(
@@ -829,7 +808,6 @@ class IntegracionFlujosTests(
 
         mock_respaldo.assert_not_called()
 
-
     def test_gestor_revocado_conserva_cotizador_pero_pierde_administracion(
         self,
     ):
@@ -839,7 +817,6 @@ class IntegracionFlujosTests(
                 "ClaveGestor123!",
             )
         )
-
 
         respuesta_admin_inicial = (
             cliente.get(
@@ -851,7 +828,6 @@ class IntegracionFlujosTests(
             respuesta_admin_inicial.status_code,
             200,
         )
-
 
         perfil = (
             self.usuario_gestor
@@ -866,7 +842,6 @@ class IntegracionFlujosTests(
             ]
         )
 
-
         respuesta_admin_posterior = (
             cliente.get(
                 "/api/administracion/resumen/"
@@ -878,7 +853,6 @@ class IntegracionFlujosTests(
             403,
         )
 
-
         respuesta_cotizador = (
             cliente.get(
                 "/api/rutas/"
@@ -889,7 +863,6 @@ class IntegracionFlujosTests(
             respuesta_cotizador.status_code,
             200,
         )
-
 
         respuesta_sesion = (
             cliente.get(

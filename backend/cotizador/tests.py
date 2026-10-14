@@ -72,7 +72,7 @@ class BaseCotizadorTestCase(TestCase):
             TipoContenedor.objects.create(
                 codigo="20",
                 nombre="Contenedor 20'",
-                capacidad_tn=Decimal("25.00"),
+                capacidad_tn=Decimal("23.00"),
                 activo=True,
             )
         )
@@ -353,7 +353,95 @@ class ModeloTests(BaseCotizadorTestCase):
 class OpcionesContenedorTests(
     BaseCotizadorTestCase
 ):
-    def test_25_tn_requiere_un_contenedor(self):
+    def test_23_tn_requiere_un_contenedor_de_cada_tipo(
+        self,
+    ):
+        respuesta = self.client.post(
+            "/api/opciones-contenedores/",
+            {
+                "ruta_id":
+                    self.ruta.id,
+
+                "peso_carga":
+                    23,
+
+                "unidad_peso":
+                    "tn",
+            },
+            format="json",
+        )
+
+        self.assertEqual(
+            respuesta.status_code,
+            200,
+        )
+
+        opciones = {
+            opcion["codigo"]:
+                opcion["cantidad"]
+
+            for opcion
+            in respuesta.data[
+                "opciones"
+            ]
+        }
+
+        self.assertEqual(
+            opciones["20"],
+            1,
+        )
+
+        self.assertEqual(
+            opciones["40"],
+            1,
+        )
+
+    def test_23_001_tn_diferencia_20_y_40_pies(
+        self,
+    ):
+        respuesta = self.client.post(
+            "/api/opciones-contenedores/",
+            {
+                "ruta_id":
+                    self.ruta.id,
+
+                "peso_carga":
+                    23.001,
+
+                "unidad_peso":
+                    "tn",
+            },
+            format="json",
+        )
+
+        self.assertEqual(
+            respuesta.status_code,
+            200,
+        )
+
+        opciones = {
+            opcion["codigo"]:
+                opcion["cantidad"]
+
+            for opcion
+            in respuesta.data[
+                "opciones"
+            ]
+        }
+
+        self.assertEqual(
+            opciones["20"],
+            2,
+        )
+
+        self.assertEqual(
+            opciones["40"],
+            1,
+        )
+
+    def test_25_tn_requiere_dos_20_y_un_40(
+        self,
+    ):
         respuesta = self.client.post(
             "/api/opciones-contenedores/",
             {
@@ -383,15 +471,29 @@ class OpcionesContenedorTests(
             Decimal("25"),
         )
 
-        for opcion in respuesta.data[
-            "opciones"
-        ]:
-            self.assertEqual(
-                opcion["cantidad"],
-                1,
-            )
+        opciones = {
+            opcion["codigo"]:
+                opcion["cantidad"]
 
-    def test_25000_kg_equivale_a_25_tn(self):
+            for opcion
+            in respuesta.data[
+                "opciones"
+            ]
+        }
+
+        self.assertEqual(
+            opciones["20"],
+            2,
+        )
+
+        self.assertEqual(
+            opciones["40"],
+            1,
+        )
+
+    def test_25000_kg_equivale_a_25_tn(
+        self,
+    ):
         respuesta = self.client.post(
             "/api/opciones-contenedores/",
             {
@@ -421,7 +523,9 @@ class OpcionesContenedorTests(
             Decimal("25"),
         )
 
-    def test_50_tn_requiere_dos_contenedores(self):
+    def test_50_tn_requiere_tres_20_y_dos_40(
+        self,
+    ):
         respuesta = self.client.post(
             "/api/opciones-contenedores/",
             {
@@ -442,15 +546,29 @@ class OpcionesContenedorTests(
             200,
         )
 
-        for opcion in respuesta.data[
-            "opciones"
-        ]:
-            self.assertEqual(
-                opcion["cantidad"],
-                2,
-            )
+        opciones = {
+            opcion["codigo"]:
+                opcion["cantidad"]
 
-    def test_25_001_tn_requiere_dos_contenedores(self):
+            for opcion
+            in respuesta.data[
+                "opciones"
+            ]
+        }
+
+        self.assertEqual(
+            opciones["20"],
+            3,
+        )
+
+        self.assertEqual(
+            opciones["40"],
+            2,
+        )
+
+    def test_25_001_tn_requiere_dos_contenedores_de_cada_tipo(
+        self,
+    ):
         respuesta = self.client.post(
             "/api/opciones-contenedores/",
             {
@@ -471,13 +589,25 @@ class OpcionesContenedorTests(
             200,
         )
 
-        for opcion in respuesta.data[
-            "opciones"
-        ]:
-            self.assertEqual(
-                opcion["cantidad"],
-                2,
-            )
+        opciones = {
+            opcion["codigo"]:
+                opcion["cantidad"]
+
+            for opcion
+            in respuesta.data[
+                "opciones"
+            ]
+        }
+
+        self.assertEqual(
+            opciones["20"],
+            2,
+        )
+
+        self.assertEqual(
+            opciones["40"],
+            2,
+        )
 
     def test_peso_cero_es_rechazado(self):
         respuesta = self.client.post(
@@ -613,7 +743,7 @@ class CotizacionTests(BaseCotizadorTestCase):
     @patch(
         "cotizador.views.obtener_tipo_cambio"
     )
-    def test_cotizacion_20_pies_25_tn(
+    def test_cotizacion_20_pies_25_tn_requiere_dos_contenedores(
         self,
         mock_tipo_cambio,
     ):
@@ -659,7 +789,7 @@ class CotizacionTests(BaseCotizadorTestCase):
 
         self.assertEqual(
             respuesta.data["cantidad"],
-            1,
+            2,
         )
 
         self.assertEqual(
@@ -668,7 +798,7 @@ class CotizacionTests(BaseCotizadorTestCase):
                     "totalMin"
                 ]
             ),
-            Decimal("1650"),
+            Decimal("3300"),
         )
 
         self.assertEqual(
@@ -677,7 +807,7 @@ class CotizacionTests(BaseCotizadorTestCase):
                     "totalMax"
                 ]
             ),
-            Decimal("2850"),
+            Decimal("5700"),
         )
 
     @patch(
@@ -831,7 +961,7 @@ class CotizacionTests(BaseCotizadorTestCase):
                     "totalMin"
                 ]
             ),
-            Decimal("1650"),
+            Decimal("3300"),
         )
 
     def test_contenedor_inexistente_es_rechazado(self):
@@ -1048,7 +1178,7 @@ class CotizacionTests(BaseCotizadorTestCase):
                     "totalMinCLP"
                 ]
             ),
-            Decimal("1601259"),
+            Decimal("3202518"),
         )
 
         self.assertEqual(
@@ -1057,7 +1187,7 @@ class CotizacionTests(BaseCotizadorTestCase):
                     "totalMaxCLP"
                 ]
             ),
-            Decimal("2765811"),
+            Decimal("5531622"),
         )
 
     @patch(
