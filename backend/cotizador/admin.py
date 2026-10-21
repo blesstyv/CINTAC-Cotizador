@@ -15,11 +15,13 @@ from .models import (
 class PerfilUsuarioAdmin(admin.ModelAdmin):
     list_display = (
         "usuario",
+        "rol",
         "autorizado",
         "puede_gestionar_datos",
     )
 
     list_editable = (
+        "rol",
         "autorizado",
         "puede_gestionar_datos",
     )
@@ -28,9 +30,11 @@ class PerfilUsuarioAdmin(admin.ModelAdmin):
         "usuario__username",
         "usuario__first_name",
         "usuario__last_name",
+        "usuario__email",
     )
 
     list_filter = (
+        "rol",
         "autorizado",
         "puede_gestionar_datos",
     )

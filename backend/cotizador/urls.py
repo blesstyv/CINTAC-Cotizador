@@ -12,6 +12,11 @@ from .gestion_views import (
     validar_excel,
 )
 
+from .usuario_views import (
+    usuario_detalle,
+    usuarios,
+)
+
 from .views import (
     cotizar_operacion,
     listar_rutas,
@@ -79,5 +84,20 @@ urlpatterns = [
         "administracion/importar-excel/",
         importar_excel,
         name="administracion-importar-excel",
+    ),
+
+    path(
+        "administracion/usuarios/",
+        usuarios,
+        name="administracion-usuarios",
+    ),
+
+    path(
+        (
+            "administracion/usuarios/"
+            "<int:usuario_id>/"
+        ),
+        usuario_detalle,
+        name="administracion-usuario-detalle",
     ),
 ]

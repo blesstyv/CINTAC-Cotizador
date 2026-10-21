@@ -19,6 +19,7 @@ def obtener_perfil_vigente(usuario):
         .values(
             "autorizado",
             "puede_gestionar_datos",
+            "rol",
         )
         .first()
     )
@@ -89,14 +90,65 @@ class PuedeGestionarDatos(BasePermission):
         if not perfil:
             return False
 
+        rol_gestor = (
+            perfil["rol"]
+            in {
+                PerfilUsuario.Rol.ENCARGADO,
+                PerfilUsuario.Rol.ADMINISTRADOR,
+            }
+        )
+
         return (
             bool(
                 perfil["autorizado"]
             )
             and
-            bool(
-                perfil[
-                    "puede_gestionar_datos"
-                ]
+            (
+                bool(
+                    perfil[
+                        "puede_gestionar_datos"
+                    ]
+                )
+                or rol_gestor
             )
+        )
+
+
+class PuedeGestionarUsuarios(BasePermission):
+    message = (
+        "Solo un administrador puede "
+        "gestionar usuarios."
+    )
+
+    def has_permission(
+        self,
+        request,
+        view,
+    ):
+        usuario = request.user
+
+        if (
+            not usuario
+            or not usuario.is_authenticated
+            or not usuario.is_active
+        ):
+            return False
+
+        if usuario.is_superuser:
+            return True
+
+        perfil = obtener_perfil_vigente(
+            usuario
+        )
+
+        if not perfil:
+            return False
+
+        return (
+            bool(
+                perfil["autorizado"]
+            )
+            and
+            perfil["rol"]
+            == PerfilUsuario.Rol.ADMINISTRADOR
         )

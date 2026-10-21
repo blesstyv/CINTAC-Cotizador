@@ -7,10 +7,33 @@ from django.db import models
 
 
 class PerfilUsuario(models.Model):
+    class Rol(models.TextChoices):
+        USUARIO = (
+            "USUARIO",
+            "Usuario",
+        )
+
+        ENCARGADO = (
+            "ENCARGADO",
+            "Encargado",
+        )
+
+        ADMINISTRADOR = (
+            "ADMINISTRADOR",
+            "Administrador",
+        )
+
     usuario = models.OneToOneField(
         User,
         on_delete=models.CASCADE,
         related_name="perfil_cintac",
+    )
+
+    rol = models.CharField(
+        max_length=20,
+        choices=Rol.choices,
+        default=Rol.USUARIO,
+        db_index=True,
     )
 
     autorizado = models.BooleanField(
@@ -21,6 +44,31 @@ class PerfilUsuario(models.Model):
         default=False,
     )
 
+    class Meta:
+        indexes = [
+            models.Index(
+                fields=[
+                    "rol",
+                    "autorizado",
+                ],
+                name="perfil_rol_aut_idx",
+            ),
+        ]
+
+    @property
+    def es_administrador(self):
+        return (
+            self.rol
+            == self.Rol.ADMINISTRADOR
+        )
+
+    @property
+    def es_encargado(self):
+        return (
+            self.rol
+            == self.Rol.ENCARGADO
+        )
+
     def __str__(self):
         estado = (
             "Autorizado"
@@ -29,7 +77,9 @@ class PerfilUsuario(models.Model):
         )
 
         return (
-            f"{self.usuario.username} - {estado}"
+            f"{self.usuario.username} - "
+            f"{self.get_rol_display()} - "
+            f"{estado}"
         )
 
 

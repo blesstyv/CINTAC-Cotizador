@@ -33,22 +33,28 @@ def obtener_permisos_usuario(
         return {
             "autorizado": False,
             "puedeGestionarDatos": False,
+            "puedeGestionarUsuarios": False,
+            "rol": None,
+            "rolNombre": None,
         }
 
     if usuario.is_superuser:
         return {
             "autorizado": True,
             "puedeGestionarDatos": True,
+            "puedeGestionarUsuarios": True,
+            "rol":
+                PerfilUsuario
+                .Rol
+                .ADMINISTRADOR,
+            "rolNombre":
+                "Administrador técnico",
         }
 
     perfil = (
         PerfilUsuario.objects
         .filter(
             usuario_id=usuario.id
-        )
-        .values(
-            "autorizado",
-            "puede_gestionar_datos",
         )
         .first()
     )
@@ -57,20 +63,44 @@ def obtener_permisos_usuario(
         return {
             "autorizado": False,
             "puedeGestionarDatos": False,
+            "puedeGestionarUsuarios": False,
+            "rol": None,
+            "rolNombre": None,
         }
 
     autorizado = bool(
-        perfil["autorizado"]
+        perfil.autorizado
     )
 
-    puede_gestionar = (
+    puede_gestionar_datos = (
         autorizado
         and
-        bool(
-            perfil[
-                "puede_gestionar_datos"
-            ]
+        (
+            bool(
+                perfil
+                .puede_gestionar_datos
+            )
+            or
+            perfil.rol
+            in {
+                PerfilUsuario
+                .Rol
+                .ENCARGADO,
+
+                PerfilUsuario
+                .Rol
+                .ADMINISTRADOR,
+            }
         )
+    )
+
+    puede_gestionar_usuarios = (
+        autorizado
+        and
+        perfil.rol
+        == PerfilUsuario
+        .Rol
+        .ADMINISTRADOR
     )
 
     return {
@@ -78,7 +108,68 @@ def obtener_permisos_usuario(
             autorizado,
 
         "puedeGestionarDatos":
-            puede_gestionar,
+            puede_gestionar_datos,
+
+        "puedeGestionarUsuarios":
+            puede_gestionar_usuarios,
+
+        "rol":
+            perfil.rol,
+
+        "rolNombre":
+            perfil.get_rol_display(),
+    }
+
+
+def _datos_usuario(
+    usuario,
+):
+    permisos = (
+        obtener_permisos_usuario(
+            usuario
+        )
+    )
+
+    return {
+        "id":
+            usuario.id,
+
+        "username":
+            usuario.username,
+
+        "nombre":
+            (
+                usuario.get_full_name()
+                or usuario.username
+            ),
+
+        "email":
+            usuario.email,
+
+        "rol":
+            permisos[
+                "rol"
+            ],
+
+        "rolNombre":
+            permisos[
+                "rolNombre"
+            ],
+
+        "autorizado":
+            permisos[
+                "autorizado"
+            ],
+
+        "puedeGestionarDatos":
+            permisos[
+                "puedeGestionarDatos"
+            ],
+
+        "puedeGestionarUsuarios":
+            permisos[
+                "puedeGestionarUsuarios"
+            ],
     }
 
 
@@ -180,34 +271,15 @@ def iniciar_sesion(request):
         user=usuario
     )
 
-    nombre = (
-        usuario.get_full_name()
-        or usuario.username
-    )
-
     return Response(
         {
             "token":
                 token.key,
 
-            "usuario": {
-                "id":
-                    usuario.id,
-
-                "username":
-                    usuario.username,
-
-                "nombre":
-                    nombre,
-
-                "autorizado":
-                    True,
-
-                "puedeGestionarDatos":
-                    permisos[
-                        "puedeGestionarDatos"
-                    ],
-            },
+            "usuario":
+                _datos_usuario(
+                    usuario
+                ),
         },
         status=
             status.HTTP_200_OK,
@@ -216,38 +288,10 @@ def iniciar_sesion(request):
 
 @api_view(["GET"])
 def sesion_actual(request):
-    usuario = request.user
-
-    permisos = (
-        obtener_permisos_usuario(
-            usuario
-        )
-    )
-
     return Response(
-        {
-            "id":
-                usuario.id,
-
-            "username":
-                usuario.username,
-
-            "nombre":
-                (
-                    usuario.get_full_name()
-                    or usuario.username
-                ),
-
-            "autorizado":
-                permisos[
-                    "autorizado"
-                ],
-
-            "puedeGestionarDatos":
-                permisos[
-                    "puedeGestionarDatos"
-                ],
-        },
+        _datos_usuario(
+            request.user
+        ),
         status=
             status.HTTP_200_OK,
     )
