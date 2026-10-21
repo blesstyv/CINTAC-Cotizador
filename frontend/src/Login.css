@@ -1,0 +1,643 @@
+/* =========================================
+   LOGIN EV3 - CINTAC
+   Rediseño de una sola columna
+========================================= */
+
+.login-page {
+  min-height: 100vh;
+
+  position: relative;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  padding: 40px 20px;
+
+  background-size: cover;
+
+  background-position: center;
+
+  background-repeat: no-repeat;
+}
+
+
+.login-overlay {
+  position: absolute;
+
+  inset: 0;
+
+  background:
+    linear-gradient(
+      180deg,
+      rgba(22, 28, 32, 0.72) 0%,
+      rgba(22, 28, 32, 0.82) 100%
+    );
+
+  backdrop-filter:
+    blur(1px);
+}
+
+
+/* =========================================
+   CONTENEDOR PRINCIPAL
+========================================= */
+
+.login-shell {
+  position: relative;
+
+  z-index: 2;
+
+  width: min(
+    480px,
+    100%
+  );
+
+  min-height: 0;
+
+  display: grid;
+
+  grid-template-columns: 1fr;
+
+  overflow: hidden;
+
+  border-top:
+    5px solid
+    var(--cintac-orange);
+
+  background:
+    var(--white);
+
+  box-shadow:
+    0 30px 80px
+    rgba(
+      0,
+      0,
+      0,
+      0.38
+    );
+}
+
+
+/* =========================================
+   IDENTIDAD CINTAC
+========================================= */
+
+.login-brand-panel {
+  position: relative;
+
+  padding:
+    36px
+    38px
+    32px;
+
+  display: flex;
+
+  flex-direction: column;
+
+  align-items: center;
+
+  justify-content: center;
+
+  text-align: center;
+
+  overflow: hidden;
+
+  background:
+    linear-gradient(
+      145deg,
+      #3f4448 0%,
+      #292e32 100%
+    );
+
+  color:
+    var(--white);
+}
+
+
+.login-brand-panel::after {
+  content: "";
+
+  position: absolute;
+
+  left: 0;
+
+  bottom: 0;
+
+  width: 100%;
+
+  height: 3px;
+
+  background:
+    var(--cintac-orange);
+}
+
+
+.login-brand {
+  margin-bottom: 13px;
+
+  color:
+    var(--cintac-orange);
+
+  font-size:
+    clamp(
+      46px,
+      8vw,
+      58px
+    );
+
+  font-weight: 800;
+
+  line-height: 0.9;
+
+  letter-spacing: -3px;
+}
+
+
+.login-kicker {
+  margin-bottom: 11px;
+
+  color:
+    var(--cintac-orange);
+
+  font-size: 10px;
+
+  font-weight: 800;
+
+  letter-spacing: 2px;
+}
+
+
+.login-brand-panel h1 {
+  margin: 0;
+
+  color:
+    var(--white);
+
+  font-size:
+    clamp(
+      28px,
+      5vw,
+      34px
+    );
+
+  font-weight: 600;
+
+  line-height: 1.05;
+
+  letter-spacing: -0.8px;
+}
+
+
+.login-brand-panel p {
+  max-width: 320px;
+
+  margin:
+    14px 0 0;
+
+  color:
+    rgba(
+      255,
+      255,
+      255,
+      0.76
+    );
+
+  font-size: 12px;
+
+  line-height: 1.5;
+}
+
+
+/* =========================================
+   TARJETA DE ACCESO
+========================================= */
+
+.login-card {
+  padding:
+    34px
+    40px
+    30px;
+
+  display: flex;
+
+  flex-direction: column;
+
+  justify-content: center;
+
+  background:
+    var(--white);
+}
+
+
+.login-card-header {
+  margin-bottom: 25px;
+
+  text-align: center;
+}
+
+
+.login-card-header > span {
+  display: block;
+
+  margin-bottom: 6px;
+
+  color:
+    var(--cintac-orange);
+
+  font-size: 9px;
+
+  font-weight: 800;
+
+  letter-spacing: 1.5px;
+}
+
+
+.login-card-header h2 {
+  margin: 0;
+
+  color:
+    var(--text-main);
+
+  font-size: 28px;
+
+  font-weight: 700;
+
+  letter-spacing: -0.5px;
+}
+
+
+.login-card-header p {
+  margin:
+    8px 0 0;
+
+  color:
+    var(--text-soft);
+
+  font-size: 13px;
+
+  line-height: 1.45;
+}
+
+
+/* =========================================
+   FORMULARIO
+========================================= */
+
+.login-form {
+  padding: 0;
+}
+
+
+.login-field {
+  margin-bottom: 18px;
+
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 7px;
+}
+
+
+.login-field label {
+  color:
+    var(--text-main);
+
+  font-size: 13px;
+
+  font-weight: 700;
+}
+
+
+.login-field input {
+  width: 100%;
+
+  min-height: 50px;
+
+  padding:
+    12px
+    14px;
+
+  border:
+    1px solid
+    var(--gray-300);
+
+  border-radius: 2px;
+
+  background:
+    var(--white);
+
+  color:
+    var(--text-main);
+
+  transition:
+    border-color
+    0.2s ease,
+    box-shadow
+    0.2s ease,
+    background-color
+    0.2s ease;
+}
+
+
+.login-field input::placeholder {
+  color:
+    #a4a7aa;
+}
+
+
+.login-field input:hover:not(:disabled) {
+  border-color:
+    #aeb3b7;
+}
+
+
+.login-field input:focus {
+  outline: none;
+
+  border-color:
+    var(--cintac-orange);
+
+  box-shadow:
+    0 0 0 3px
+    rgba(
+      255,
+      79,
+      0,
+      0.1
+    );
+}
+
+
+.login-field input:disabled {
+  background:
+    var(--gray-100);
+
+  cursor: wait;
+}
+
+
+/* =========================================
+   ERROR
+========================================= */
+
+.login-error {
+  margin:
+    2px 0 18px;
+
+  padding:
+    12px
+    13px;
+
+  display: flex;
+
+  align-items: center;
+
+  gap: 10px;
+
+  border-left:
+    4px solid
+    var(--error);
+
+  background:
+    var(--error-light);
+
+  color:
+    var(--error);
+}
+
+
+.login-error span {
+  width: 22px;
+
+  height: 22px;
+
+  flex-shrink: 0;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  border-radius: 50%;
+
+  background:
+    var(--error);
+
+  color:
+    var(--white);
+
+  font-size: 11px;
+
+  font-weight: 800;
+}
+
+
+.login-error p {
+  margin: 0;
+
+  font-size: 12px;
+
+  line-height: 1.4;
+}
+
+
+/* =========================================
+   BOTÓN INGRESAR
+========================================= */
+
+.login-button {
+  width: 100%;
+
+  min-height: 50px;
+
+  margin-top: 3px;
+
+  padding:
+    13px
+    20px;
+
+  border: none;
+
+  border-radius: 2px;
+
+  background:
+    var(--cintac-orange);
+
+  color:
+    var(--white);
+
+  font-size: 11px;
+
+  font-weight: 800;
+
+  letter-spacing: 0.7px;
+
+  cursor: pointer;
+
+  transition:
+    background-color
+    0.2s ease,
+    transform
+    0.2s ease,
+    box-shadow
+    0.2s ease;
+}
+
+
+.login-button:hover:not(:disabled) {
+  background:
+    var(--cintac-orange-dark);
+
+  transform:
+    translateY(-1px);
+
+  box-shadow:
+    0 7px 18px
+    rgba(
+      255,
+      79,
+      0,
+      0.2
+    );
+}
+
+
+.login-button:disabled {
+  opacity: 0.65;
+
+  cursor: wait;
+
+  transform: none;
+}
+
+
+/* =========================================
+   PIE
+========================================= */
+
+.login-footer {
+  margin-top: 24px;
+
+  padding-top: 17px;
+
+  border-top:
+    1px solid
+    var(--gray-200);
+
+  color:
+    var(--text-soft);
+
+  font-size: 10px;
+
+  text-align: center;
+}
+
+
+/* =========================================
+   RESPONSIVE
+========================================= */
+
+@media (
+  max-width: 600px
+) {
+  .login-page {
+    padding:
+      22px
+      14px;
+  }
+
+
+  .login-shell {
+    width: 100%;
+  }
+
+
+  .login-brand-panel {
+    padding:
+      31px
+      24px
+      27px;
+  }
+
+
+  .login-brand {
+    font-size: 46px;
+  }
+
+
+  .login-brand-panel h1 {
+    font-size: 28px;
+  }
+
+
+  .login-brand-panel p {
+    font-size: 11px;
+  }
+
+
+  .login-card {
+    padding:
+      29px
+      24px
+      25px;
+  }
+
+
+  .login-card-header h2 {
+    font-size: 25px;
+  }
+}
+
+
+@media (
+  max-height: 720px
+) and (
+  min-width: 601px
+) {
+  .login-page {
+    align-items:
+      flex-start;
+
+    padding-top: 28px;
+
+    padding-bottom: 28px;
+  }
+
+
+  .login-brand-panel {
+    padding:
+      26px
+      36px
+      23px;
+  }
+
+
+  .login-brand {
+    margin-bottom: 9px;
+
+    font-size: 43px;
+  }
+
+
+  .login-brand-panel h1 {
+    font-size: 27px;
+  }
+
+
+  .login-brand-panel p {
+    margin-top: 10px;
+  }
+
+
+  .login-card {
+    padding:
+      26px
+      38px
+      24px;
+  }
+}

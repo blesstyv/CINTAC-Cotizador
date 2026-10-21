@@ -4,6 +4,9 @@ import {
   useState,
 } from "react";
 
+import AdminUsuarios
+  from "./AdminUsuarios";
+
 import "./AdminDatos.css";
 
 
@@ -90,9 +93,6 @@ function AdminDatos({
     setErrorResumen,
   ] = useState("");
 
-  /* ======================================
-   BLOQUEOS DE PETICIONES
-====================================== */
 
   const resumenEnCursoRef =
     useRef(false);
@@ -103,9 +103,6 @@ function AdminDatos({
   const importacionEnCursoRef =
     useRef(false);
 
-  /* ======================================
-     COMPROBAR PERMISO
-  ====================================== */
 
   const comprobarPermiso =
     (respuesta) => {
@@ -124,10 +121,6 @@ function AdminDatos({
       return true;
     };
 
-
-  /* ======================================
-     CARGAR RESUMEN MANUALMENTE
-  ====================================== */
 
   const cargarResumen =
   async () => {
@@ -190,10 +183,6 @@ function AdminDatos({
   };
 
 
-  /* ======================================
-     CARGA INICIAL DEL RESUMEN
-  ====================================== */
-
   useEffect(() => {
     let activo = true;
 
@@ -236,12 +225,14 @@ function AdminDatos({
               ""
             );
           }
+
         } catch (error) {
           if (activo) {
             setErrorResumen(
               error.message
             );
           }
+
         } finally {
           if (activo) {
             setCargandoResumen(
@@ -263,10 +254,6 @@ function AdminDatos({
   ]);
 
 
-  /* ======================================
-     SELECCIONAR ARCHIVO
-  ====================================== */
-
   const seleccionarArchivo =
     (event) => {
       const seleccionado =
@@ -283,10 +270,6 @@ function AdminDatos({
       setMensaje("");
     };
 
-
-  /* ======================================
-     VALIDAR EXCEL
-  ====================================== */
 
   const validarExcel =
   async () => {
@@ -305,10 +288,6 @@ function AdminDatos({
       return;
     }
 
-
-    /*
-     * Bloqueo inmediato.
-     */
     validacionEnCursoRef.current =
       true;
 
@@ -320,7 +299,6 @@ function AdminDatos({
     setErrores([]);
     setMensaje("");
 
-
     const formulario =
       new FormData();
 
@@ -328,7 +306,6 @@ function AdminDatos({
       "archivo",
       archivo
     );
-
 
     try {
       const respuesta =
@@ -343,7 +320,6 @@ function AdminDatos({
           }
         );
 
-
       if (
         !comprobarPermiso(
           respuesta
@@ -352,10 +328,8 @@ function AdminDatos({
         return;
       }
 
-
       const datos =
         await respuesta.json();
-
 
       if (!respuesta.ok) {
         setErrores(
@@ -367,11 +341,9 @@ function AdminDatos({
         return;
       }
 
-
       setValidacion(
         datos
       );
-
 
       setMensaje(
         "El archivo superó todas las validaciones."
@@ -393,10 +365,6 @@ function AdminDatos({
   };
 
 
-  /* ======================================
-     APLICAR IMPORTACIÓN
-  ====================================== */
-
   const aplicarImportacion =
   async () => {
     if (
@@ -405,7 +373,6 @@ function AdminDatos({
     ) {
       return;
     }
-
 
     if (
       !archivo ||
@@ -418,20 +385,13 @@ function AdminDatos({
       return;
     }
 
-
-    /*
-     * Reservamos la operación antes
-     * incluso de continuar con el diálogo.
-     */
     importacionEnCursoRef.current =
       true;
-
 
     const confirmado =
       window.confirm(
         "Se actualizarán los datos maestros utilizados por el cotizador. Antes de aplicar los cambios se generará un respaldo de la base de datos. ¿Desea continuar?"
       );
-
 
     if (!confirmado) {
       importacionEnCursoRef.current =
@@ -440,14 +400,12 @@ function AdminDatos({
       return;
     }
 
-
     setImportando(
       true
     );
 
     setErrores([]);
     setMensaje("");
-
 
     const formulario =
       new FormData();
@@ -456,7 +414,6 @@ function AdminDatos({
       "archivo",
       archivo
     );
-
 
     try {
       const respuesta =
@@ -471,7 +428,6 @@ function AdminDatos({
           }
         );
 
-
       if (
         !comprobarPermiso(
           respuesta
@@ -480,10 +436,8 @@ function AdminDatos({
         return;
       }
 
-
       const datos =
         await respuesta.json();
-
 
       if (!respuesta.ok) {
         setErrores(
@@ -495,32 +449,26 @@ function AdminDatos({
         return;
       }
 
-
       setMensaje(
         datos.detail ||
         "Los datos maestros fueron actualizados correctamente."
       );
 
-
       setValidacion(null);
 
       setArchivo(null);
-
 
       const inputArchivo =
         document.getElementById(
           "archivo-datos-cintac"
         );
 
-
       if (inputArchivo) {
         inputArchivo.value =
           "";
       }
 
-
       await cargarResumen();
-
 
       if (
         onDatosActualizados
@@ -544,10 +492,6 @@ function AdminDatos({
   };
 
 
-  /* ======================================
-     INTERFAZ
-  ====================================== */
-
   return (
     <div className="admin-page">
       <header className="site-header">
@@ -566,7 +510,10 @@ function AdminDatos({
           <div className="header-user">
             <div className="user-info">
               <span>
-                USUARIO
+                {
+                  usuario.rolNombre ||
+                  "USUARIO"
+                }
               </span>
 
               <strong>
@@ -619,20 +566,45 @@ function AdminDatos({
           <h1>
             Administración{" "}
             <strong>
-              de datos
+              CINTAC
             </strong>
           </h1>
 
           <p>
-            Gestión de la información
-            utilizada por el cotizador
-            logístico.
+            Gestión de datos,
+            accesos y configuración
+            operativa del cotizador.
           </p>
         </div>
       </section>
 
 
       <main className="admin-main">
+        {
+          usuario
+            .puedeGestionarUsuarios &&
+          (
+            <AdminUsuarios
+              apiUrl={
+                apiUrl
+              }
+
+              usuarioActual={
+                usuario
+              }
+
+              peticionAutenticada={
+                peticionAutenticada
+              }
+
+              onPermisoRevocado={
+                onPermisoRevocado
+              }
+            />
+          )
+        }
+
+
         <section className="admin-section">
           <div className="admin-section-heading">
             <div>
