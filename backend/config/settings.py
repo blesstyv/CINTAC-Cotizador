@@ -197,6 +197,16 @@ CORS_ALLOWED_ORIGINS = [
 ]
 
 
+CORS_ALLOWED_ORIGIN_REGEXES = [
+    pattern.strip()
+    for pattern in os.getenv(
+        "CORS_ALLOWED_ORIGIN_REGEXES",
+        "",
+    ).split(",")
+    if pattern.strip()
+]
+
+
 TOKEN_EXPIRATION_HOURS = int(
     os.getenv(
         "TOKEN_EXPIRATION_HOURS",
