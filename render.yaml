@@ -28,6 +28,12 @@ services:
         value: "^https://cintac-cotizador.*\\.onrender\\.com$"
       - key: TOKEN_EXPIRATION_HOURS
         value: "8"
+      - key: USD_CLP_FALLBACK_VALUE
+        value: "976.82"
+      - key: USD_CLP_FALLBACK_DATE
+        value: "2026-10-22"
+      - key: USD_CLP_FALLBACK_SOURCE
+        value: "Banco Central de Chile - Dolar Observado"
       - key: PYTHON_VERSION
         value: "3.13.14"
       - key: DJANGO_SUPERUSER_USERNAME
