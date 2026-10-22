@@ -7,8 +7,6 @@ import "./index.css";
 import App
   from "./App.jsx";
 
-import "./Login.css";
-
 
 createRoot(
   document.getElementById(

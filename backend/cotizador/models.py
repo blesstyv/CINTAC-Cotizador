@@ -603,3 +603,233 @@ class TipoCambio(models.Model):
             f"{self.valor} - "
             f"{self.fecha_referencia}"
         )
+
+
+class Cotizacion(models.Model):
+    usuario = models.ForeignKey(
+        User,
+        on_delete=models.PROTECT,
+        related_name="cotizaciones_cintac",
+    )
+
+    creada_en = models.DateTimeField(
+        auto_now_add=True,
+        db_index=True,
+    )
+
+    origen = models.CharField(
+        max_length=100,
+        db_index=True,
+    )
+
+    pais_origen = models.CharField(
+        max_length=100,
+    )
+
+    destino = models.CharField(
+        max_length=100,
+        db_index=True,
+    )
+
+    tipo_ruta = models.CharField(
+        max_length=30,
+    )
+
+    peso_kg = models.DecimalField(
+        max_digits=18,
+        decimal_places=3,
+    )
+
+    peso_tn = models.DecimalField(
+        max_digits=18,
+        decimal_places=3,
+    )
+
+    tipo_contenedor = models.CharField(
+        max_length=2,
+        db_index=True,
+    )
+
+    nombre_contenedor = models.CharField(
+        max_length=50,
+    )
+
+    capacidad_tn = models.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+    )
+
+    cantidad = models.PositiveIntegerField()
+
+    tarifa_min = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+    )
+
+    tarifa_max = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+    )
+
+    total_min = models.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+    )
+
+    total_max = models.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+    )
+
+    es_sugerida = models.BooleanField(
+        default=False,
+    )
+
+    contingencia = models.PositiveIntegerField(
+        default=0,
+    )
+
+    transito_original_min = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+    )
+
+    transito_original_max = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+    )
+
+    transito_min = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+    )
+
+    transito_max = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+    )
+
+    fuente_tarifa = models.CharField(
+        max_length=200,
+        blank=True,
+    )
+
+    conversion_disponible = models.BooleanField(
+        default=False,
+    )
+
+    tipo_cambio = models.DecimalField(
+        max_digits=12,
+        decimal_places=4,
+        null=True,
+        blank=True,
+    )
+
+    fecha_tipo_cambio = models.DateField(
+        null=True,
+        blank=True,
+    )
+
+    fuente_tipo_cambio = models.CharField(
+        max_length=100,
+        blank=True,
+    )
+
+    modo_tipo_cambio = models.CharField(
+        max_length=30,
+        blank=True,
+    )
+
+    total_min_clp = models.DecimalField(
+        max_digits=18,
+        decimal_places=2,
+        null=True,
+        blank=True,
+    )
+
+    total_max_clp = models.DecimalField(
+        max_digits=18,
+        decimal_places=2,
+        null=True,
+        blank=True,
+    )
+
+    class Meta:
+        ordering = [
+            "-creada_en",
+            "-id",
+        ]
+
+        indexes = [
+            models.Index(
+                fields=[
+                    "usuario",
+                    "-creada_en",
+                ],
+                name="cot_usuario_fecha_idx",
+            ),
+
+            models.Index(
+                fields=[
+                    "tipo_contenedor",
+                    "-creada_en",
+                ],
+                name="cot_contenedor_fecha_idx",
+            ),
+
+            models.Index(
+                fields=[
+                    "origen",
+                    "destino",
+                ],
+                name="cot_ruta_snapshot_idx",
+            ),
+        ]
+
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(
+                    peso_kg__gt=0
+                ),
+                name="cot_peso_kg_positivo",
+            ),
+
+            models.CheckConstraint(
+                condition=models.Q(
+                    peso_tn__gt=0
+                ),
+                name="cot_peso_tn_positivo",
+            ),
+
+            models.CheckConstraint(
+                condition=models.Q(
+                    cantidad__gte=1
+                ),
+                name="cot_cantidad_positiva",
+            ),
+
+            models.CheckConstraint(
+                condition=models.Q(
+                    tarifa_max__gte=models.F(
+                        "tarifa_min"
+                    )
+                ),
+                name="cot_tarifa_rango_valido",
+            ),
+
+            models.CheckConstraint(
+                condition=models.Q(
+                    total_max__gte=models.F(
+                        "total_min"
+                    )
+                ),
+                name="cot_total_rango_valido",
+            ),
+        ]
+
+    def __str__(self):
+        return (
+            f"Cotización #{self.id} - "
+            f"{self.usuario.username} - "
+            f"{self.origen} → {self.destino}"
+        )

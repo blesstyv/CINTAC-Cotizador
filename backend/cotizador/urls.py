@@ -12,6 +12,11 @@ from .gestion_views import (
     validar_excel,
 )
 
+from .historial_views import (
+    historial_cotizacion_detalle,
+    historial_cotizaciones,
+)
+
 from .usuario_views import (
     usuario_detalle,
     usuarios,
@@ -66,6 +71,18 @@ urlpatterns = [
         "cotizar/",
         cotizar_operacion,
         name="cotizar",
+    ),
+
+    path(
+        "historial/",
+        historial_cotizaciones,
+        name="historial",
+    ),
+
+    path(
+        "historial/<int:cotizacion_id>/",
+        historial_cotizacion_detalle,
+        name="historial-detalle",
     ),
 
     path(

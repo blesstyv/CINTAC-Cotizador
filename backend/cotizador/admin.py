@@ -1,6 +1,7 @@
 from django.contrib import admin
 
 from .models import (
+    Cotizacion,
     PerfilUsuario,
     Puerto,
     Ruta,
@@ -160,4 +161,43 @@ class TipoCambioAdmin(admin.ModelAdmin):
     ordering = (
         "-fecha_referencia",
         "-obtenido_en",
+    )
+
+
+@admin.register(Cotizacion)
+class CotizacionAdmin(admin.ModelAdmin):
+    list_display = (
+        "id",
+        "usuario",
+        "creada_en",
+        "origen",
+        "destino",
+        "tipo_contenedor",
+        "cantidad",
+        "total_min",
+        "total_max",
+    )
+
+    list_filter = (
+        "tipo_contenedor",
+        "es_sugerida",
+        "conversion_disponible",
+        "creada_en",
+    )
+
+    search_fields = (
+        "usuario__username",
+        "usuario__first_name",
+        "usuario__last_name",
+        "origen",
+        "destino",
+        "fuente_tarifa",
+    )
+
+    readonly_fields = (
+        "creada_en",
+    )
+
+    ordering = (
+        "-creada_en",
     )

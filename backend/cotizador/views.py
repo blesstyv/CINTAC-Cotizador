@@ -12,6 +12,7 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
 from .models import (
+    Cotizacion,
     Ruta,
     Tarifa,
     TiempoTransito,
@@ -445,7 +446,6 @@ def cotizar_operacion(
         ]
     )
 
-
     tipo_cambio = None
     fecha_tipo_cambio = None
     fuente_tipo_cambio = None
@@ -456,7 +456,6 @@ def cotizar_operacion(
 
     conversion_disponible = False
     mensaje_conversion = None
-
 
     try:
         cambio = (
@@ -503,7 +502,6 @@ def cotizar_operacion(
             "no está disponible temporalmente."
         )
 
-
     transito_original_min = None
     transito_original_max = None
 
@@ -536,9 +534,142 @@ def cotizar_operacion(
     except TiempoTransito.DoesNotExist:
         pass
 
+    es_sugerida = (
+        opcion_seleccionada[
+            "codigo"
+        ]
+        == sugerida
+    )
+
+    cotizacion = (
+        Cotizacion.objects.create(
+            usuario=
+                request.user,
+
+            origen=
+                ruta
+                .puerto_origen
+                .nombre,
+
+            pais_origen=
+                ruta
+                .puerto_origen
+                .pais,
+
+            destino=
+                ruta
+                .puerto_destino
+                .nombre,
+
+            tipo_ruta=
+                ruta.tipo_ruta,
+
+            peso_kg=
+                peso_kg,
+
+            peso_tn=
+                peso_tn,
+
+            tipo_contenedor=
+                opcion_seleccionada[
+                    "codigo"
+                ],
+
+            nombre_contenedor=
+                opcion_seleccionada[
+                    "nombre"
+                ],
+
+            capacidad_tn=
+                Decimal(
+                    opcion_seleccionada[
+                        "capacidadTN"
+                    ]
+                ),
+
+            cantidad=
+                opcion_seleccionada[
+                    "cantidad"
+                ],
+
+            tarifa_min=
+                Decimal(
+                    opcion_seleccionada[
+                        "tarifaMin"
+                    ]
+                ),
+
+            tarifa_max=
+                Decimal(
+                    opcion_seleccionada[
+                        "tarifaMax"
+                    ]
+                ),
+
+            total_min=
+                total_min,
+
+            total_max=
+                total_max,
+
+            es_sugerida=
+                es_sugerida,
+
+            contingencia=
+                contingencia,
+
+            transito_original_min=
+                transito_original_min,
+
+            transito_original_max=
+                transito_original_max,
+
+            transito_min=
+                transito_min,
+
+            transito_max=
+                transito_max,
+
+            fuente_tarifa=
+                opcion_seleccionada[
+                    "fuente"
+                ]
+                or "",
+
+            conversion_disponible=
+                conversion_disponible,
+
+            tipo_cambio=
+                tipo_cambio,
+
+            fecha_tipo_cambio=
+                fecha_tipo_cambio,
+
+            fuente_tipo_cambio=
+                (
+                    fuente_tipo_cambio
+                    or ""
+                ),
+
+            modo_tipo_cambio=
+                (
+                    modo_tipo_cambio
+                    or ""
+                ),
+
+            total_min_clp=
+                total_min_clp,
+
+            total_max_clp=
+                total_max_clp,
+        )
+    )
 
     return Response(
         {
+            "historialId":
+                cotizacion.id,
+
             "rutaId":
                 ruta.id,
 
@@ -601,12 +732,7 @@ def cotizar_operacion(
                 ],
 
             "esSugerida":
-                (
-                    opcion_seleccionada[
-                        "codigo"
-                    ]
-                    == sugerida
-                ),
+                es_sugerida,
 
             "transitoOriginalMin":
                 transito_original_min,

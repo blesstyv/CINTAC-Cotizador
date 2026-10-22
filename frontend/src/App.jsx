@@ -6,26 +6,32 @@ import {
   useState,
 } from "react";
 
-import heroImage from "./assets/hero-cintac.jpg";
-import AdminDatos from "./AdminDatos";
+import heroImage
+  from "./assets/hero-cintac.jpg";
+
+import AdminDatos
+  from "./AdminDatos";
+
+import HistorialCotizaciones
+  from "./HistorialCotizaciones";
+
 import "./App.css";
+import "./Login.css";
 
 
 const API_URL =
   import.meta.env.VITE_API_URL ||
   "http://127.0.0.1:8000/api";
 
-const TOKEN_KEY = "cintac_token";
+const TOKEN_KEY =
+  "cintac_token";
 
-const USER_KEY = "cintac_usuario";
+const USER_KEY =
+  "cintac_usuario";
 
 const MENSAJE_SERVIDOR_NO_DISPONIBLE =
   "No fue posible conectar con el servidor. Verifique la conexión e intente nuevamente.";
 
-
-/* ======================================
-   UTILIDADES
-====================================== */
 
 function recopilarMensajes(valor) {
   if (
@@ -35,17 +41,23 @@ function recopilarMensajes(valor) {
     return [];
   }
 
-  if (typeof valor === "string") {
+  if (
+    typeof valor === "string"
+  ) {
     return [valor];
   }
 
-  if (Array.isArray(valor)) {
+  if (
+    Array.isArray(valor)
+  ) {
     return valor.flatMap(
       recopilarMensajes
     );
   }
 
-  if (typeof valor === "object") {
+  if (
+    typeof valor === "object"
+  ) {
     return Object.values(
       valor
     ).flatMap(
@@ -73,13 +85,17 @@ function extraerMensajeError(
         datos.detail
       );
 
-    if (mensajes.length > 0) {
+    if (
+      mensajes.length > 0
+    ) {
       return mensajes.join(" ");
     }
   }
 
   const mensajes =
-    recopilarMensajes(datos);
+    recopilarMensajes(
+      datos
+    );
 
   return (
     mensajes.join(" ") ||
@@ -123,6 +139,7 @@ function cargarUsuarioGuardado() {
     return JSON.parse(
       contenido
     );
+
   } catch {
     sessionStorage.removeItem(
       USER_KEY
@@ -133,9 +150,7 @@ function cargarUsuarioGuardado() {
 }
 
 
-function guardarUsuario(
-  usuario
-) {
+function guardarUsuario(usuario) {
   if (!usuario) {
     return;
   }
@@ -149,26 +164,43 @@ function guardarUsuario(
 }
 
 
+function obtenerNombreRol(usuario) {
+  if (
+    usuario?.rol ===
+    "ADMINISTRADOR"
+  ) {
+    return "ADMINISTRADOR";
+  }
+
+  if (
+    usuario?.rol ===
+    "ENCARGADO"
+  ) {
+    return "ENCARGADO";
+  }
+
+  return "USUARIO";
+}
+
+
 function App() {
-  /* ======================================
-     AUTENTICACIÓN
-  ====================================== */
+  const [
+    token,
+    setToken,
+  ] = useState(
+    () =>
+      sessionStorage.getItem(
+        TOKEN_KEY
+      ) || ""
+  );
 
-  const [token, setToken] =
-    useState(
-      () =>
-        sessionStorage.getItem(
-          TOKEN_KEY
-        ) || ""
-    );
-
-
-  const [usuario, setUsuario] =
-    useState(
-      () =>
-        cargarUsuarioGuardado()
-    );
-
+  const [
+    usuario,
+    setUsuario,
+  ] = useState(
+    () =>
+      cargarUsuarioGuardado()
+  );
 
   const [
     verificandoSesion,
@@ -177,140 +209,117 @@ function App() {
     Boolean(token)
   );
 
-
   const [
     reintentoSesion,
     setReintentoSesion,
   ] = useState(0);
-
 
   const [
     errorSesion,
     setErrorSesion,
   ] = useState("");
 
-
   const [
     loginUsuario,
     setLoginUsuario,
   ] = useState("");
-
 
   const [
     loginPassword,
     setLoginPassword,
   ] = useState("");
 
-
   const [
     loginError,
     setLoginError,
   ] = useState("");
-
 
   const [
     iniciandoSesion,
     setIniciandoSesion,
   ] = useState(false);
 
-
-  /* ======================================
-     NAVEGACIÓN
-  ====================================== */
-
   const [
     vistaActiva,
     setVistaActiva,
-  ] = useState("cotizador");
-
+  ] = useState(
+    "cotizador"
+  );
 
   const [
     versionDatos,
     setVersionDatos,
   ] = useState(0);
 
+  const [
+    rutas,
+    setRutas,
+  ] = useState([]);
 
-  /* ======================================
-     COTIZADOR
-  ====================================== */
+  const [
+    origen,
+    setOrigen,
+  ] = useState("");
 
-  const [rutas, setRutas] =
-    useState([]);
-
-
-  const [origen, setOrigen] =
-    useState("");
-
-
-  const [destino, setDestino] =
-    useState("");
-
+  const [
+    destino,
+    setDestino,
+  ] = useState("");
 
   const [
     tipoContenedor,
     setTipoContenedor,
   ] = useState("");
 
-
   const [
     pesoCarga,
     setPesoCarga,
   ] = useState("");
-
 
   const [
     unidadPeso,
     setUnidadPeso,
   ] = useState("kg");
 
-
   const [
     contingencia,
     setContingencia,
   ] = useState("0");
-
 
   const [
     recomendacion,
     setRecomendacion,
   ] = useState(null);
 
-
   const [
     cargandoDatos,
     setCargandoDatos,
   ] = useState(false);
-
 
   const [
     cargandoOpciones,
     setCargandoOpciones,
   ] = useState(false);
 
-
   const [
     cotizando,
     setCotizando,
   ] = useState(false);
-
 
   const [
     errorDatos,
     setErrorDatos,
   ] = useState("");
 
-
   const [
     mensaje,
     setMensaje,
   ] = useState("");
 
-
   const [
     resultado,
     setResultado,
   ] = useState(null);
-
 
   const [
     errores,
@@ -331,21 +340,18 @@ function App() {
 
   const cotizacionEnCursoRef =
     useRef(false);
-  
-  const claveOpcionesRef = 
+
+  const claveOpcionesRef =
     useRef("");
 
-
-  /* ======================================
-     FORMATOS
-  ====================================== */
 
   const formatearUSD =
     (valor) =>
       new Intl.NumberFormat(
         "es-CL",
         {
-          maximumFractionDigits: 0,
+          maximumFractionDigits:
+            0,
         }
       ).format(
         Number(valor)
@@ -357,7 +363,8 @@ function App() {
       new Intl.NumberFormat(
         "es-CL",
         {
-          maximumFractionDigits: 0,
+          maximumFractionDigits:
+            0,
         }
       ).format(
         Number(valor)
@@ -369,7 +376,8 @@ function App() {
       new Intl.NumberFormat(
         "es-CL",
         {
-          maximumFractionDigits: 3,
+          maximumFractionDigits:
+            3,
         }
       ).format(
         Number(valor)
@@ -381,8 +389,11 @@ function App() {
       new Intl.NumberFormat(
         "es-CL",
         {
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2,
+          minimumFractionDigits:
+            2,
+
+          maximumFractionDigits:
+            2,
         }
       ).format(
         Number(valor)
@@ -412,74 +423,51 @@ function App() {
     };
 
 
-  /* ======================================
-     LIMPIAR SESIÓN
-  ====================================== */
-
   const limpiarSesion =
-    useCallback(() => {
-      sessionStorage.removeItem(
-        TOKEN_KEY
-      );
+    useCallback(
+      () => {
+        sessionStorage.removeItem(
+          TOKEN_KEY
+        );
 
-      sessionStorage.removeItem(
-        USER_KEY
-      );
+        sessionStorage.removeItem(
+          USER_KEY
+        );
 
-      setToken("");
+        setToken("");
+        setUsuario(null);
+        setVerificandoSesion(false);
+        setErrorSesion("");
+        setVistaActiva("cotizador");
 
-      setUsuario(null);
+        setRutas([]);
+        setOrigen("");
+        setDestino("");
+        setTipoContenedor("");
+        setPesoCarga("");
+        setUnidadPeso("kg");
+        setContingencia("0");
+        setRecomendacion(null);
+        setResultado(null);
+        setMensaje("");
+        setErrorDatos("");
+        setCargandoDatos(false);
+        setCargandoOpciones(false);
+        setCotizando(false);
 
-      setVerificandoSesion(
-        false
-      );
+        claveOpcionesRef.current =
+          "";
 
-      setErrorSesion("");
+        setErrores({
+          origen: false,
+          destino: false,
+          pesoCarga: false,
+          contingencia: false,
+        });
+      },
+      []
+    );
 
-      setVistaActiva(
-        "cotizador"
-      );
-
-      setRutas([]);
-
-      setOrigen("");
-
-      setDestino("");
-
-      setTipoContenedor("");
-
-      setPesoCarga("");
-
-      setUnidadPeso("kg");
-
-      setContingencia("0");
-
-      setRecomendacion(null);
-
-      setResultado(null);
-
-      setMensaje("");
-
-      setErrorDatos("");
-
-      setCargandoDatos(false);
-
-      setCargandoOpciones(false);
-
-      setCotizando(false);
-
-      setErrores({
-        origen: false,
-        destino: false,
-        pesoCarga: false,
-        contingencia: false,
-      });
-    }, []);
-
-
-  /* ======================================
-     PETICIÓN AUTENTICADA
-  ====================================== */
 
   const peticionAutenticada =
     useCallback(
@@ -503,7 +491,6 @@ function App() {
               }
             );
 
-
           if (
             respuesta.status ===
             401
@@ -515,7 +502,6 @@ function App() {
             );
           }
 
-
           return respuesta;
 
         } catch (error) {
@@ -525,7 +511,6 @@ function App() {
           ) {
             throw error;
           }
-
 
           if (
             error instanceof
@@ -538,7 +523,6 @@ function App() {
             );
           }
 
-
           throw error;
         }
       },
@@ -549,383 +533,345 @@ function App() {
     );
 
 
-    /* ======================================
-   VALIDAR SESIÓN
-====================================== */
+  useEffect(
+    () => {
+      if (!token) {
+        return undefined;
+      }
 
-useEffect(() => {
-  if (!token) {
-    return;
-  }
+      let activo = true;
 
-  let activo = true;
+      const temporizador =
+        window.setTimeout(
+          () => {
+            const verificarSesion =
+              async () => {
+                setVerificandoSesion(
+                  true
+                );
 
-  const verificarSesion =
-    async () => {
-      setVerificandoSesion(
-        true
+                try {
+                  const respuesta =
+                    await fetch(
+                      `${API_URL}/sesion/`,
+                      {
+                        headers: {
+                          Authorization:
+                            `Token ${token}`,
+                        },
+                      }
+                    );
+
+                  if (
+                    respuesta.status ===
+                      401 ||
+                    respuesta.status ===
+                      403
+                  ) {
+                    if (activo) {
+                      limpiarSesion();
+                    }
+
+                    return;
+                  }
+
+                  if (!respuesta.ok) {
+                    throw new Error(
+                      "No fue posible validar la sesión."
+                    );
+                  }
+
+                  const datos =
+                    await respuesta.json();
+
+                  if (!activo) {
+                    return;
+                  }
+
+                  setUsuario(datos);
+
+                  guardarUsuario(
+                    datos
+                  );
+
+                  setErrorSesion("");
+                  setErrorDatos("");
+
+                } catch (error) {
+                  if (!activo) {
+                    return;
+                  }
+
+                  const texto =
+                    obtenerMensajeError(
+                      error,
+                      "No fue posible validar la sesión."
+                    );
+
+                  setErrorSesion(
+                    texto
+                  );
+
+                  setErrorDatos(
+                    texto
+                  );
+
+                } finally {
+                  if (activo) {
+                    setVerificandoSesion(
+                      false
+                    );
+                  }
+                }
+              };
+
+            void verificarSesion();
+          },
+          0
+        );
+
+      return () => {
+        activo = false;
+
+        window.clearTimeout(
+          temporizador
+        );
+      };
+    },
+    [
+      token,
+      limpiarSesion,
+      reintentoSesion,
+    ]
+  );
+
+
+  useEffect(
+    () => {
+      if (
+        !token ||
+        !usuarioId
+      ) {
+        return undefined;
+      }
+
+      const actualizarPermisos =
+        async () => {
+          try {
+            const respuesta =
+              await fetch(
+                `${API_URL}/sesion/`,
+                {
+                  headers: {
+                    Authorization:
+                      `Token ${token}`,
+                  },
+                }
+              );
+
+            if (
+              respuesta.status ===
+                401 ||
+              respuesta.status ===
+                403
+            ) {
+              limpiarSesion();
+              return;
+            }
+
+            if (!respuesta.ok) {
+              return;
+            }
+
+            const datos =
+              await respuesta.json();
+
+            setUsuario(datos);
+            guardarUsuario(datos);
+
+            setErrorSesion("");
+            setErrorDatos("");
+
+            setVistaActiva(
+              (vistaActual) => {
+                if (
+                  vistaActual ===
+                    "administracion" &&
+                  !datos
+                    .puedeGestionarDatos
+                ) {
+                  return "cotizador";
+                }
+
+                return vistaActual;
+              }
+            );
+
+            setVersionDatos(
+              (actual) =>
+                actual + 1
+            );
+
+          } catch (error) {
+            const texto =
+              obtenerMensajeError(
+                error,
+                MENSAJE_SERVIDOR_NO_DISPONIBLE
+              );
+
+            setErrorSesion(
+              texto
+            );
+
+            setErrorDatos(
+              texto
+            );
+          }
+        };
+
+
+      const manejarFoco =
+        () => {
+          void actualizarPermisos();
+        };
+
+
+      window.addEventListener(
+        "focus",
+        manejarFoco
       );
+
+      return () => {
+        window.removeEventListener(
+          "focus",
+          manejarFoco
+        );
+      };
+    },
+    [
+      token,
+      usuarioId,
+      limpiarSesion,
+    ]
+  );
+
+
+  const iniciarSesion =
+    async (
+      event
+    ) => {
+      event.preventDefault();
+
+      if (
+        loginEnCursoRef.current ||
+        iniciandoSesion
+      ) {
+        return;
+      }
+
+      setLoginError("");
+
+      if (
+        !loginUsuario.trim() ||
+        !loginPassword
+      ) {
+        setLoginError(
+          "Ingrese usuario y contraseña."
+        );
+
+        return;
+      }
+
+      loginEnCursoRef.current =
+        true;
+
+      setIniciandoSesion(true);
 
       try {
         const respuesta =
           await fetch(
-            `${API_URL}/sesion/`,
+            `${API_URL}/login/`,
             {
+              method: "POST",
+
               headers: {
-                Authorization:
-                  `Token ${token}`,
+                "Content-Type":
+                  "application/json",
               },
+
+              body:
+                JSON.stringify({
+                  username:
+                    loginUsuario.trim(),
+
+                  password:
+                    loginPassword,
+                }),
             }
           );
 
+        let datos = null;
 
-        if (
-          respuesta.status === 401 ||
-          respuesta.status === 403
-        ) {
-          if (activo) {
-            limpiarSesion();
-          }
+        try {
+          datos =
+            await respuesta.json();
 
-          return;
+        } catch {
+          datos = null;
         }
-
 
         if (!respuesta.ok) {
           throw new Error(
-            "No fue posible validar la sesión."
+            extraerMensajeError(
+              datos,
+              "No fue posible iniciar sesión."
+            )
           );
         }
 
+        sessionStorage.setItem(
+          TOKEN_KEY,
+          datos.token
+        );
 
-        const datos =
-          await respuesta.json();
+        guardarUsuario(
+          datos.usuario
+        );
 
+        setToken(
+          datos.token
+        );
 
-        if (activo) {
-          setUsuario(
-            datos
-          );
+        setUsuario(
+          datos.usuario
+        );
 
-          guardarUsuario(
-            datos
-          );
+        setVistaActiva(
+          "cotizador"
+        );
 
-          setErrorSesion("");
-
-          setErrorDatos("");
-        }
+        setLoginUsuario("");
+        setLoginPassword("");
+        setLoginError("");
+        setErrorSesion("");
+        setErrorDatos("");
 
       } catch (error) {
-        if (!activo) {
-          return;
-        }
-
-
-        const texto =
+        setLoginError(
           obtenerMensajeError(
             error,
-            "No fue posible validar la sesión."
-          );
-
-
-        setErrorSesion(
-          texto
-        );
-
-
-        /*
-         * Un problema de red no invalida
-         * el token almacenado localmente.
-         */
-        setErrorDatos(
-          texto
-        );
-
-      } finally {
-        if (activo) {
-          setVerificandoSesion(
-            false
-          );
-        }
-      }
-    };
-
-
-  void verificarSesion();
-
-
-  return () => {
-    activo = false;
-  };
-}, [
-  token,
-  limpiarSesion,
-  reintentoSesion,
-]);
-
-
-  /* ======================================
-     ACTUALIZAR PERMISOS
-  ====================================== */
-
-  useEffect(() => {
-    if (
-      !token ||
-      !usuarioId
-    ) {
-      return;
-    }
-
-
-    const actualizarPermisos =
-      async () => {
-        try {
-          const respuesta =
-            await fetch(
-              `${API_URL}/sesion/`,
-              {
-                headers: {
-                  Authorization:
-                    `Token ${token}`,
-                },
-              }
-            );
-
-
-          if (
-            respuesta.status ===
-              401 ||
-            respuesta.status ===
-              403
-          ) {
-            limpiarSesion();
-
-            return;
-          }
-
-
-          if (!respuesta.ok) {
-            return;
-          }
-
-
-          const datos =
-            await respuesta.json();
-
-
-          setUsuario(
-            datos
-          );
-
-
-          guardarUsuario(
-            datos
-          );
-
-
-          setErrorSesion("");
-
-          setErrorDatos("");
-
-
-          if (
-            !datos
-              .puedeGestionarDatos
-          ) {
-            setVistaActiva(
-              "cotizador"
-            );
-          }
-
-
-          /*
-           * Si el servidor vuelve a estar
-           * disponible, se recargan las
-           * rutas automáticamente.
-           */
-          setVersionDatos(
-            (actual) =>
-              actual + 1
-          );
-
-        } catch (error) {
-          const texto =
-            obtenerMensajeError(
-              error,
-              MENSAJE_SERVIDOR_NO_DISPONIBLE
-            );
-
-
-          setErrorSesion(
-            texto
-          );
-
-
-          setErrorDatos(
-            texto
-          );
-        }
-      };
-
-
-    const manejarFoco =
-      () => {
-        void actualizarPermisos();
-      };
-
-
-    window.addEventListener(
-      "focus",
-      manejarFoco
-    );
-
-
-    return () => {
-      window.removeEventListener(
-        "focus",
-        manejarFoco
-      );
-    };
-  }, [
-    token,
-    usuarioId,
-    limpiarSesion,
-  ]);
-
-
-  /* ======================================
-     LOGIN
-  ====================================== */
-
-  const iniciarSesion =
-  async (e) => {
-    e.preventDefault();
-
-    if (
-      loginEnCursoRef.current ||
-      iniciandoSesion
-    ) {
-      return;
-    }
-
-    setLoginError("");
-
-    if (
-      !loginUsuario.trim() ||
-      !loginPassword
-    ) {
-      setLoginError(
-        "Ingrese usuario y contraseña."
-      );
-
-      return;
-    }
-
-    /*
-     * El ref se modifica inmediatamente.
-     * Un segundo clic ya no puede entrar
-     * aunque React todavía no haya renderizado.
-     */
-    loginEnCursoRef.current =
-      true;
-
-    setIniciandoSesion(
-      true
-    );
-
-    try {
-      const respuesta =
-        await fetch(
-          `${API_URL}/login/`,
-          {
-            method:
-              "POST",
-
-            headers: {
-              "Content-Type":
-                "application/json",
-            },
-
-            body:
-              JSON.stringify({
-                username:
-                  loginUsuario.trim(),
-
-                password:
-                  loginPassword,
-              }),
-          }
-        );
-
-      let datos = null;
-
-      try {
-        datos =
-          await respuesta.json();
-      } catch {
-        datos = null;
-      }
-
-      if (!respuesta.ok) {
-        throw new Error(
-          extraerMensajeError(
-            datos,
             "No fue posible iniciar sesión."
           )
         );
+
+      } finally {
+        loginEnCursoRef.current =
+          false;
+
+        setIniciandoSesion(false);
       }
+    };
 
-      sessionStorage.setItem(
-        TOKEN_KEY,
-        datos.token
-      );
-
-      guardarUsuario(
-        datos.usuario
-      );
-
-      setToken(
-        datos.token
-      );
-
-      setUsuario(
-        datos.usuario
-      );
-
-      setVistaActiva(
-        "cotizador"
-      );
-
-      setLoginUsuario("");
-      setLoginPassword("");
-      setLoginError("");
-
-      setErrorSesion("");
-      setErrorDatos("");
-
-    } catch (error) {
-      setLoginError(
-        obtenerMensajeError(
-          error,
-          "No fue posible iniciar sesión."
-        )
-      );
-
-    } finally {
-      loginEnCursoRef.current =
-        false;
-
-      setIniciandoSesion(
-        false
-      );
-    }
-  };
-
-
-  /* ======================================
-     LOGOUT
-  ====================================== */
 
   const cerrarSesion =
     async () => {
@@ -934,8 +880,7 @@ useEffect(() => {
           await fetch(
             `${API_URL}/logout/`,
             {
-              method:
-                "POST",
+              method: "POST",
 
               headers: {
                 Authorization:
@@ -943,106 +888,114 @@ useEffect(() => {
               },
             }
           );
+
         } catch {
           /*
-           * Aunque el backend no responda,
-           * el usuario puede cerrar su
-           * sesión local.
+           * Aunque el servidor no responda,
+           * la sesión local puede cerrarse.
            */
         }
       }
-
 
       limpiarSesion();
     };
 
 
-  /* ======================================
-     RUTAS
-  ====================================== */
+  useEffect(
+    () => {
+      if (
+        !token ||
+        !usuarioId
+      ) {
+        return undefined;
+      }
 
-  useEffect(() => {
-    if (
-      !token ||
-      !usuarioId
-    ) {
-      return;
-    }
+      let activo = true;
 
+      const temporizador =
+        window.setTimeout(
+          () => {
+            const cargarRutas =
+              async () => {
+                setCargandoDatos(
+                  true
+                );
 
-    const cargarRutas =
-      async () => {
-        setCargandoDatos(
-          true
+                try {
+                  const respuesta =
+                    await peticionAutenticada(
+                      `${API_URL}/rutas/`
+                    );
+
+                  let datos = null;
+
+                  try {
+                    datos =
+                      await respuesta.json();
+
+                  } catch {
+                    datos = null;
+                  }
+
+                  if (!respuesta.ok) {
+                    throw new Error(
+                      extraerMensajeError(
+                        datos,
+                        "No fue posible cargar la información del cotizador."
+                      )
+                    );
+                  }
+
+                  if (!activo) {
+                    return;
+                  }
+
+                  setRutas(datos);
+                  setErrorDatos("");
+
+                } catch (error) {
+                  if (
+                    activo &&
+                    token
+                  ) {
+                    setErrorDatos(
+                      obtenerMensajeError(
+                        error,
+                        "No fue posible cargar la información del cotizador."
+                      )
+                    );
+                  }
+
+                } finally {
+                  if (activo) {
+                    setCargandoDatos(
+                      false
+                    );
+                  }
+                }
+              };
+
+            void cargarRutas();
+          },
+          0
         );
 
+      return () => {
+        activo = false;
 
-        try {
-          const respuesta =
-            await peticionAutenticada(
-              `${API_URL}/rutas/`
-            );
-
-
-          let datos = null;
-
-
-          try {
-            datos =
-              await respuesta.json();
-          } catch {
-            datos = null;
-          }
-
-
-          if (!respuesta.ok) {
-            throw new Error(
-              extraerMensajeError(
-                datos,
-                "No fue posible cargar la información del cotizador."
-              )
-            );
-          }
-
-
-          setRutas(
-            datos
-          );
-
-
-          setErrorDatos("");
-
-        } catch (error) {
-          if (token) {
-            setErrorDatos(
-              obtenerMensajeError(
-                error,
-                "No fue posible cargar la información del cotizador."
-              )
-            );
-          }
-
-        } finally {
-          setCargandoDatos(
-            false
-          );
-        }
+        window.clearTimeout(
+          temporizador
+        );
       };
+    },
+    [
+      token,
+      usuarioId,
+      versionDatos,
+      peticionAutenticada,
+    ]
+  );
 
-
-    void cargarRutas();
-
-  }, [
-    token,
-    usuarioId,
-    versionDatos,
-    peticionAutenticada,
-  ]);
-
-
-  /* ======================================
-     PUERTOS
-  ====================================== */
 
   const puertosOrigen =
     useMemo(
@@ -1054,7 +1007,9 @@ useEffect(() => {
           )
         ),
       ],
-      [rutas]
+      [
+        rutas,
+      ]
     );
 
 
@@ -1064,7 +1019,6 @@ useEffect(() => {
         if (!origen) {
           return [];
         }
-
 
         return [
           ...new Set(
@@ -1098,7 +1052,6 @@ useEffect(() => {
           return null;
         }
 
-
         return (
           rutas.find(
             (ruta) =>
@@ -1117,231 +1070,191 @@ useEffect(() => {
     );
 
 
-  /* ======================================
-   OPCIONES CONTENEDORES
-====================================== */
+  useEffect(
+    () => {
+      if (
+        !token ||
+        !rutaSeleccionada ||
+        pesoCarga === ""
+      ) {
+        return undefined;
+      }
 
-  useEffect(() => {
-    if (
-      !token ||
-      !rutaSeleccionada ||
-      pesoCarga === ""
-    ) {
-      return;
-    }
+      const pesoNumero =
+        Number(
+          pesoCarga
+        );
 
-    const pesoNumero =
-      Number(
-        pesoCarga
-      );
+      if (
+        !Number.isFinite(
+          pesoNumero
+        ) ||
+        pesoNumero <= 0
+      ) {
+        return undefined;
+      }
 
-    if (
-      !Number.isFinite(
-        pesoNumero
-      ) ||
-      pesoNumero <= 0
-    ) {
-      return;
-    }
+      const claveSolicitud =
+        [
+          versionDatos,
+          rutaSeleccionada.id,
+          pesoCarga,
+          unidadPeso,
+        ].join("|");
 
-    const claveSolicitud =
-      [
-        versionDatos,
-        rutaSeleccionada.id,
-        pesoCarga,
-        unidadPeso,
-      ].join("|");
+      if (
+        claveOpcionesRef.current ===
+        claveSolicitud
+      ) {
+        return undefined;
+      }
 
+      const controlador =
+        new AbortController();
 
-    /*
-    * Si React intenta repetir exactamente
-    * la misma solicitud, no se vuelve
-    * a consultar el backend.
-    */
-    if (
-      claveOpcionesRef.current ===
-      claveSolicitud
-    ) {
-      return;
-    }
-
-
-    const controlador =
-      new AbortController();
-
-
-    const temporizador =
-      setTimeout(
-        async () => {
-          /*
-          * Se registra justo antes de
-          * realizar la petición.
-          */
-          claveOpcionesRef.current =
-            claveSolicitud;
-
-          setCargandoOpciones(
-            true
-          );
-
-          try {
-            const respuesta =
-              await peticionAutenticada(
-                `${API_URL}/opciones-contenedores/`,
-                {
-                  method:
-                    "POST",
-
-                  headers: {
-                    "Content-Type":
-                      "application/json",
-                  },
-
-                  body:
-                    JSON.stringify({
-                      ruta_id:
-                        rutaSeleccionada.id,
-
-                      peso_carga:
-                        pesoCarga,
-
-                      unidad_peso:
-                        unidadPeso,
-                    }),
-
-                  signal:
-                    controlador.signal,
-                }
-              );
-
-
-            const datos =
-              await respuesta.json();
-
-
-            if (!respuesta.ok) {
-              throw new Error(
-                extraerMensajeError(
-                  datos,
-                  "No fue posible obtener las opciones de contenedor."
-                )
-              );
-            }
-
-
-            if (
-              controlador
-                .signal
-                .aborted
-            ) {
-              return;
-            }
-
-
-            setRecomendacion(
-              datos
-            );
-
-            setTipoContenedor(
-              datos.sugerida
-            );
-
-            setMensaje("");
-            setErrorDatos("");
-
-          } catch (error) {
-            if (
-              error.name !==
-              "AbortError"
-            ) {
-              /*
-              * Permitimos reintentar exactamente
-              * los mismos datos si la petición
-              * realmente falló.
-              */
-              if (
-                claveOpcionesRef
-                  .current ===
-                claveSolicitud
-              ) {
+      const temporizador =
+        window.setTimeout(
+          () => {
+            const cargarOpciones =
+              async () => {
                 claveOpcionesRef.current =
-                  "";
-              }
+                  claveSolicitud;
 
-              setMensaje(
-                obtenerMensajeError(
-                  error,
-                  "No fue posible obtener las opciones de contenedor."
-                )
-              );
-            }
+                setCargandoOpciones(
+                  true
+                );
 
-          } finally {
-            if (
-              !controlador
-                .signal
-                .aborted
-            ) {
-              setCargandoOpciones(
-                false
-              );
-            }
-          }
-        },
+                try {
+                  const respuesta =
+                    await peticionAutenticada(
+                      `${API_URL}/opciones-contenedores/`,
+                      {
+                        method:
+                          "POST",
 
-        /*
-        * Evita consultar en cada tecla mientras
-        * el usuario todavía está escribiendo.
-        */
-        450
-      );
+                        headers: {
+                          "Content-Type":
+                            "application/json",
+                        },
 
+                        body:
+                          JSON.stringify({
+                            ruta_id:
+                              rutaSeleccionada.id,
 
-    return () => {
-      clearTimeout(
-        temporizador
-      );
+                            peso_carga:
+                              pesoCarga,
 
-      controlador.abort();
-    };
+                            unidad_peso:
+                              unidadPeso,
+                          }),
 
-  }, [
-    token,
-    rutaSeleccionada,
-    pesoCarga,
-    unidadPeso,
-    versionDatos,
-    peticionAutenticada,
-  ]);
+                        signal:
+                          controlador.signal,
+                      }
+                    );
 
+                  const datos =
+                    await respuesta.json();
 
-  /* ======================================
-     AUXILIARES
-  ====================================== */
+                  if (!respuesta.ok) {
+                    throw new Error(
+                      extraerMensajeError(
+                        datos,
+                        "No fue posible obtener las opciones de contenedor."
+                      )
+                    );
+                  }
+
+                  if (
+                    controlador.signal.aborted
+                  ) {
+                    return;
+                  }
+
+                  setRecomendacion(
+                    datos
+                  );
+
+                  setTipoContenedor(
+                    datos.sugerida
+                  );
+
+                  setMensaje("");
+                  setErrorDatos("");
+
+                } catch (error) {
+                  if (
+                    error?.name !==
+                    "AbortError"
+                  ) {
+                    if (
+                      claveOpcionesRef.current ===
+                      claveSolicitud
+                    ) {
+                      claveOpcionesRef.current =
+                        "";
+                    }
+
+                    setMensaje(
+                      obtenerMensajeError(
+                        error,
+                        "No fue posible obtener las opciones de contenedor."
+                      )
+                    );
+                  }
+
+                } finally {
+                  if (
+                    !controlador.signal.aborted
+                  ) {
+                    setCargandoOpciones(
+                      false
+                    );
+                  }
+                }
+              };
+
+            void cargarOpciones();
+          },
+          450
+        );
+
+      return () => {
+        window.clearTimeout(
+          temporizador
+        );
+
+        controlador.abort();
+      };
+    },
+    [
+      token,
+      rutaSeleccionada,
+      pesoCarga,
+      unidadPeso,
+      versionDatos,
+      peticionAutenticada,
+    ]
+  );
+
 
   const reiniciarOpcionesContenedor =
     () => {
       claveOpcionesRef.current =
         "";
 
-        setRecomendacion(null);
-
-        setTipoContenedor("");
-
-        setResultado(null);
-
-        setMensaje("");
-
-        setCargandoOpciones(
-          false
-        );
-    }; 
+      setRecomendacion(null);
+      setTipoContenedor("");
+      setResultado(null);
+      setMensaje("");
+      setCargandoOpciones(false);
+    };
 
 
   const limpiarResultado =
     () => {
       setResultado(null);
-
       setMensaje("");
     };
 
@@ -1359,14 +1272,38 @@ useEffect(() => {
     };
 
 
-  /* ======================================
-     ADMINISTRACIÓN
-  ====================================== */
+  const nuevaCotizacion =
+    () => {
+      setOrigen("");
+      setDestino("");
+      setTipoContenedor("");
+      setPesoCarga("");
+      setUnidadPeso("kg");
+      setContingencia("0");
+      setRecomendacion(null);
+      setMensaje("");
+      setResultado(null);
+
+      claveOpcionesRef.current =
+        "";
+
+      setErrores({
+        origen: false,
+        destino: false,
+        pesoCarga: false,
+        contingencia: false,
+      });
+
+      window.scrollTo({
+        top: 0,
+        behavior: "smooth",
+      });
+    };
+
 
   const abrirAdministracion =
     async () => {
       setMensaje("");
-
 
       try {
         const respuesta =
@@ -1374,10 +1311,8 @@ useEffect(() => {
             `${API_URL}/sesion/`
           );
 
-
         const datos =
           await respuesta.json();
-
 
         if (!respuesta.ok) {
           throw new Error(
@@ -1388,16 +1323,11 @@ useEffect(() => {
           );
         }
 
-
-        setUsuario(
-          datos
-        );
-
+        setUsuario(datos);
 
         guardarUsuario(
           datos
         );
-
 
         if (
           !datos
@@ -1407,15 +1337,12 @@ useEffect(() => {
             "cotizador"
           );
 
-
           setMensaje(
-            "El usuario no tiene permiso para administrar los datos maestros."
+            "El usuario no tiene permiso para acceder a Administración."
           );
-
 
           return;
         }
-
 
         setVistaActiva(
           "administracion"
@@ -1432,9 +1359,13 @@ useEffect(() => {
     };
 
 
-  /* ======================================
-     PERMISO ADMIN REVOCADO
-  ====================================== */
+  const abrirHistorial =
+    () => {
+      setVistaActiva(
+        "historial"
+      );
+    };
+
 
   const manejarPermisoRevocado =
     useCallback(
@@ -1445,18 +1376,11 @@ useEffect(() => {
               `${API_URL}/sesion/`
             );
 
-
-          if (
-            respuesta.ok
-          ) {
+          if (respuesta.ok) {
             const datos =
               await respuesta.json();
 
-
-            setUsuario(
-              datos
-            );
-
+            setUsuario(datos);
 
             guardarUsuario(
               datos
@@ -1465,9 +1389,10 @@ useEffect(() => {
 
         } catch {
           /*
-           * Si existe un error de conexión,
-           * no eliminamos la sesión.
+           * Se conserva la sesión si
+           * solamente falla la conexión.
            */
+
         } finally {
           setVistaActiva(
             "cotizador"
@@ -1480,284 +1405,203 @@ useEffect(() => {
     );
 
 
-  /* ======================================
-     NUEVA COTIZACIÓN
-  ====================================== */
+  const cotizar =
+    async (
+      event
+    ) => {
+      event.preventDefault();
 
-  const nuevaCotizacion =
-    () => {
-      setOrigen("");
-
-      setDestino("");
-
-      setTipoContenedor("");
-
-      setPesoCarga("");
-
-      setUnidadPeso("kg");
-
-      setContingencia("0");
-
-      setRecomendacion(null);
+      if (
+        cotizacionEnCursoRef.current ||
+        cotizando
+      ) {
+        return;
+      }
 
       setMensaje("");
-
       setResultado(null);
 
-      setErrores({
-        origen: false,
-        destino: false,
-        pesoCarga: false,
-        contingencia: false,
-      });
+      const nuevosErrores = {
+        origen:
+          !origen,
 
+        destino:
+          !destino,
 
-      window.scrollTo({
-        top: 0,
-        behavior: "smooth",
-      });
-    };
+        pesoCarga:
+          !pesoCarga,
 
+        contingencia:
+          false,
+      };
 
-  /* ======================================
-     COTIZAR
-  ====================================== */
-
-  const cotizar =
-  async (e) => {
-    e.preventDefault();
-
-    /*
-     * Bloqueo sincrónico.
-     */
-    if (
-      cotizacionEnCursoRef.current ||
-      cotizando
-    ) {
-      return;
-    }
-
-
-    setMensaje("");
-    setResultado(null);
-
-
-    const nuevosErrores = {
-      origen:
-        !origen,
-
-      destino:
-        !destino,
-
-      pesoCarga:
-        !pesoCarga,
-
-      contingencia:
-        false,
-    };
-
-
-    setErrores(
-      nuevosErrores
-    );
-
-
-    if (
-      nuevosErrores.origen ||
-      nuevosErrores.destino ||
-      nuevosErrores.pesoCarga
-    ) {
-      setMensaje(
-        "Complete los campos obligatorios para realizar la cotización."
-      );
-
-      return;
-    }
-
-
-    if (!rutaSeleccionada) {
-      setMensaje(
-        "No existe información para la ruta seleccionada."
-      );
-
-      return;
-    }
-
-
-    const pesoNumero =
-      Number(
-        pesoCarga
-      );
-
-
-    if (
-      !Number.isFinite(
-        pesoNumero
-      ) ||
-      pesoNumero <= 0
-    ) {
       setErrores(
-        (actuales) => ({
-          ...actuales,
-
-          pesoCarga:
-            true,
-        })
+        nuevosErrores
       );
 
-
-      setMensaje(
-        "El peso total debe ser mayor que cero."
-      );
-
-      return;
-    }
-
-
-    if (
-      !recomendacion ||
-      !tipoContenedor
-    ) {
-      setMensaje(
-        "Seleccione una opción de contenedor."
-      );
-
-      return;
-    }
-
-
-    const contingenciaNumero =
-      Number(
-        contingencia
-      );
-
-
-    if (
-      !Number.isInteger(
-        contingenciaNumero
-      ) ||
-      contingenciaNumero < 0
-    ) {
-      setErrores(
-        (actuales) => ({
-          ...actuales,
-
-          contingencia:
-            true,
-        })
-      );
-
-
-      setMensaje(
-        "El margen de contingencia debe ser un número entero igual o mayor que cero."
-      );
-
-      return;
-    }
-
-
-    /*
-     * A partir de aquí existe una petición
-     * válida y se activa el lock antes
-     * de cualquier await.
-     */
-    cotizacionEnCursoRef.current =
-      true;
-
-    setCotizando(
-      true
-    );
-
-
-    try {
-      const respuesta =
-        await peticionAutenticada(
-          `${API_URL}/cotizar/`,
-          {
-            method:
-              "POST",
-
-            headers: {
-              "Content-Type":
-                "application/json",
-            },
-
-            body:
-              JSON.stringify({
-                ruta_id:
-                  rutaSeleccionada.id,
-
-                peso_carga:
-                  pesoCarga,
-
-                unidad_peso:
-                  unidadPeso,
-
-                tipo_contenedor:
-                  tipoContenedor,
-
-                contingencia:
-                  contingenciaNumero,
-              }),
-          }
+      if (
+        nuevosErrores.origen ||
+        nuevosErrores.destino ||
+        nuevosErrores.pesoCarga
+      ) {
+        setMensaje(
+          "Complete los campos obligatorios para realizar la cotización."
         );
 
+        return;
+      }
 
-      const datos =
-        await respuesta.json();
+      if (!rutaSeleccionada) {
+        setMensaje(
+          "No existe información para la ruta seleccionada."
+        );
 
+        return;
+      }
 
-      if (!respuesta.ok) {
-        throw new Error(
-          extraerMensajeError(
-            datos,
+      const pesoNumero =
+        Number(
+          pesoCarga
+        );
+
+      if (
+        !Number.isFinite(
+          pesoNumero
+        ) ||
+        pesoNumero <= 0
+      ) {
+        setErrores(
+          (actuales) => ({
+            ...actuales,
+
+            pesoCarga:
+              true,
+          })
+        );
+
+        setMensaje(
+          "El peso total debe ser mayor que cero."
+        );
+
+        return;
+      }
+
+      if (
+        !recomendacion ||
+        !tipoContenedor
+      ) {
+        setMensaje(
+          "Seleccione una opción de contenedor."
+        );
+
+        return;
+      }
+
+      const contingenciaNumero =
+        Number(
+          contingencia
+        );
+
+      if (
+        !Number.isInteger(
+          contingenciaNumero
+        ) ||
+        contingenciaNumero < 0
+      ) {
+        setErrores(
+          (actuales) => ({
+            ...actuales,
+
+            contingencia:
+              true,
+          })
+        );
+
+        setMensaje(
+          "El margen de contingencia debe ser un número entero igual o mayor que cero."
+        );
+
+        return;
+      }
+
+      cotizacionEnCursoRef.current =
+        true;
+
+      setCotizando(true);
+
+      try {
+        const respuesta =
+          await peticionAutenticada(
+            `${API_URL}/cotizar/`,
+            {
+              method: "POST",
+
+              headers: {
+                "Content-Type":
+                  "application/json",
+              },
+
+              body:
+                JSON.stringify({
+                  ruta_id:
+                    rutaSeleccionada.id,
+
+                  peso_carga:
+                    pesoCarga,
+
+                  unidad_peso:
+                    unidadPeso,
+
+                  tipo_contenedor:
+                    tipoContenedor,
+
+                  contingencia:
+                    contingenciaNumero,
+                }),
+            }
+          );
+
+        const datos =
+          await respuesta.json();
+
+        if (!respuesta.ok) {
+          throw new Error(
+            extraerMensajeError(
+              datos,
+              "No fue posible generar la cotización."
+            )
+          );
+        }
+
+        setResultado(datos);
+        setMensaje("");
+        setErrorDatos("");
+
+        setErrores({
+          origen: false,
+          destino: false,
+          pesoCarga: false,
+          contingencia: false,
+        });
+
+      } catch (error) {
+        setMensaje(
+          obtenerMensajeError(
+            error,
             "No fue posible generar la cotización."
           )
         );
+
+      } finally {
+        cotizacionEnCursoRef.current =
+          false;
+
+        setCotizando(false);
       }
+    };
 
 
-      setResultado(
-        datos
-      );
-
-      setMensaje("");
-      setErrorDatos("");
-
-
-      setErrores({
-        origen: false,
-        destino: false,
-        pesoCarga: false,
-        contingencia: false,
-      });
-
-    } catch (error) {
-      setMensaje(
-        obtenerMensajeError(
-          error,
-          "No fue posible generar la cotización."
-        )
-      );
-
-    } finally {
-      cotizacionEnCursoRef.current =
-        false;
-
-      setCotizando(
-        false
-      );
-    }
-  };
-
-
-  /* ======================================
-     VALIDANDO SESIÓN
-  ====================================== */
-
-  if (
-    verificandoSesion
-  ) {
+  if (verificandoSesion) {
     return (
       <div className="session-screen">
         <div className="session-loader">
@@ -1773,11 +1617,6 @@ useEffect(() => {
     );
   }
 
-
-  /* ======================================
-     TOKEN EXISTE, PERO NO PODEMOS
-     VALIDAR USUARIO POR CONEXIÓN
-  ====================================== */
 
   if (
     token &&
@@ -1829,10 +1668,6 @@ useEffect(() => {
   }
 
 
-  /* ======================================
-     LOGIN
-  ====================================== */
-
   if (
     !token ||
     !usuario
@@ -1848,7 +1683,6 @@ useEffect(() => {
         <div className="login-overlay">
         </div>
 
-
         <div className="login-shell">
           <div className="login-brand-panel">
             <div className="login-brand">
@@ -1860,9 +1694,7 @@ useEffect(() => {
             </div>
 
             <h1>
-              Cotizador
-              <br />
-              Logístico
+              Cotizador Logístico
             </h1>
 
             <p>
@@ -1896,18 +1728,21 @@ useEffect(() => {
               }
             >
               <div className="login-field">
-                <label>
+                <label
+                  htmlFor="login-usuario"
+                >
                   Usuario
                 </label>
 
                 <input
+                  id="login-usuario"
                   type="text"
                   value={
                     loginUsuario
                   }
-                  onChange={(e) => {
+                  onChange={(event) => {
                     setLoginUsuario(
-                      e.target.value
+                      event.target.value
                     );
 
                     setLoginError("");
@@ -1922,18 +1757,21 @@ useEffect(() => {
 
 
               <div className="login-field">
-                <label>
+                <label
+                  htmlFor="login-password"
+                >
                   Contraseña
                 </label>
 
                 <input
+                  id="login-password"
                   type="password"
                   value={
                     loginPassword
                   }
-                  onChange={(e) => {
+                  onChange={(event) => {
                     setLoginPassword(
-                      e.target.value
+                      event.target.value
                     );
 
                     setLoginError("");
@@ -1987,9 +1825,37 @@ useEffect(() => {
   }
 
 
-  /* ======================================
-     ADMINISTRACIÓN
-  ====================================== */
+  if (
+    vistaActiva ===
+    "historial"
+  ) {
+    return (
+      <HistorialCotizaciones
+        apiUrl={
+          API_URL
+        }
+
+        usuario={
+          usuario
+        }
+
+        peticionAutenticada={
+          peticionAutenticada
+        }
+
+        onVolver={() => {
+          setVistaActiva(
+            "cotizador"
+          );
+        }}
+
+        onCerrarSesion={
+          cerrarSesion
+        }
+      />
+    );
+  }
+
 
   if (
     vistaActiva ===
@@ -2036,10 +1902,6 @@ useEffect(() => {
   }
 
 
-  /* ======================================
-     COTIZADOR
-  ====================================== */
-
   return (
     <div className="app">
       <header className="site-header">
@@ -2058,7 +1920,11 @@ useEffect(() => {
           <div className="header-user">
             <div className="user-info">
               <span>
-                USUARIO
+                {
+                  obtenerNombreRol(
+                    usuario
+                  )
+                }
               </span>
 
               <strong>
@@ -2070,6 +1936,17 @@ useEffect(() => {
             </div>
 
 
+            <button
+              type="button"
+              className="admin-header-button"
+              onClick={
+                abrirHistorial
+              }
+            >
+              HISTORIAL
+            </button>
+
+
             {
               usuario
                 .puedeGestionarDatos &&
@@ -2077,9 +1954,9 @@ useEffect(() => {
                 <button
                   type="button"
                   className="admin-header-button"
-                  onClick={
-                    abrirAdministracion
-                  }
+                  onClick={() => {
+                    void abrirAdministracion();
+                  }}
                 >
                   ADMINISTRACIÓN
                 </button>
@@ -2113,7 +1990,6 @@ useEffect(() => {
 
         <div className="hero-accent">
         </div>
-
 
         <div className="hero-content">
           <div className="hero-kicker">
@@ -2152,9 +2028,9 @@ useEffect(() => {
           </div>
 
           <div className="intro-text">
-            Ingrese los antecedentes de
-            la operación para obtener
-            una estimación.
+            Ingrese los antecedentes
+            de la operación para
+            obtener una estimación.
           </div>
         </div>
       </section>
@@ -2225,7 +2101,9 @@ useEffect(() => {
 
               <div className="form-grid">
                 <div className="form-group">
-                  <label>
+                  <label
+                    htmlFor="origen"
+                  >
                     Puerto de origen
 
                     <span className="required">
@@ -2234,24 +2112,22 @@ useEffect(() => {
                   </label>
 
                   <select
+                    id="origen"
                     className={
                       errores.origen
                         ? "campo-error"
                         : ""
                     }
-
                     value={
                       origen
                     }
-
                     disabled={
                       cargandoDatos ||
                       rutas.length === 0
                     }
-
-                    onChange={(e) => {
+                    onChange={(event) => {
                       setOrigen(
-                        e.target.value
+                        event.target.value
                       );
 
                       setDestino("");
@@ -2292,7 +2168,9 @@ useEffect(() => {
 
 
                 <div className="form-group">
-                  <label>
+                  <label
+                    htmlFor="destino"
+                  >
                     Puerto de destino
 
                     <span className="required">
@@ -2301,23 +2179,21 @@ useEffect(() => {
                   </label>
 
                   <select
+                    id="destino"
                     className={
                       errores.destino
                         ? "campo-error"
                         : ""
                     }
-
                     value={
                       destino
                     }
-
                     disabled={
                       !origen
                     }
-
-                    onChange={(e) => {
+                    onChange={(event) => {
                       setDestino(
-                        e.target.value
+                        event.target.value
                       );
 
                       limpiarError(
@@ -2372,7 +2248,9 @@ useEffect(() => {
 
               <div className="form-grid single">
                 <div className="form-group">
-                  <label>
+                  <label
+                    htmlFor="peso-carga"
+                  >
                     Peso total
 
                     <span className="required">
@@ -2382,23 +2260,21 @@ useEffect(() => {
 
                   <div className="field-with-select">
                     <input
+                      id="peso-carga"
                       className={
                         errores.pesoCarga
                           ? "campo-error"
                           : ""
                       }
-
                       type="number"
                       min="0"
                       step="any"
-
                       value={
                         pesoCarga
                       }
-
-                      onChange={(e) => {
+                      onChange={(event) => {
                         setPesoCarga(
-                          e.target.value
+                          event.target.value
                         );
 
                         limpiarError(
@@ -2407,19 +2283,17 @@ useEffect(() => {
 
                         reiniciarOpcionesContenedor();
                       }}
-
                       placeholder="Ej: 25000"
                     />
 
-
                     <select
+                      aria-label="Unidad de peso"
                       value={
                         unidadPeso
                       }
-
-                      onChange={(e) => {
+                      onChange={(event) => {
                         setUnidadPeso(
-                          e.target.value
+                          event.target.value
                         );
 
                         reiniciarOpcionesContenedor();
@@ -2484,15 +2358,12 @@ useEffect(() => {
                               opcion.codigo ===
                               tipoContenedor;
 
-
                             return (
                               <button
                                 key={
                                   opcion.codigo
                                 }
-
                                 type="button"
-
                                 className={[
                                   "recommendation-option",
 
@@ -2507,10 +2378,7 @@ useEffect(() => {
                                   .filter(
                                     Boolean
                                   )
-                                  .join(
-                                    " "
-                                  )}
-
+                                  .join(" ")}
                                 onClick={() => {
                                   setTipoContenedor(
                                     opcion.codigo
@@ -2525,7 +2393,6 @@ useEffect(() => {
                                       opcion.nombre
                                     }
                                   </strong>
-
 
                                   <div className="option-labels">
                                     {sugerida && (
@@ -2602,29 +2469,29 @@ useEffect(() => {
 
               <div className="form-grid single">
                 <div className="form-group">
-                  <label>
+                  <label
+                    htmlFor="contingencia"
+                  >
                     Margen de contingencia
                   </label>
 
                   <div className="input-with-unit">
                     <input
+                      id="contingencia"
                       className={
                         errores.contingencia
                           ? "campo-error"
                           : ""
                       }
-
                       type="number"
                       min="0"
                       step="1"
-
                       value={
                         contingencia
                       }
-
-                      onChange={(e) => {
+                      onChange={(event) => {
                         setContingencia(
-                          e.target.value
+                          event.target.value
                         );
 
                         limpiarError(
@@ -2662,7 +2529,6 @@ useEffect(() => {
                 * Campos obligatorios
               </span>
 
-
               <div className="buttons-container">
                 <button
                   type="button"
@@ -2676,7 +2542,6 @@ useEffect(() => {
                 >
                   LIMPIAR
                 </button>
-
 
                 <button
                   type="submit"
@@ -2744,6 +2609,32 @@ useEffect(() => {
             </div>
           ) : (
             <div className="result-content">
+              {
+                resultado
+                  .historialId &&
+                (
+                  <div className="route-summary">
+                    <span>
+                      REGISTRO
+                    </span>
+
+                    <strong>
+                      Cotización #
+                      {
+                        resultado
+                          .historialId
+                      }
+                    </strong>
+
+                    <small>
+                      Guardada automáticamente
+                      en el historial.
+                    </small>
+                  </div>
+                )
+              }
+
+
               <div className="route-summary">
                 <span>
                   RUTA
@@ -2807,7 +2698,7 @@ useEffect(() => {
                     resultado
                       .tipoContenedor
                   }
-                  '
+                  &apos;
                 </strong>
               </div>
 
@@ -2959,7 +2850,8 @@ useEffect(() => {
                   )
                   : (
                     resultado
-                      .mensajeConversion && (
+                      .mensajeConversion &&
+                    (
                       <div className="message-box conversion-warning">
                         <span className="message-icon">
                           !
@@ -3011,7 +2903,8 @@ useEffect(() => {
                       {
                         resultado
                           .contingencia >
-                          0 && (
+                          0 &&
+                        (
                           <div className="contingency-info">
                             +{" "}
                             {
@@ -3072,6 +2965,17 @@ useEffect(() => {
                   }
                 </strong>
               </div>
+
+
+              <button
+                type="button"
+                className="new-quote-button"
+                onClick={
+                  abrirHistorial
+                }
+              >
+                VER HISTORIAL
+              </button>
 
 
               <button

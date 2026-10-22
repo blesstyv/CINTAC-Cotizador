@@ -1,4 +1,5 @@
 import {
+  useCallback,
   useEffect,
   useRef,
   useState,
@@ -19,9 +20,7 @@ const FORMULARIO_INICIAL = {
 };
 
 
-function extraerErrores(
-  datos
-) {
+function extraerErrores(datos) {
   if (!datos) {
     return [
       "No fue posible completar la operación.",
@@ -30,76 +29,53 @@ function extraerErrores(
 
   if (datos.detail) {
     return [
-      String(
-        datos.detail
-      ),
+      String(datos.detail),
     ];
   }
 
   const errores = [];
 
-  Object.values(
-    datos
-  ).forEach(
-    (valor) => {
-      if (
-        Array.isArray(
-          valor
-        )
-      ) {
-        valor.forEach(
-          (mensaje) => {
-            errores.push(
-              String(
-                mensaje
-              )
+  Object.values(datos).forEach((valor) => {
+    if (Array.isArray(valor)) {
+      valor.forEach((mensaje) => {
+        errores.push(
+          String(mensaje)
+        );
+      });
+
+      return;
+    }
+
+    if (
+      typeof valor === "string"
+    ) {
+      errores.push(valor);
+      return;
+    }
+
+    if (
+      valor &&
+      typeof valor === "object"
+    ) {
+      Object.values(valor).forEach(
+        (contenido) => {
+          if (
+            Array.isArray(
+              contenido
+            )
+          ) {
+            contenido.forEach(
+              (mensaje) => {
+                errores.push(
+                  String(mensaje)
+                );
+              }
             );
           }
-        );
-
-        return;
-      }
-
-      if (
-        typeof valor ===
-        "string"
-      ) {
-        errores.push(
-          valor
-        );
-
-        return;
-      }
-
-      if (
-        valor &&
-        typeof valor ===
-        "object"
-      ) {
-        Object.values(
-          valor
-        ).forEach(
-          (contenido) => {
-            if (
-              Array.isArray(
-                contenido
-              )
-            ) {
-              contenido.forEach(
-                (mensaje) => {
-                  errores.push(
-                    String(
-                      mensaje
-                    )
-                  );
-                }
-              );
-            }
-          }
-        );
-      }
+        }
+      );
     }
-  );
+  });
 
   if (
     errores.length === 0
@@ -113,9 +89,7 @@ function extraerErrores(
 }
 
 
-function obtenerNombreRol(
-  usuario
-) {
+function obtenerNombreRol(usuario) {
   if (
     usuario?.rol ===
     "ADMINISTRADOR"
@@ -202,15 +176,15 @@ function AdminUsuarios({
     useRef(null);
 
 
-  /* ======================================
-     PERMISOS
-  ====================================== */
-
   const comprobarPermiso =
-    (respuesta) => {
-      if (
-        respuesta.status === 403
-      ) {
+    useCallback(
+      (respuesta) => {
+        if (
+          respuesta.status !== 403
+        ) {
+          return true;
+        }
+
         if (
           onPermisoRevocado
         ) {
@@ -218,15 +192,127 @@ function AdminUsuarios({
         }
 
         return false;
-      }
+      },
+      [
+        onPermisoRevocado,
+      ]
+    );
 
-      return true;
-    };
+
+  const cargarUsuarios =
+    useCallback(
+      async (
+        busquedaActual = "",
+        rolActual = ""
+      ) => {
+        if (
+          cargandoRef.current
+        ) {
+          return;
+        }
+
+        cargandoRef.current =
+          true;
+
+        setCargando(true);
+        setErrores([]);
+
+        try {
+          const parametros =
+            new URLSearchParams();
+
+          if (
+            busquedaActual.trim()
+          ) {
+            parametros.set(
+              "q",
+              busquedaActual.trim()
+            );
+          }
+
+          if (rolActual) {
+            parametros.set(
+              "rol",
+              rolActual
+            );
+          }
+
+          const query =
+            parametros.toString();
+
+          const url = query
+            ? `${apiUrl}/administracion/usuarios/?${query}`
+            : `${apiUrl}/administracion/usuarios/`;
+
+          const respuesta =
+            await peticionAutenticada(
+              url
+            );
+
+          if (
+            !comprobarPermiso(
+              respuesta
+            )
+          ) {
+            return;
+          }
+
+          const datos =
+            await respuesta.json();
+
+          if (!respuesta.ok) {
+            throw new Error(
+              datos.detail ||
+              "No fue posible cargar los usuarios."
+            );
+          }
+
+          setUsuarios(
+            datos.usuarios || []
+          );
+
+        } catch (error) {
+          setErrores([
+            error.message ||
+            "No fue posible cargar los usuarios.",
+          ]);
+
+        } finally {
+          cargandoRef.current =
+            false;
+
+          setCargando(false);
+        }
+      },
+      [
+        apiUrl,
+        peticionAutenticada,
+        comprobarPermiso,
+      ]
+    );
 
 
-  /* ======================================
-     DESPLAZAR AL FORMULARIO
-  ====================================== */
+  useEffect(
+    () => {
+      const temporizador =
+        window.setTimeout(
+          () => {
+            void cargarUsuarios();
+          },
+          0
+        );
+
+      return () => {
+        window.clearTimeout(
+          temporizador
+        );
+      };
+    },
+    [
+      cargarUsuarios,
+    ]
+  );
+
 
   const desplazarAlFormulario =
     () => {
@@ -234,127 +320,14 @@ function AdminUsuarios({
         () => {
           formularioRef.current
             ?.scrollIntoView({
-              behavior:
-                "smooth",
-
-              block:
-                "start",
+              behavior: "smooth",
+              block: "start",
             });
         },
         50
       );
     };
 
-
-  /* ======================================
-     LISTAR USUARIOS
-  ====================================== */
-
-  const cargarUsuarios =
-  async (
-    busquedaActual = "",
-    rolActual = ""
-  ) => {
-    if (
-      cargandoRef.current
-    ) {
-      return;
-    }
-
-    cargandoRef.current =
-      true;
-
-    setCargando(
-      true
-    );
-
-    setErrores([]);
-
-    try {
-      const parametros =
-        new URLSearchParams();
-
-      if (
-        busquedaActual.trim()
-      ) {
-        parametros.set(
-          "q",
-          busquedaActual.trim()
-        );
-      }
-
-      if (
-        rolActual
-      ) {
-        parametros.set(
-          "rol",
-          rolActual
-        );
-      }
-
-      const query =
-        parametros.toString();
-
-      const url = query
-        ? (
-          `${apiUrl}/administracion/usuarios/?${query}`
-        )
-        : (
-          `${apiUrl}/administracion/usuarios/`
-        );
-
-      const respuesta =
-        await peticionAutenticada(
-          url
-        );
-
-      if (
-        !comprobarPermiso(
-          respuesta
-        )
-      ) {
-        return;
-      }
-
-      const datos =
-        await respuesta.json();
-
-      if (!respuesta.ok) {
-        throw new Error(
-          datos.detail ||
-          "No fue posible cargar los usuarios."
-        );
-      }
-
-      setUsuarios(
-        datos.usuarios || []
-      );
-
-    } catch (error) {
-      setErrores([
-        error.message ||
-        "No fue posible cargar los usuarios.",
-      ]);
-
-    } finally {
-      cargandoRef.current =
-        false;
-
-      setCargando(
-        false
-      );
-    }
-  };
-
-
-  useEffect(() => {
-    void cargarUsuarios();
-  }, []);
-
-
-  /* ======================================
-     FORMULARIO
-  ====================================== */
 
   const actualizarCampo =
     (
@@ -364,9 +337,7 @@ function AdminUsuarios({
       setFormulario(
         (actual) => ({
           ...actual,
-
-          [campo]:
-            valor,
+          [campo]: valor,
         })
       );
 
@@ -381,16 +352,10 @@ function AdminUsuarios({
         FORMULARIO_INICIAL
       );
 
-      setUsuarioEditando(
-        null
-      );
-
+      setUsuarioEditando(null);
       setErrores([]);
       setMensaje("");
-
-      setMostrarFormulario(
-        true
-      );
+      setMostrarFormulario(true);
 
       desplazarAlFormulario();
     };
@@ -402,14 +367,8 @@ function AdminUsuarios({
         FORMULARIO_INICIAL
       );
 
-      setUsuarioEditando(
-        null
-      );
-
-      setMostrarFormulario(
-        false
-      );
-
+      setUsuarioEditando(null);
+      setMostrarFormulario(false);
       setErrores([]);
     };
 
@@ -439,11 +398,9 @@ function AdminUsuarios({
         email:
           usuario.email || "",
 
-        password:
-          "",
+        password: "",
 
-        password_confirm:
-          "",
+        password_confirm: "",
 
         rol:
           usuario.rol ||
@@ -457,18 +414,11 @@ function AdminUsuarios({
 
       setErrores([]);
       setMensaje("");
-
-      setMostrarFormulario(
-        true
-      );
+      setMostrarFormulario(true);
 
       desplazarAlFormulario();
     };
 
-
-  /* ======================================
-     VALIDACIÓN FRONTEND
-  ====================================== */
 
   const validarFormulario =
     () => {
@@ -515,17 +465,13 @@ function AdminUsuarios({
         );
       }
 
-      if (
-        !formulario.rol
-      ) {
+      if (!formulario.rol) {
         problemas.push(
           "Debe seleccionar un rol."
         );
       }
 
-      if (
-        !usuarioEditando
-      ) {
+      if (!usuarioEditando) {
         if (
           !formulario.password
         ) {
@@ -564,336 +510,278 @@ function AdminUsuarios({
     };
 
 
-  /* ======================================
-     GUARDAR
-  ====================================== */
-
   const guardarUsuario =
-  async (
-    event
-  ) => {
-    event.preventDefault();
+    async (
+      event
+    ) => {
+      event.preventDefault();
 
-    if (
-      guardandoRef.current
-    ) {
-      return;
-    }
+      if (
+        guardandoRef.current
+      ) {
+        return;
+      }
 
-    const problemas =
-      validarFormulario();
+      const problemas =
+        validarFormulario();
 
-    if (
-      problemas.length > 0
-    ) {
-      setErrores(
-        problemas
-      );
+      if (
+        problemas.length > 0
+      ) {
+        setErrores(
+          problemas
+        );
 
-      return;
-    }
+        return;
+      }
 
-    guardandoRef.current =
-      true;
+      guardandoRef.current =
+        true;
 
-    setGuardando(
-      true
-    );
+      setGuardando(true);
+      setErrores([]);
+      setMensaje("");
 
-    setErrores([]);
-    setMensaje("");
-
-    const editando =
-      Boolean(
-        usuarioEditando
-      );
-
-    const payload = {
-      first_name:
-        formulario
-          .first_name
-          .trim(),
-
-      last_name:
-        formulario
-          .last_name
-          .trim(),
-
-      email:
-        formulario
-          .email
-          .trim(),
-
-      rol:
-        formulario.rol,
-
-      activo:
+      const editando =
         Boolean(
-          formulario.activo
-        ),
+          usuarioEditando
+        );
+
+      const payload = {
+        first_name:
+          formulario
+            .first_name
+            .trim(),
+
+        last_name:
+          formulario
+            .last_name
+            .trim(),
+
+        email:
+          formulario
+            .email
+            .trim(),
+
+        rol:
+          formulario.rol,
+
+        activo:
+          Boolean(
+            formulario.activo
+          ),
+      };
+
+      if (!editando) {
+        payload.username =
+          formulario
+            .username
+            .trim();
+
+        payload.password =
+          formulario.password;
+
+        payload.password_confirm =
+          formulario
+            .password_confirm;
+      }
+
+      if (
+        editando &&
+        formulario.password
+      ) {
+        payload.password =
+          formulario.password;
+
+        payload.password_confirm =
+          formulario
+            .password_confirm;
+      }
+
+      try {
+        const url = editando
+          ? `${apiUrl}/administracion/usuarios/${usuarioEditando.id}/`
+          : `${apiUrl}/administracion/usuarios/`;
+
+        const respuesta =
+          await peticionAutenticada(
+            url,
+            {
+              method:
+                editando
+                  ? "PATCH"
+                  : "POST",
+
+              headers: {
+                "Content-Type":
+                  "application/json",
+              },
+
+              body:
+                JSON.stringify(
+                  payload
+                ),
+            }
+          );
+
+        if (
+          !comprobarPermiso(
+            respuesta
+          )
+        ) {
+          return;
+        }
+
+        const datos =
+          await respuesta.json();
+
+        if (!respuesta.ok) {
+          setErrores(
+            extraerErrores(
+              datos
+            )
+          );
+
+          return;
+        }
+
+        setMensaje(
+          datos.detail ||
+          (
+            editando
+              ? "Usuario actualizado correctamente."
+              : "Usuario creado correctamente."
+          )
+        );
+
+        setFormulario(
+          FORMULARIO_INICIAL
+        );
+
+        setUsuarioEditando(null);
+        setMostrarFormulario(false);
+
+        await cargarUsuarios(
+          busqueda,
+          filtroRol
+        );
+
+      } catch (error) {
+        setErrores([
+          error.message ||
+          "No fue posible guardar el usuario.",
+        ]);
+
+      } finally {
+        guardandoRef.current =
+          false;
+
+        setGuardando(false);
+      }
     };
 
-    if (!editando) {
-      payload.username =
-        formulario
-          .username
-          .trim();
-
-      payload.password =
-        formulario.password;
-
-      payload.password_confirm =
-        formulario
-          .password_confirm;
-    }
-
-    if (
-      editando &&
-      formulario.password
-    ) {
-      payload.password =
-        formulario.password;
-
-      payload.password_confirm =
-        formulario
-          .password_confirm;
-    }
-
-    try {
-      const url = editando
-        ? (
-          `${apiUrl}/administracion/usuarios/${usuarioEditando.id}/`
-        )
-        : (
-          `${apiUrl}/administracion/usuarios/`
-        );
-
-      const respuesta =
-        await peticionAutenticada(
-          url,
-          {
-            method:
-              editando
-                ? "PATCH"
-                : "POST",
-
-            headers: {
-              "Content-Type":
-                "application/json",
-            },
-
-            body:
-              JSON.stringify(
-                payload
-              ),
-          }
-        );
-
-      if (
-        !comprobarPermiso(
-          respuesta
-        )
-      ) {
-        return;
-      }
-
-      const datos =
-        await respuesta.json();
-
-      if (!respuesta.ok) {
-        setErrores(
-          extraerErrores(
-            datos
-          )
-        );
-
-        return;
-      }
-
-      setMensaje(
-        datos.detail ||
-        (
-          editando
-            ? (
-              "Usuario actualizado correctamente."
-            )
-            : (
-              "Usuario creado correctamente."
-            )
-        )
-      );
-
-      setFormulario(
-        FORMULARIO_INICIAL
-      );
-
-      setUsuarioEditando(
-        null
-      );
-
-      setMostrarFormulario(
-        false
-      );
-
-      await cargarUsuarios(
-        busqueda,
-        filtroRol
-      );
-
-      window.scrollTo({
-        top:
-          formularioRef
-            .current
-            ?.parentElement
-            ?.offsetTop ||
-          0,
-
-        behavior:
-          "smooth",
-      });
-
-    } catch (error) {
-      setErrores([
-        error.message ||
-        "No fue posible guardar el usuario.",
-      ]);
-
-    } finally {
-      guardandoRef.current =
-        false;
-
-      setGuardando(
-        false
-      );
-    }
-  };
-
-
-  /* ======================================
-     ACTIVAR / DESACTIVAR
-  ====================================== */
 
   const cambiarEstado =
-  async (
-    usuario
-  ) => {
-    if (
-      guardandoRef.current ||
-      usuario.protegido
-    ) {
-      return;
-    }
-
-    const nuevoEstado =
-      !usuario.activo;
-
-    const accion =
-      nuevoEstado
-        ? "activar"
-        : "desactivar";
-
-    const confirmado =
-      window.confirm(
-        (
-          `¿Desea ${accion} al usuario `
-          + `${usuario.username}?`
-        )
-      );
-
-    if (!confirmado) {
-      return;
-    }
-
-    guardandoRef.current =
-      true;
-
-    setGuardando(
-      true
-    );
-
-    setErrores([]);
-    setMensaje("");
-
-    try {
-      const respuesta =
-        await peticionAutenticada(
-          (
-            `${apiUrl}/administracion/usuarios/`
-            + `${usuario.id}/`
-          ),
-          {
-            method:
-              "PATCH",
-
-            headers: {
-              "Content-Type":
-                "application/json",
-            },
-
-            body:
-              JSON.stringify({
-                activo:
-                  nuevoEstado,
-              }),
-          }
-        );
-
+    async (
+      usuario
+    ) => {
       if (
-        !comprobarPermiso(
-          respuesta
-        )
+        guardandoRef.current ||
+        usuario.protegido
       ) {
         return;
       }
 
-      const datos =
-        await respuesta.json();
+      const nuevoEstado =
+        !usuario.activo;
 
-      if (!respuesta.ok) {
-        setErrores(
-          extraerErrores(
-            datos
-          )
+      const accion =
+        nuevoEstado
+          ? "activar"
+          : "desactivar";
+
+      const confirmado =
+        window.confirm(
+          `¿Desea ${accion} al usuario ${usuario.username}?`
         );
 
+      if (!confirmado) {
         return;
       }
 
-      setMensaje(
-        nuevoEstado
-          ? (
-            "Usuario activado correctamente."
-          )
-          : (
-            "Usuario desactivado correctamente."
-          )
-      );
-
-      await cargarUsuarios(
-        busqueda,
-        filtroRol
-      );
-
-    } catch (error) {
-      setErrores([
-        error.message ||
-        "No fue posible modificar el usuario.",
-      ]);
-
-    } finally {
       guardandoRef.current =
-        false;
+        true;
 
-      setGuardando(
-        false
-      );
-    }
-  };
+      setGuardando(true);
+      setErrores([]);
+      setMensaje("");
 
+      try {
+        const respuesta =
+          await peticionAutenticada(
+            `${apiUrl}/administracion/usuarios/${usuario.id}/`,
+            {
+              method: "PATCH",
 
-  /* ======================================
-     BUSCAR
-  ====================================== */
+              headers: {
+                "Content-Type":
+                  "application/json",
+              },
+
+              body:
+                JSON.stringify({
+                  activo:
+                    nuevoEstado,
+                }),
+            }
+          );
+
+        if (
+          !comprobarPermiso(
+            respuesta
+          )
+        ) {
+          return;
+        }
+
+        const datos =
+          await respuesta.json();
+
+        if (!respuesta.ok) {
+          setErrores(
+            extraerErrores(
+              datos
+            )
+          );
+
+          return;
+        }
+
+        setMensaje(
+          nuevoEstado
+            ? "Usuario activado correctamente."
+            : "Usuario desactivado correctamente."
+        );
+
+        await cargarUsuarios(
+          busqueda,
+          filtroRol
+        );
+
+      } catch (error) {
+        setErrores([
+          error.message ||
+          "No fue posible modificar el usuario.",
+        ]);
+
+      } finally {
+        guardandoRef.current =
+          false;
+
+        setGuardando(false);
+      }
+    };
+
 
   const ejecutarBusqueda =
     (event) => {
@@ -918,10 +806,6 @@ function AdminUsuarios({
     };
 
 
-  /* ======================================
-     INTERFAZ
-  ====================================== */
-
   return (
     <section className="users-section">
       <div className="users-heading">
@@ -935,10 +819,10 @@ function AdminUsuarios({
           </h2>
 
           <p>
-            Creación, edición,
-            roles y estado de las
-            cuentas autorizadas para
-            utilizar el cotizador.
+            Creación, edición, roles
+            y estado de las cuentas
+            autorizadas para utilizar
+            el cotizador.
           </p>
         </div>
 
@@ -1144,21 +1028,21 @@ function AdminUsuarios({
                     )
                     : (
                       usuarios.map(
-                        (usuario) => (
+                        (item) => (
                           <tr
                             key={
-                              usuario.id
+                              item.id
                             }
                           >
                             <td>
                               <strong>
                                 {
-                                  usuario.username
+                                  item.username
                                 }
                               </strong>
 
                               {
-                                usuario.id ===
+                                item.id ===
                                   usuarioActual?.id &&
                                 (
                                   <span className="users-you">
@@ -1170,13 +1054,13 @@ function AdminUsuarios({
 
                             <td>
                               {
-                                usuario.nombre
+                                item.nombre
                               }
                             </td>
 
                             <td>
                               {
-                                usuario.email ||
+                                item.email ||
                                 "—"
                               }
                             </td>
@@ -1184,20 +1068,17 @@ function AdminUsuarios({
                             <td>
                               <span
                                 className={
-                                  (
-                                    "users-role "
-                                    + (
-                                      usuario
-                                        .rol
-                                        ?.toLowerCase() ||
-                                      ""
-                                    )
-                                  )
+                                  `users-role ${
+                                    item
+                                      .rol
+                                      ?.toLowerCase() ||
+                                    ""
+                                  }`
                                 }
                               >
                                 {
                                   obtenerNombreRol(
-                                    usuario
+                                    item
                                   )
                                 }
                               </span>
@@ -1206,18 +1087,15 @@ function AdminUsuarios({
                             <td>
                               <span
                                 className={
-                                  (
-                                    "users-status "
-                                    + (
-                                      usuario.activo
-                                        ? "active"
-                                        : "inactive"
-                                    )
-                                  )
+                                  `users-status ${
+                                    item.activo
+                                      ? "active"
+                                      : "inactive"
+                                  }`
                                 }
                               >
                                 {
-                                  usuario.activo
+                                  item.activo
                                     ? "ACTIVO"
                                     : "INACTIVO"
                                 }
@@ -1231,12 +1109,12 @@ function AdminUsuarios({
                                   className="users-table-button"
                                   onClick={() => {
                                     editarUsuario(
-                                      usuario
+                                      item
                                     );
                                   }}
                                   disabled={
                                     guardando ||
-                                    usuario.protegido
+                                    item.protegido
                                   }
                                 >
                                   EDITAR
@@ -1245,29 +1123,26 @@ function AdminUsuarios({
                                 <button
                                   type="button"
                                   className={
-                                    (
-                                      "users-table-button "
-                                      + (
-                                        usuario.activo
-                                          ? "danger"
-                                          : "success"
-                                      )
-                                    )
+                                    `users-table-button ${
+                                      item.activo
+                                        ? "danger"
+                                        : "success"
+                                    }`
                                   }
                                   onClick={() => {
                                     void cambiarEstado(
-                                      usuario
+                                      item
                                     );
                                   }}
                                   disabled={
                                     guardando ||
-                                    usuario.protegido ||
-                                    usuario.id ===
+                                    item.protegido ||
+                                    item.id ===
                                       usuarioActual?.id
                                   }
                                 >
                                   {
-                                    usuario.activo
+                                    item.activo
                                       ? "DESACTIVAR"
                                       : "ACTIVAR"
                                   }
@@ -1307,12 +1182,8 @@ function AdminUsuarios({
                 <h3>
                   {
                     usuarioEditando
-                      ? (
-                        `Editar ${usuarioEditando.username}`
-                      )
-                      : (
-                        "Crear usuario"
-                      )
+                      ? `Editar ${usuarioEditando.username}`
+                      : "Crear usuario"
                   }
                 </h3>
 
