@@ -3,6 +3,7 @@ databases:
     plan: free
     databaseName: cintac_cotizador
     user: cintac
+    postgresMajorVersion: "16"
 
 services:
   - type: web
