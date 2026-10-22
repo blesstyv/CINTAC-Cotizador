@@ -133,13 +133,13 @@ gunicorn config.wsgi:application
 
 ## Inicialización
 
-En el primer despliegue Render ejecuta:
+Durante el build del backend Render ejecuta:
 
 ```bash
 python manage.py bootstrap_production
 ```
 
-El comando carga los datos iniciales del cotizador y crea o actualiza de forma idempotente el administrador.
+El comando carga los datos iniciales del cotizador, registra un tipo de cambio de respaldo cuando corresponde y crea o actualiza de forma idempotente el administrador. Al ser idempotente, puede ejecutarse en despliegues posteriores sin duplicar los datos maestros.
 
 ## API
 
