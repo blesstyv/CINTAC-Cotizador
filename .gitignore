@@ -43,9 +43,7 @@ htmlcov/
 # DJANGO
 # ==========================================
 
-backend/db.sqlite3
 backend/staticfiles/
-backend/backups/
 
 # ==========================================
 # VARIABLES DE ENTORNO
