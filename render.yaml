@@ -13,7 +13,6 @@ services:
     rootDir: backend
     buildCommand: bash build.sh
     startCommand: gunicorn config.wsgi:application
-    initialDeployHook: python manage.py bootstrap_production
     healthCheckPath: /health/
     autoDeployTrigger: checksPass
     envVars:
