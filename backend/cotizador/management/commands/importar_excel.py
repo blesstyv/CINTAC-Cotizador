@@ -37,7 +37,7 @@ class Command(BaseCommand):
             "--aplicar",
             action="store_true",
             help=(
-                "Aplica los datos a SQLite "
+                "Aplica los datos a PostgreSQL "
                 "después de superar todas "
                 "las validaciones."
             ),
@@ -157,7 +157,7 @@ class Command(BaseCommand):
 
         self.stdout.write("")
         self.stdout.write(
-            "Creando respaldo de SQLite..."
+            "Preparando actualización transaccional..."
         )
 
         respaldo = (
@@ -167,20 +167,15 @@ class Command(BaseCommand):
         if respaldo:
             self.stdout.write(
                 self.style.SUCCESS(
-                    (
-                        "Respaldo creado en: "
-                        f"{respaldo}"
-                    )
+                    f"Respaldo creado en: {respaldo}"
                 )
             )
         else:
             self.stdout.write(
-                self.style.WARNING(
+                self.style.SUCCESS(
                     (
-                        "La base de datos aún "
-                        "no existía; no fue "
-                        "necesario crear "
-                        "respaldo."
+                        "La actualización se ejecutará "
+                        "dentro de una transacción atómica."
                     )
                 )
             )
