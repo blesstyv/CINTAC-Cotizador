@@ -24,11 +24,8 @@ services:
         generateValue: true
       - key: DJANGO_DEBUG
         value: "False"
-      - key: CORS_ALLOWED_ORIGINS
-        fromService:
-          name: cintac-cotizador
-          type: web
-          envVarKey: RENDER_EXTERNAL_URL
+      - key: CORS_ALLOWED_ORIGIN_REGEXES
+        value: "^https://cintac-cotizador.*\\.onrender\\.com$"
       - key: TOKEN_EXPIRATION_HOURS
         value: "8"
       - key: PYTHON_VERSION
