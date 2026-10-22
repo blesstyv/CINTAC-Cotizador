@@ -68,6 +68,9 @@ DATABASE_URL=<URL PostgreSQL>
 CORS_ALLOWED_ORIGINS=<orígenes exactos opcionales>
 CORS_ALLOWED_ORIGIN_REGEXES=<regex opcional>
 TOKEN_EXPIRATION_HOURS=8
+USD_CLP_FALLBACK_VALUE=<valor inicial de respaldo>
+USD_CLP_FALLBACK_DATE=<AAAA-MM-DD>
+USD_CLP_FALLBACK_SOURCE=<fuente del valor>
 ```
 
 En Render, `DATABASE_URL` se obtiene directamente del servicio PostgreSQL y `DJANGO_SECRET_KEY` se genera como secreto.
@@ -212,6 +215,7 @@ La prueba mide GET de sesión/rutas y POST de opciones/cotización con distintos
 - Protección frente a framing.
 - Validaciones de entrada.
 - Importaciones dentro de transacciones atómicas.
+- Tipo de cambio en línea con caché y valor de respaldo persistente para contingencias del proveedor.
 - Archivos temporales eliminados después del procesamiento.
 - Base de datos separada del código fuente.
 
