@@ -636,7 +636,7 @@ class Cotizacion(models.Model):
     )
 
     peso_kg = models.DecimalField(
-        max_digits=18,
+        max_digits=21,
         decimal_places=3,
     )
 
@@ -659,7 +659,7 @@ class Cotizacion(models.Model):
         decimal_places=2,
     )
 
-    cantidad = models.PositiveIntegerField()
+    cantidad = models.PositiveBigIntegerField()
 
     tarifa_min = models.DecimalField(
         max_digits=12,
@@ -672,12 +672,12 @@ class Cotizacion(models.Model):
     )
 
     total_min = models.DecimalField(
-        max_digits=14,
+        max_digits=20,
         decimal_places=2,
     )
 
     total_max = models.DecimalField(
-        max_digits=14,
+        max_digits=20,
         decimal_places=2,
     )
 
@@ -741,14 +741,14 @@ class Cotizacion(models.Model):
     )
 
     total_min_clp = models.DecimalField(
-        max_digits=18,
+        max_digits=24,
         decimal_places=2,
         null=True,
         blank=True,
     )
 
     total_max_clp = models.DecimalField(
-        max_digits=18,
+        max_digits=24,
         decimal_places=2,
         null=True,
         blank=True,

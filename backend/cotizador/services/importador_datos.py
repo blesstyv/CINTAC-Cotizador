@@ -1,11 +1,7 @@
-import sqlite3
-
 from dataclasses import dataclass
-from datetime import datetime
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 
-from django.conf import settings
 from django.db import transaction
 
 from openpyxl import load_workbook
@@ -929,64 +925,14 @@ def validar_archivo_excel(
 
 
 def crear_respaldo_sqlite():
-    ruta_bd = Path(
-        settings.DATABASES[
-            "default"
-        ]["NAME"]
-    )
+    """
+    Compatibilidad con el flujo anterior.
 
-    if not ruta_bd.exists():
-        return None
-
-    carpeta_respaldos = (
-        Path(
-            settings.BASE_DIR
-        )
-        / "backups"
-    )
-
-    carpeta_respaldos.mkdir(
-        parents=True,
-        exist_ok=True,
-    )
-
-    marca_tiempo = (
-        datetime.now()
-        .strftime(
-            "%Y%m%d_%H%M%S"
-        )
-    )
-
-    ruta_respaldo = (
-        carpeta_respaldos
-        / (
-            "db_antes_importacion_"
-            f"{marca_tiempo}.sqlite3"
-        )
-    )
-
-    origen = sqlite3.connect(
-        str(
-            ruta_bd
-        )
-    )
-
-    destino = sqlite3.connect(
-        str(
-            ruta_respaldo
-        )
-    )
-
-    try:
-        origen.backup(
-            destino
-        )
-
-    finally:
-        destino.close()
-        origen.close()
-
-    return ruta_respaldo
+    PostgreSQL ya no utiliza un archivo local que pueda copiarse.
+    La importación se protege mediante transaction.atomic, por lo
+    que cualquier error revierte completamente los cambios.
+    """
+    return None
 
 
 @transaction.atomic

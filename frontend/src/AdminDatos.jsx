@@ -390,7 +390,7 @@ function AdminDatos({
 
     const confirmado =
       window.confirm(
-        "Se actualizarán los datos maestros utilizados por el cotizador. Antes de aplicar los cambios se generará un respaldo de la base de datos. ¿Desea continuar?"
+        "Se actualizarán los datos maestros utilizados por el cotizador mediante una transacción segura. Si ocurre un error, PostgreSQL revertirá automáticamente todos los cambios. ¿Desea continuar?"
       );
 
     if (!confirmado) {

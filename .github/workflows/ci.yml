@@ -1,0 +1,88 @@
+name: CINTAC CI
+
+on:
+  push:
+    branches:
+      - main
+      - render-production
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: cintac_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d cintac_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DJANGO_SECRET_KEY: ci-secret-key-only
+      DJANGO_DEBUG: "True"
+      DJANGO_ALLOWED_HOSTS: 127.0.0.1,localhost
+      CORS_ALLOWED_ORIGINS: http://localhost:5173
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/cintac_test
+      TOKEN_EXPIRATION_HOURS: "8"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Instalar dependencias
+        run: pip install -r backend/requirements.txt
+
+      - name: Verificar migraciones
+        working-directory: backend
+        run: python manage.py makemigrations --check --dry-run
+
+      - name: Verificar configuración
+        working-directory: backend
+        run: python manage.py check
+
+      - name: Ejecutar pruebas
+        working-directory: backend
+        run: python manage.py test cotizador
+
+  frontend:
+    runs-on: ubuntu-latest
+
+    env:
+      VITE_API_URL: https://api.example.com
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Instalar dependencias
+        working-directory: frontend
+        run: npm ci
+
+      - name: Analizar código
+        working-directory: frontend
+        run: npm run lint
+
+      - name: Compilar producción
+        working-directory: frontend
+        run: npm run build
