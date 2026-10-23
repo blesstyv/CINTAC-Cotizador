@@ -1,17 +1,40 @@
 import os
 from pathlib import Path
 
+import dj_database_url
+
 from dotenv import load_dotenv
 
 
-BASE_DIR = Path(__file__).resolve().parent.parent
-PROJECT_ROOT = BASE_DIR.parent
+# ==========================================
+# RUTAS DEL PROYECTO
+# ==========================================
 
-
-load_dotenv(
-    PROJECT_ROOT / ".env"
+BASE_DIR = (
+    Path(__file__)
+    .resolve()
+    .parent
+    .parent
 )
 
+PROJECT_ROOT = (
+    BASE_DIR.parent
+)
+
+
+# ==========================================
+# VARIABLES DE ENTORNO LOCALES
+# ==========================================
+
+load_dotenv(
+    PROJECT_ROOT
+    / ".env"
+)
+
+
+# ==========================================
+# SEGURIDAD GENERAL
+# ==========================================
 
 SECRET_KEY = os.getenv(
     "DJANGO_SECRET_KEY"
@@ -19,7 +42,12 @@ SECRET_KEY = os.getenv(
 
 if not SECRET_KEY:
     raise RuntimeError(
-        "No se encontró DJANGO_SECRET_KEY en las variables de entorno."
+        (
+            "No se encontró "
+            "DJANGO_SECRET_KEY "
+            "en las variables "
+            "de entorno."
+        )
     )
 
 
@@ -27,20 +55,54 @@ DEBUG = (
     os.getenv(
         "DJANGO_DEBUG",
         "False",
-    ).lower()
+    )
+    .strip()
+    .lower()
     == "true"
 )
 
+
+# ==========================================
+# HOSTS PERMITIDOS
+# ==========================================
 
 ALLOWED_HOSTS = [
     host.strip()
     for host in os.getenv(
         "DJANGO_ALLOWED_HOSTS",
-        "127.0.0.1,localhost",
+        (
+            "127.0.0.1,"
+            "localhost"
+        ),
     ).split(",")
     if host.strip()
 ]
 
+
+# Render entrega automáticamente esta
+# variable al servicio publicado.
+RENDER_EXTERNAL_HOSTNAME = (
+    os.getenv(
+        "RENDER_EXTERNAL_HOSTNAME",
+        "",
+    ).strip()
+)
+
+
+if (
+    RENDER_EXTERNAL_HOSTNAME
+    and
+    RENDER_EXTERNAL_HOSTNAME
+    not in ALLOWED_HOSTS
+):
+    ALLOWED_HOSTS.append(
+        RENDER_EXTERNAL_HOSTNAME
+    )
+
+
+# ==========================================
+# APLICACIONES
+# ==========================================
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -60,32 +122,78 @@ INSTALLED_APPS = [
 ]
 
 
+# ==========================================
+# MIDDLEWARE
+# ==========================================
+
 MIDDLEWARE = [
-    "django.middleware.security.SecurityMiddleware",
+    (
+        "django.middleware."
+        "security.SecurityMiddleware"
+    ),
 
-    "corsheaders.middleware.CorsMiddleware",
+    (
+        "whitenoise.middleware."
+        "WhiteNoiseMiddleware"
+    ),
 
-    "django.contrib.sessions.middleware.SessionMiddleware",
+    (
+        "corsheaders.middleware."
+        "CorsMiddleware"
+    ),
 
-    "django.middleware.common.CommonMiddleware",
+    (
+        "django.contrib.sessions."
+        "middleware.SessionMiddleware"
+    ),
 
-    "django.middleware.csrf.CsrfViewMiddleware",
+    (
+        "django.middleware."
+        "common.CommonMiddleware"
+    ),
 
-    "django.contrib.auth.middleware.AuthenticationMiddleware",
+    (
+        "django.middleware.csrf."
+        "CsrfViewMiddleware"
+    ),
 
-    "django.contrib.messages.middleware.MessageMiddleware",
+    (
+        "django.contrib.auth."
+        "middleware."
+        "AuthenticationMiddleware"
+    ),
 
-    "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    (
+        "django.contrib.messages."
+        "middleware."
+        "MessageMiddleware"
+    ),
+
+    (
+        "django.middleware."
+        "clickjacking."
+        "XFrameOptionsMiddleware"
+    ),
 ]
 
 
-ROOT_URLCONF = "config.urls"
+ROOT_URLCONF = (
+    "config.urls"
+)
 
+
+# ==========================================
+# TEMPLATES
+# ==========================================
 
 TEMPLATES = [
     {
         "BACKEND":
-            "django.template.backends.django.DjangoTemplates",
+            (
+                "django.template."
+                "backends.django."
+                "DjangoTemplates"
+            ),
 
         "DIRS": [],
 
@@ -93,67 +201,192 @@ TEMPLATES = [
 
         "OPTIONS": {
             "context_processors": [
-                "django.template.context_processors.request",
+                (
+                    "django.template."
+                    "context_processors."
+                    "request"
+                ),
 
-                "django.contrib.auth.context_processors.auth",
+                (
+                    "django.contrib.auth."
+                    "context_processors."
+                    "auth"
+                ),
 
-                "django.contrib.messages.context_processors.messages",
+                (
+                    "django.contrib.messages."
+                    "context_processors."
+                    "messages"
+                ),
             ],
         },
     },
 ]
 
 
-WSGI_APPLICATION = "config.wsgi.application"
+WSGI_APPLICATION = (
+    "config.wsgi.application"
+)
 
 
-DATABASES = {
-    "default": {
-        "ENGINE":
-            "django.db.backends.sqlite3",
+# ==========================================
+# BASE DE DATOS
+# ==========================================
+#
+# DESARROLLO LOCAL:
+# Si DATABASE_URL está vacío o no existe,
+# utilizamos SQLite.
+#
+# DESPLIEGUE WEB:
+# Si DATABASE_URL existe,
+# utilizamos PostgreSQL.
+# ==========================================
 
-        "NAME":
-            BASE_DIR / "db.sqlite3",
+DATABASE_URL = (
+    os.getenv(
+        "DATABASE_URL",
+        "",
+    ).strip()
+)
+
+
+if DATABASE_URL:
+    DATABASES = {
+        "default":
+            dj_database_url.parse(
+                DATABASE_URL,
+                conn_max_age=60,
+                conn_health_checks=True,
+            )
     }
-}
 
+else:
+    DATABASES = {
+        "default": {
+            "ENGINE":
+                (
+                    "django.db."
+                    "backends.sqlite3"
+                ),
+
+            "NAME":
+                (
+                    BASE_DIR
+                    / "db.sqlite3"
+                ),
+        }
+    }
+
+
+# ==========================================
+# VALIDACIÓN DE CONTRASEÑAS
+# ==========================================
 
 AUTH_PASSWORD_VALIDATORS = [
     {
         "NAME":
-            "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
+            (
+                "django.contrib.auth."
+                "password_validation."
+                "UserAttributeSimilarityValidator"
+            ),
     },
+
     {
         "NAME":
-            "django.contrib.auth.password_validation.MinimumLengthValidator",
+            (
+                "django.contrib.auth."
+                "password_validation."
+                "MinimumLengthValidator"
+            ),
     },
+
     {
         "NAME":
-            "django.contrib.auth.password_validation.CommonPasswordValidator",
+            (
+                "django.contrib.auth."
+                "password_validation."
+                "CommonPasswordValidator"
+            ),
     },
+
     {
         "NAME":
-            "django.contrib.auth.password_validation.NumericPasswordValidator",
+            (
+                "django.contrib.auth."
+                "password_validation."
+                "NumericPasswordValidator"
+            ),
     },
 ]
 
 
-LANGUAGE_CODE = "es-cl"
+# ==========================================
+# REGIONALIZACIÓN
+# ==========================================
 
-TIME_ZONE = "America/Santiago"
+LANGUAGE_CODE = (
+    "es-cl"
+)
+
+TIME_ZONE = (
+    "America/Santiago"
+)
 
 USE_I18N = True
 
 USE_TZ = True
 
 
-STATIC_URL = "static/"
+# ==========================================
+# ARCHIVOS ESTÁTICOS
+# ==========================================
 
-
-EMAIL_BACKEND = (
-    "django.core.mail.backends.console.EmailBackend"
+STATIC_URL = (
+    "/static/"
 )
 
+STATIC_ROOT = (
+    BASE_DIR
+    / "staticfiles"
+)
+
+
+STORAGES = {
+    "default": {
+        "BACKEND":
+            (
+                "django.core.files."
+                "storage."
+                "FileSystemStorage"
+            ),
+    },
+
+    "staticfiles": {
+        "BACKEND":
+            (
+                "whitenoise.storage."
+                "CompressedManifest"
+                "StaticFilesStorage"
+            ),
+    },
+}
+
+
+# ==========================================
+# CORREO
+# ==========================================
+
+EMAIL_BACKEND = (
+    "django.core.mail."
+    "backends.console."
+    "EmailBackend"
+)
+
+
+# ==========================================
+# CORS
+# ==========================================
 
 CORS_ALLOWED_ORIGINS = [
     origin.strip()
@@ -168,6 +401,39 @@ CORS_ALLOWED_ORIGINS = [
 ]
 
 
+# ==========================================
+# CSRF
+# ==========================================
+
+CSRF_TRUSTED_ORIGINS = [
+    origin.strip()
+    for origin in os.getenv(
+        "CSRF_TRUSTED_ORIGINS",
+        "",
+    ).split(",")
+    if origin.strip()
+]
+
+
+if RENDER_EXTERNAL_HOSTNAME:
+    render_origin = (
+        "https://"
+        + RENDER_EXTERNAL_HOSTNAME
+    )
+
+    if (
+        render_origin
+        not in CSRF_TRUSTED_ORIGINS
+    ):
+        CSRF_TRUSTED_ORIGINS.append(
+            render_origin
+        )
+
+
+# ==========================================
+# TOKEN DE AUTENTICACIÓN
+# ==========================================
+
 TOKEN_EXPIRATION_HOURS = int(
     os.getenv(
         "TOKEN_EXPIRATION_HOURS",
@@ -176,39 +442,86 @@ TOKEN_EXPIRATION_HOURS = int(
 )
 
 
+# ==========================================
+# DJANGO REST FRAMEWORK
+# ==========================================
+
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
-        "cotizador.authentication.ExpiringTokenAuthentication",
+        (
+            "cotizador.authentication."
+            "ExpiringTokenAuthentication"
+        ),
     ],
 
     "DEFAULT_PERMISSION_CLASSES": [
-        "cotizador.permissions.EsUsuarioAutorizado",
+        (
+            "cotizador.permissions."
+            "EsUsuarioAutorizado"
+        ),
     ],
 
     "DEFAULT_THROTTLE_RATES": {
-        "login": "5/minute",
+        "login":
+            "5/minute",
     },
 }
 
 
-X_FRAME_OPTIONS = "DENY"
+# ==========================================
+# SEGURIDAD HTTP
+# ==========================================
 
-SECURE_CONTENT_TYPE_NOSNIFF = True
+X_FRAME_OPTIONS = (
+    "DENY"
+)
 
-SESSION_COOKIE_HTTPONLY = True
+SECURE_CONTENT_TYPE_NOSNIFF = (
+    True
+)
 
-CSRF_COOKIE_HTTPONLY = True
+SESSION_COOKIE_HTTPONLY = (
+    True
+)
 
+CSRF_COOKIE_HTTPONLY = (
+    True
+)
+
+
+# ==========================================
+# CONFIGURACIÓN DE PRODUCCIÓN
+# ==========================================
 
 if not DEBUG:
-    SECURE_SSL_REDIRECT = True
+    # Render funciona detrás de un proxy
+    # HTTPS. Esto permite que Django
+    # reconozca correctamente la conexión.
+    SECURE_PROXY_SSL_HEADER = (
+        "HTTP_X_FORWARDED_PROTO",
+        "https",
+    )
 
-    SESSION_COOKIE_SECURE = True
+    SECURE_SSL_REDIRECT = (
+        True
+    )
 
-    CSRF_COOKIE_SECURE = True
+    SESSION_COOKIE_SECURE = (
+        True
+    )
 
-    SECURE_HSTS_SECONDS = 31536000
+    CSRF_COOKIE_SECURE = (
+        True
+    )
 
-    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_SECONDS = (
+        31536000
+    )
 
-    SECURE_HSTS_PRELOAD = True
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = (
+        True
+    )
+
+    SECURE_HSTS_PRELOAD = (
+        True
+    )
