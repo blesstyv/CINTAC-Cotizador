@@ -543,6 +543,18 @@ class TipoCambio(models.Model):
             "-obtenido_en",
         ]
 
+        indexes = [
+            models.Index(
+                fields=[
+                    "moneda_origen",
+                    "moneda_destino",
+                    "-fecha_referencia",
+                    "-obtenido_en",
+                ],
+                name="tc_moneda_fecha_idx",
+            ),
+        ]
+
         constraints = [
             models.CheckConstraint(
                 condition=models.Q(
@@ -783,6 +795,15 @@ class Cotizacion(models.Model):
                     "destino",
                 ],
                 name="cot_ruta_snapshot_idx",
+            ),
+
+            models.Index(
+                fields=[
+                    "origen",
+                    "destino",
+                    "-creada_en",
+                ],
+                name="cot_ruta_fecha_idx",
             ),
         ]
 
