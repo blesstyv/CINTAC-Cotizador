@@ -141,6 +141,16 @@ function obtenerMensajeError(
 }
 
 
+function escaparCeldaCsv(valor) {
+  const texto = String(valor ?? "");
+  const seguro = /^[\\s]*[=+\\-@]/.test(texto)
+    ? "'" + texto
+    : texto;
+
+  return '"' + seguro.replace(/"/g, '""') + '"';
+}
+
+
 function HistorialCotizaciones({
   apiUrl,
   usuario,
@@ -200,6 +210,69 @@ function HistorialCotizaciones({
 
   const detalleEnCursoRef =
     useRef(false);
+
+
+  const exportarHistorialCsv = () => {
+    if (cargando || cotizaciones.length === 0) {
+      return;
+    }
+
+    const encabezado = [
+      "ID",
+      "Fecha",
+      "Usuario",
+      "Origen",
+      "Destino",
+      "Peso (TN)",
+      "Contenedor",
+      "Cantidad",
+      "Total minimo USD",
+      "Total maximo USD",
+      "Total minimo CLP",
+      "Total maximo CLP",
+      "Transito minimo (dias)",
+      "Transito maximo (dias)",
+    ];
+
+    const filas = cotizaciones.map((item) => [
+      item.id,
+      item.fecha,
+      item.usuario?.username || "",
+      item.origen,
+      item.destino,
+      item.pesoTN,
+      item.tipoContenedor,
+      item.cantidad,
+      item.totalMin,
+      item.totalMax,
+      item.totalMinCLP,
+      item.totalMaxCLP,
+      item.transitoMin,
+      item.transitoMax,
+    ]);
+
+    const contenido = "\\uFEFF" + [
+      encabezado,
+      ...filas,
+    ].map((fila) =>
+      fila.map(escaparCeldaCsv).join(";")
+    ).join("\\r\\n");
+
+    const archivo = new Blob([contenido], {
+      type: "text/csv;charset=utf-8;",
+    });
+    const direccion = URL.createObjectURL(archivo);
+    const enlace = document.createElement("a");
+    enlace.href = direccion;
+    enlace.download = "cintac-historial.csv";
+    document.body.appendChild(enlace);
+    enlace.click();
+    enlace.remove();
+    window.setTimeout(
+      () => URL.revokeObjectURL(direccion),
+      1000
+    );
+  };
 
 
   const rolVisible =
@@ -851,6 +924,19 @@ function HistorialCotizaciones({
                 }
               >
                 LIMPIAR
+              </button>
+
+              <button
+                type="button"
+                className="history-secondary-button"
+                onClick={exportarHistorialCsv}
+                disabled={
+                  cargando ||
+                  cotizaciones.length === 0
+                }
+                title="Exporta únicamente los registros cargados según los filtros y permisos de esta cuenta"
+              >
+                EXPORTAR CSV
               </button>
             </div>
           </form>
