@@ -24,8 +24,8 @@ services:
         generateValue: true
       - key: DJANGO_DEBUG
         value: "False"
-      - key: CORS_ALLOWED_ORIGIN_REGEXES
-        value: "^https://cintac-cotizador.*\\.onrender\\.com$"
+      - key: CORS_ALLOWED_ORIGINS
+        value: "https://cintac-cotizador.onrender.com"
       - key: TOKEN_EXPIRATION_HOURS
         value: "8"
       - key: USD_CLP_FALLBACK_VALUE
