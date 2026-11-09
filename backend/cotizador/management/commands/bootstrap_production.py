@@ -143,6 +143,16 @@ class Command(BaseCommand):
                 "y DJANGO_SUPERUSER_PASSWORD."
             )
 
+        usuario = User.objects.filter(
+            username=username
+        ).first()
+
+        if usuario is not None and not usuario.is_superuser:
+            raise CommandError(
+                "La cuenta del administrador configurado "
+                "existe, pero no tiene permisos de superusuario."
+            )
+
         if not Ruta.objects.exists():
             self.stdout.write(
                 "Instalación inicial: cargando datos maestros..."
@@ -155,10 +165,6 @@ class Command(BaseCommand):
 
         self._cargar_tipo_cambio_respaldo()
 
-        usuario = User.objects.filter(
-            username=username
-        ).first()
-
         if usuario is None:
             usuario = User.objects.create_superuser(
                 username=username,
@@ -167,11 +173,6 @@ class Command(BaseCommand):
             )
             creado = True
         else:
-            if not usuario.is_superuser:
-                raise CommandError(
-                    "La cuenta del administrador configurado "
-                    "existe, pero no tiene permisos de superusuario."
-                )
             creado = False
             self.stdout.write(
                 "Cuenta administrativa existente conservada "
