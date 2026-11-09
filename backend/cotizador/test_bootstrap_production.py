@@ -6,9 +6,10 @@ from unittest.mock import patch
 
 from django.contrib.auth.models import User
 from django.core.management import call_command
+from django.core.management.base import CommandError
 from django.test import TestCase
 
-from cotizador.models import TipoCambio
+from cotizador.models import TipoCambio, TipoContenedor
 
 
 class BootstrapProduccionTests(TestCase):
@@ -108,3 +109,46 @@ class BootstrapProduccionTests(TestCase):
             cambio.valor,
             Decimal("950.0000"),
         )
+
+    def test_redeploy_conserva_password_y_capacidad(self):
+        with patch.dict(os.environ, self._entorno(), clear=False):
+            call_command("bootstrap_production", verbosity=0)
+
+        usuario = User.objects.get(username="admin_prueba")
+        usuario.set_password("PasswordActualizada567!")
+        usuario.save(update_fields=["password"])
+
+        contenedor = TipoContenedor.objects.get(codigo="20")
+        contenedor.capacidad_tn = Decimal("24")
+        contenedor.save(update_fields=["capacidad_tn"])
+
+        with patch.dict(os.environ, self._entorno(), clear=False):
+            call_command("bootstrap_production", verbosity=0)
+
+        usuario.refresh_from_db()
+        contenedor.refresh_from_db()
+
+        self.assertTrue(
+            usuario.check_password("PasswordActualizada567!")
+        )
+        self.assertEqual(
+            contenedor.capacidad_tn,
+            Decimal("24"),
+        )
+        self.assertEqual(
+            User.objects.filter(username="admin_prueba").count(),
+            1,
+        )
+
+    def test_bootstrap_no_eleva_usuario_preexistente(self):
+        User.objects.create_user(
+            username="admin_prueba",
+            password="ClaveUsuario123!",
+        )
+
+        with patch.dict(os.environ, self._entorno(), clear=False):
+            with self.assertRaisesMessage(
+                CommandError,
+                "no tiene permisos de superusuario",
+            ):
+                call_command("bootstrap_production", verbosity=0)
