@@ -143,7 +143,7 @@ function obtenerMensajeError(
 
 function escaparCeldaCsv(valor) {
   const texto = String(valor ?? "");
-  const seguro = /^[\\s]*[=+\\-@]/.test(texto)
+  const seguro = /^\s*[=+@-]/.test(texto)
     ? "'" + texto
     : texto;
 
@@ -251,12 +251,12 @@ function HistorialCotizaciones({
       item.transitoMax,
     ]);
 
-    const contenido = "\\uFEFF" + [
+    const contenido = "\uFEFF" + [
       encabezado,
       ...filas,
     ].map((fila) =>
       fila.map(escaparCeldaCsv).join(";")
-    ).join("\\r\\n");
+    ).join("\r\n");
 
     const archivo = new Blob([contenido], {
       type: "text/csv;charset=utf-8;",
