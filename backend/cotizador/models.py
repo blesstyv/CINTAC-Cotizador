@@ -714,6 +714,16 @@ class Cotizacion(models.Model):
         blank=True,
     )
 
+    valor_carga = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=Decimal("0.00"),
+        help_text=(
+            "Valor de carga opcional en USD sumado "
+            "una vez al total estimado del flete."
+        ),
+    )
+
     conversion_disponible = models.BooleanField(
         default=False,
     )
@@ -824,6 +834,13 @@ class Cotizacion(models.Model):
                     )
                 ),
                 name="cot_total_rango_valido",
+            ),
+
+            models.CheckConstraint(
+                condition=models.Q(
+                    valor_carga__gte=0
+                ),
+                name="cot_valor_carga_no_negativo",
             ),
         ]
 

@@ -297,6 +297,46 @@ class CotizacionOperacionSerializer(
         },
     )
 
+    # Valor de carga opcional (USD) que se suma una vez
+    # al total estimado. No altera tarifas, cantidad de
+    # contenedores, recomendación ni tránsito.
+    valor_carga = serializers.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        min_value=Decimal("0"),
+        required=False,
+        allow_null=True,
+        default=Decimal("0"),
+        error_messages={
+            "invalid":
+                "El valor de carga debe ser un valor numérico.",
+
+            "min_value":
+                "El valor de carga no puede ser negativo.",
+
+            "max_digits":
+                "El valor de carga excede el formato permitido.",
+
+            "max_whole_digits":
+                "El valor de carga excede el formato permitido.",
+
+            "max_decimal_places":
+                (
+                    "El valor de carga puede contener "
+                    "como máximo dos decimales."
+                ),
+        },
+    )
+
+    def validate_valor_carga(
+        self,
+        value,
+    ):
+        if value is None:
+            return Decimal("0")
+
+        return value
+
     def validate_tipo_contenedor(
         self,
         value,

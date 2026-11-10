@@ -446,6 +446,30 @@ def cotizar_operacion(
         ]
     )
 
+    # El valor de carga se suma una sola vez al total.
+    # Los totales del flete (total_min/total_max) y sus
+    # equivalentes CLP se conservan sin cambios.
+    valor_carga = (
+        datos.get("valor_carga")
+        or Decimal("0")
+    ).quantize(
+        Decimal("0.01"),
+        rounding=ROUND_HALF_UP,
+    )
+
+    total_final_min = (
+        total_min
+        + valor_carga
+    )
+
+    total_final_max = (
+        total_max
+        + valor_carga
+    )
+
+    total_final_min_clp = None
+    total_final_max_clp = None
+
     tipo_cambio = None
     fecha_tipo_cambio = None
     fuente_tipo_cambio = None
@@ -488,6 +512,20 @@ def cotizar_operacion(
         total_max_clp = redondear_clp(
             convertir_usd_a_clp(
                 total_max,
+                tipo_cambio,
+            )
+        )
+
+        total_final_min_clp = redondear_clp(
+            convertir_usd_a_clp(
+                total_final_min,
+                tipo_cambio,
+            )
+        )
+
+        total_final_max_clp = redondear_clp(
+            convertir_usd_a_clp(
+                total_final_max,
                 tipo_cambio,
             )
         )
@@ -635,6 +673,9 @@ def cotizar_operacion(
                     "fuente"
                 ]
                 or "",
+
+            valor_carga=
+                valor_carga,
 
             conversion_disponible=
                 conversion_disponible,
@@ -798,5 +839,30 @@ def cotizar_operacion(
 
             "mensajeConversion":
                 mensaje_conversion,
+
+            "valorCarga":
+                str(valor_carga),
+
+            "totalFinalMin":
+                str(total_final_min),
+
+            "totalFinalMax":
+                str(total_final_max),
+
+            "totalFinalMinCLP":
+                (
+                    str(total_final_min_clp)
+                    if total_final_min_clp
+                    is not None
+                    else None
+                ),
+
+            "totalFinalMaxCLP":
+                (
+                    str(total_final_max_clp)
+                    if total_final_max_clp
+                    is not None
+                    else None
+                ),
         }
     )
