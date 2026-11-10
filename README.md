@@ -26,10 +26,11 @@ PostgreSQL es el único motor de base de datos del proyecto.
 - Tiempo de tránsito y contingencia.
 - Conversión USD/CLP.
 - Historial de cotizaciones.
+- Exportación a CSV de los registros del historial visibles para cada usuario, respetando permisos y neutralizando fórmulas peligrosas.
 - Gestión de usuarios y permisos.
 - Importación y validación de datos maestros desde Excel.
 - Actualización transaccional de datos: ante un error PostgreSQL revierte todos los cambios.
-- Diseño responsive.
+- Diseño responsive, navegación por teclado y compatibilidad con preferencias de movimiento reducido.
 - Health check del backend y de la conexión a PostgreSQL.
 - Pruebas unitarias, de integración, robustez y seguridad.
 - Pruebas de rendimiento y concurrencia.
@@ -207,6 +208,8 @@ La prueba mide GET de sesión/rutas y POST de opciones/cotización con distintos
 ## Seguridad
 
 - Secretos mediante variables de entorno.
+- Inicialización de producción que conserva credenciales y datos maestros en despliegues posteriores.
+- CORS restringido al dominio real del frontend.
 - Contraseñas con hashing de Django.
 - Token con expiración configurable.
 - Autorización comprobada en backend.
