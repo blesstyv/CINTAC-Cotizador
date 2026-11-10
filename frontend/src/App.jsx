@@ -298,6 +298,11 @@ function App() {
   ] = useState("0");
 
   const [
+    valorCarga,
+    setValorCarga,
+  ] = useState("");
+
+  const [
     recomendacion,
     setRecomendacion,
   ] = useState(null);
@@ -340,6 +345,7 @@ function App() {
     destino: false,
     pesoCarga: false,
     contingencia: false,
+    valorCarga: false,
   });
 
 
@@ -367,6 +373,33 @@ function App() {
       ).format(
         Number(valor)
       );
+
+
+  // Muestra decimales sólo cuando el monto tiene centavos
+  // (por ejemplo, un valor de carga de 350,50 USD).
+  const formatearMontoUSD =
+    (valor) => {
+      const numero =
+        Number(valor);
+
+      const tieneCentavos =
+        Math.round(
+          numero * 100
+        ) % 100 !== 0;
+
+      return new Intl.NumberFormat(
+        "es-CL",
+        {
+          minimumFractionDigits:
+            tieneCentavos ? 2 : 0,
+
+          maximumFractionDigits:
+            tieneCentavos ? 2 : 0,
+        }
+      ).format(
+        numero
+      );
+    };
 
 
   const formatearCLP =
@@ -458,6 +491,7 @@ function App() {
         setPesoCarga("");
         setUnidadPeso("kg");
         setContingencia("0");
+        setValorCarga("");
         setRecomendacion(null);
         setResultado(null);
         setMensaje("");
@@ -474,6 +508,7 @@ function App() {
           destino: false,
           pesoCarga: false,
           contingencia: false,
+          valorCarga: false,
         });
       },
       []
@@ -1291,6 +1326,7 @@ function App() {
       setPesoCarga("");
       setUnidadPeso("kg");
       setContingencia("0");
+      setValorCarga("");
       setRecomendacion(null);
       setMensaje("");
       setResultado(null);
@@ -1303,6 +1339,7 @@ function App() {
         destino: false,
         pesoCarga: false,
         contingencia: false,
+        valorCarga: false,
       });
 
       window.scrollTo({
@@ -1444,6 +1481,9 @@ function App() {
 
         contingencia:
           false,
+
+        valorCarga:
+          false,
       };
 
       setErrores(
@@ -1535,6 +1575,46 @@ function App() {
         return;
       }
 
+      // Valor de carga opcional: vacío equivale a 0.
+      const valorCargaTexto =
+        String(
+          valorCarga
+        ).trim();
+
+      const valorCargaNumero =
+        valorCargaTexto === ""
+          ? 0
+          : Number(
+            valorCargaTexto
+          );
+
+      if (
+        !Number.isFinite(
+          valorCargaNumero
+        ) ||
+        valorCargaNumero < 0 ||
+        !/^\d+(\.\d{1,2})?$/.test(
+          valorCargaTexto === ""
+            ? "0"
+            : valorCargaTexto
+        )
+      ) {
+        setErrores(
+          (actuales) => ({
+            ...actuales,
+
+            valorCarga:
+              true,
+          })
+        );
+
+        setMensaje(
+          "El valor de carga debe ser un número igual o mayor que cero, con máximo dos decimales."
+        );
+
+        return;
+      }
+
       cotizacionEnCursoRef.current =
         true;
 
@@ -1568,6 +1648,11 @@ function App() {
 
                   contingencia:
                     contingenciaNumero,
+
+                  valor_carga:
+                    valorCargaTexto === ""
+                      ? "0"
+                      : valorCargaTexto,
                 }),
             }
           );
@@ -1593,6 +1678,7 @@ function App() {
           destino: false,
           pesoCarga: false,
           contingencia: false,
+          valorCarga: false,
         });
 
       } catch (error) {
@@ -2257,7 +2343,7 @@ function App() {
               </div>
 
 
-              <div className="form-grid single">
+              <div className="form-grid">
                 <div className="form-group">
                   <label
                     htmlFor="peso-carga"
@@ -2319,6 +2405,64 @@ function App() {
                       </option>
                     </select>
                   </div>
+                </div>
+
+
+                <div className="form-group">
+                  <label
+                    htmlFor="valor-carga"
+                  >
+                    Valor de carga
+
+                    <span className="optional">
+                      Opcional
+                    </span>
+                  </label>
+
+                  <div className="input-with-unit">
+                    <input
+                      id="valor-carga"
+                      className={
+                        errores.valorCarga
+                          ? "campo-error"
+                          : ""
+                      }
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      inputMode="decimal"
+                      value={
+                        valorCarga
+                      }
+                      onChange={(event) => {
+                        setValorCarga(
+                          event.target.value
+                        );
+
+                        limpiarError(
+                          "valorCarga"
+                        );
+
+                        limpiarResultado();
+                      }}
+                      placeholder="0"
+                      aria-describedby="valor-carga-ayuda"
+                      aria-invalid={
+                        errores.valorCarga
+                      }
+                    />
+
+                    <span>
+                      USD
+                    </span>
+                  </div>
+
+                  <small
+                    id="valor-carga-ayuda"
+                    className="field-hint"
+                  >
+                    Se suma al total estimado. Si se deja vacío, se considera 0.
+                  </small>
                 </div>
               </div>
 
@@ -2597,8 +2741,24 @@ function App() {
 
               <h2>
                 Cotización
+                {
+                  resultado?.historialId
+                    ? ` #${resultado.historialId}`
+                    : ""
+                }
               </h2>
             </div>
+
+            {
+              resultado?.historialId && (
+                <span
+                  className="result-saved-badge"
+                  title="Guardada automáticamente en el historial"
+                >
+                  Guardada
+                </span>
+              )
+            }
           </div>
 
 
@@ -2620,32 +2780,6 @@ function App() {
             </div>
           ) : (
             <div className="result-content">
-              {
-                resultado
-                  .historialId &&
-                (
-                  <div className="route-summary">
-                    <span>
-                      REGISTRO
-                    </span>
-
-                    <strong>
-                      Cotización #
-                      {
-                        resultado
-                          .historialId
-                      }
-                    </strong>
-
-                    <small>
-                      Guardada automáticamente
-                      en el historial.
-                    </small>
-                  </div>
-                )
-              }
-
-
               <div className="route-summary">
                 <span>
                   RUTA
@@ -2677,90 +2811,171 @@ function App() {
               </div>
 
 
-              <div className="result-item">
-                <span>
-                  Carga total
-                </span>
+              <div className="result-stats">
+                <div className="result-stat">
+                  <span>
+                    Carga total
+                  </span>
 
-                <strong>
+                  <strong>
+                    {
+                      formatearNumero(
+                        resultado.pesoTN
+                      )
+                    }{" "}
+                    TN
+                  </strong>
+                </div>
+
+
+                <div className="result-stat">
+                  <span>
+                    Contenedores
+                  </span>
+
+                  <strong>
+                    {
+                      resultado.cantidad
+                    }
+
+                    {" × "}
+
+                    {
+                      resultado
+                        .tipoContenedor
+                    }
+                    &apos;
+                  </strong>
+
                   {
-                    formatearNumero(
-                      resultado.pesoTN
+                    resultado.esSugerida && (
+                      <em className="result-badge">
+                        Recomendado
+                      </em>
                     )
-                  }{" "}
-                  TN
-                </strong>
+                  }
+                </div>
               </div>
 
 
-              <div className="result-item">
-                <span>
-                  Contenedor
+              <div className="cost-breakdown">
+                <span className="result-section-title">
+                  DESGLOSE DE COSTOS
                 </span>
 
-                <strong>
-                  {
-                    resultado.cantidad
-                  }
+                <div className="cost-row">
+                  <span>
+                    Tarifa por contenedor
+                  </span>
 
-                  {" × "}
+                  <strong>
+                    US${" "}
+                    {
+                      formatearUSD(
+                        resultado.tarifaMin
+                      )
+                    }
 
-                  {
-                    resultado
-                      .tipoContenedor
-                  }
-                  &apos;
-                </strong>
-              </div>
+                    {" – "}
+
+                    {
+                      formatearUSD(
+                        resultado.tarifaMax
+                      )
+                    }
+                  </strong>
+                </div>
 
 
-              <div className="result-item vertical-result">
-                <span>
-                  Tarifa por contenedor
-                </span>
-
-                <strong>
-                  US${" "}
-                  {
-                    formatearUSD(
-                      resultado.tarifaMin
+                <div className="cost-row">
+                  <span>
+                    Flete (
+                    {
+                      resultado.cantidad
+                    }{" "}
+                    {
+                      resultado.cantidad === 1
+                        ? "contenedor"
+                        : "contenedores"
+                    }
                     )
-                  }
+                  </span>
 
-                  {" - "}
+                  <strong>
+                    US${" "}
+                    {
+                      formatearUSD(
+                        resultado.totalMin
+                      )
+                    }
 
-                  US${" "}
-                  {
-                    formatearUSD(
-                      resultado.tarifaMax
-                    )
-                  }
-                </strong>
+                    {" – "}
+
+                    {
+                      formatearUSD(
+                        resultado.totalMax
+                      )
+                    }
+                  </strong>
+                </div>
+
+
+                {
+                  Number(
+                    resultado.valorCarga
+                  ) > 0 && (
+                    <div className="cost-row cost-row-added">
+                      <span>
+                        Valor de carga
+                      </span>
+
+                      <strong>
+                        + US${" "}
+                        {
+                          formatearMontoUSD(
+                            resultado.valorCarga
+                          )
+                        }
+                      </strong>
+                    </div>
+                  )
+                }
               </div>
 
 
               <div className="total-result">
                 <span>
-                  TOTAL ESTIMADO DEL FLETE
+                  TOTAL ESTIMADO
                 </span>
 
                 <strong>
                   US${" "}
                   {
-                    formatearUSD(
+                    formatearMontoUSD(
+                      resultado.totalFinalMin ??
                       resultado.totalMin
                     )
                   }
 
-                  {" - "}
+                  {" – "}
 
-                  US${" "}
                   {
-                    formatearUSD(
+                    formatearMontoUSD(
+                      resultado.totalFinalMax ??
                       resultado.totalMax
                     )
                   }
                 </strong>
+
+                {
+                  Number(
+                    resultado.valorCarga
+                  ) > 0 && (
+                    <small>
+                      Incluye flete y valor de carga
+                    </small>
+                  )
+                }
               </div>
 
 
@@ -2778,14 +2993,18 @@ function App() {
                         {
                           formatearCLP(
                             resultado
+                              .totalFinalMinCLP ??
+                            resultado
                               .totalMinCLP
                           )
                         }
 
-                        {" - $"}
+                        {" – $"}
 
                         {
                           formatearCLP(
+                            resultado
+                              .totalFinalMaxCLP ??
                             resultado
                               .totalMaxCLP
                           )
@@ -2880,124 +3099,111 @@ function App() {
               }
 
 
-              {
-                resultado
-                  .transitoOriginalMin !==
-                  null &&
-                resultado
-                  .transitoOriginalMax !==
-                  null
-                  ? (
-                    <>
-                      <div className="result-item">
-                        <span>
-                          Tránsito base
-                        </span>
-
-                        <strong>
-                          {
-                            resultado
-                              .transitoOriginalMin
-                          }
-
-                          {" - "}
-
-                          {
-                            resultado
-                              .transitoOriginalMax
-                          }{" "}
-                          días
-                        </strong>
-                      </div>
-
-
-                      {
-                        resultado
-                          .contingencia >
-                          0 &&
-                        (
-                          <div className="contingency-info">
-                            +{" "}
-                            {
-                              resultado
-                                .contingencia
-                            }{" "}
-                            días
-                          </div>
-                        )
-                      }
-
-
-                      <div className="result-item">
-                        <span>
-                          Tránsito estimado
-                        </span>
-
-                        <strong>
-                          {
-                            resultado
-                              .transitoMin
-                          }
-
-                          {" - "}
-
-                          {
-                            resultado
-                              .transitoMax
-                          }{" "}
-                          días
-                        </strong>
-                      </div>
-                    </>
-                  )
-                  : (
-                    <div className="result-item">
-                      <span>
-                        Tránsito
-                      </span>
-
-                      <strong>
-                        Sin información disponible
-                      </strong>
-                    </div>
-                  )
-              }
-
-
-              <div className="result-item source-item">
-                <span>
-                  Fuente tarifa
+              <div className="transit-summary">
+                <span className="result-section-title">
+                  TIEMPO DE TRÁNSITO
                 </span>
 
-                <strong>
-                  {
-                    resultado.fuente ||
-                    "Sin referencia registrada"
-                  }
-                </strong>
+                {
+                  resultado
+                    .transitoOriginalMin !==
+                    null &&
+                  resultado
+                    .transitoOriginalMax !==
+                    null
+                    ? (
+                      <>
+                        <div className="cost-row transit-row">
+                          <span>
+                            Tránsito estimado
+                          </span>
+
+                          <strong>
+                            {
+                              resultado
+                                .transitoMin
+                            }
+
+                            {" – "}
+
+                            {
+                              resultado
+                                .transitoMax
+                            }{" "}
+                            días
+                          </strong>
+                        </div>
+
+                        {
+                          resultado
+                            .contingencia >
+                            0 && (
+                            <small className="transit-detail">
+                              Base{" "}
+                              {
+                                resultado
+                                  .transitoOriginalMin
+                              }
+
+                              {" – "}
+
+                              {
+                                resultado
+                                  .transitoOriginalMax
+                              }{" "}
+                              días + {
+                                resultado
+                                  .contingencia
+                              }{" "}
+                              {
+                                resultado
+                                  .contingencia === 1
+                                  ? "día"
+                                  : "días"
+                              }{" "}
+                              de contingencia
+                            </small>
+                          )
+                        }
+                      </>
+                    )
+                    : (
+                      <div className="cost-row transit-row">
+                        <span>
+                          Tránsito
+                        </span>
+
+                        <strong>
+                          Sin información disponible
+                        </strong>
+                      </div>
+                    )
+                }
               </div>
 
 
-              <button
-                type="button"
-                className="new-quote-button"
-                onClick={
-                  abrirHistorial
-                }
-              >
-                VER HISTORIAL
-              </button>
+              <div className="result-actions">
+                <button
+                  type="button"
+                  className="new-quote-button"
+                  onClick={
+                    abrirHistorial
+                  }
+                >
+                  VER HISTORIAL
+                </button>
 
 
-              <button
-                type="button"
-                className="new-quote-button"
-                onClick={
-                  nuevaCotizacion
-                }
-              >
-                NUEVA COTIZACIÓN
-              </button>
+                <button
+                  type="button"
+                  className="new-quote-button new-quote-button-primary"
+                  onClick={
+                    nuevaCotizacion
+                  }
+                >
+                  NUEVA COTIZACIÓN
+                </button>
+              </div>
             </div>
           )}
 
