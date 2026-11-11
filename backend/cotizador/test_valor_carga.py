@@ -599,3 +599,140 @@ class ValorCargaClpRespaldoRealTests(BaseCotizadorTestCase):
         )
         # 95.000 CLP / 950 = 100,00 USD
         self.assertEqual(respuesta.data["valorCarga"], "100.00")
+
+
+# ----------------------------------------------------------
+# Historial: debe mostrar el mismo total que se vio al cotizar
+# ----------------------------------------------------------
+
+CAMPOS_TOTAL_FINAL = [
+    "valorCarga",
+    "monedaValorCarga",
+    "valorCargaIngresado",
+    "totalFinalMin",
+    "totalFinalMax",
+    "totalFinalMinCLP",
+    "totalFinalMaxCLP",
+]
+
+
+@patch("cotizador.views.obtener_tipo_cambio")
+class HistorialValorCargaTests(BaseCotizadorTestCase):
+
+    def configurar_tipo_cambio(self, mock_tipo_cambio):
+        mock_tipo_cambio.return_value = {
+            "valor": TIPO_CAMBIO_PRUEBA,
+            "fecha": timezone.localdate(),
+            "fuente": "Fuente prueba",
+            "modo": "en_linea",
+        }
+
+    def cotizar(self, **extra):
+        datos = {
+            "ruta_id": self.ruta.id,
+            "peso_carga": 100,
+            "unidad_peso": "tn",
+            "tipo_contenedor": "20",
+        }
+        datos.update(extra)
+
+        return self.client.post(
+            "/api/cotizar/",
+            datos,
+            format="json",
+        )
+
+    def detalle(self, cotizacion_id):
+        respuesta = self.client.get(
+            f"/api/historial/{cotizacion_id}/"
+        )
+        self.assertEqual(respuesta.status_code, 200)
+        return respuesta.data["cotizacion"]
+
+    def listado(self):
+        respuesta = self.client.get("/api/historial/")
+        self.assertEqual(respuesta.status_code, 200)
+        return {
+            item["id"]: item
+            for item in respuesta.data["cotizaciones"]
+        }
+
+    def assert_historial_igual_a_cotizacion(self, cotizacion):
+        detalle = self.detalle(cotizacion["historialId"])
+        fila = self.listado()[cotizacion["historialId"]]
+
+        for campo in CAMPOS_TOTAL_FINAL:
+            with self.subTest(campo=campo):
+                self.assertEqual(detalle[campo], cotizacion[campo])
+                self.assertEqual(fila[campo], cotizacion[campo])
+
+    def test_historial_valor_carga_usd(self, mock_tc):
+        self.configurar_tipo_cambio(mock_tc)
+
+        cotizacion = self.cotizar(valor_carga="350.50").data
+
+        self.assert_historial_igual_a_cotizacion(cotizacion)
+
+    def test_historial_valor_carga_clp(self, mock_tc):
+        self.configurar_tipo_cambio(mock_tc)
+
+        cotizacion = self.cotizar(
+            valor_carga="300000",
+            moneda_valor_carga="CLP",
+        ).data
+
+        self.assert_historial_igual_a_cotizacion(cotizacion)
+
+    def test_historial_sin_valor_carga_total_final_igual_al_flete(
+        self, mock_tc
+    ):
+        self.configurar_tipo_cambio(mock_tc)
+
+        cotizacion = self.cotizar().data
+        detalle = self.detalle(cotizacion["historialId"])
+
+        self.assertEqual(detalle["totalFinalMin"], detalle["totalMin"])
+        self.assertEqual(detalle["totalFinalMax"], detalle["totalMax"])
+        self.assertEqual(
+            Decimal(detalle["totalFinalMinCLP"]),
+            Decimal(detalle["totalMinCLP"]),
+        )
+        self.assertEqual(
+            Decimal(detalle["totalFinalMaxCLP"]),
+            Decimal(detalle["totalMaxCLP"]),
+        )
+        self.assert_historial_igual_a_cotizacion(cotizacion)
+
+    def test_historial_sin_tipo_cambio_total_final_clp_nulo(
+        self, mock_tc
+    ):
+        mock_tc.side_effect = TipoCambioNoDisponible("sin servicio")
+
+        cotizacion = self.cotizar(valor_carga=500).data
+        detalle = self.detalle(cotizacion["historialId"])
+
+        self.assertEqual(detalle["totalFinalMin"], "8750.00")
+        self.assertIsNone(detalle["totalFinalMinCLP"])
+        self.assertIsNone(detalle["totalFinalMaxCLP"])
+
+    def test_historial_conserva_campos_existentes(self, mock_tc):
+        self.configurar_tipo_cambio(mock_tc)
+
+        base = self.cotizar().data
+        con_valor = self.cotizar(
+            valor_carga="300000",
+            moneda_valor_carga="CLP",
+        ).data
+
+        detalle_base = self.detalle(base["historialId"])
+        detalle_valor = self.detalle(con_valor["historialId"])
+
+        for campo in (
+            "tarifaMin", "tarifaMax", "totalMin", "totalMax",
+            "cantidad", "transitoMin", "transitoMax",
+            "totalMinCLP", "totalMaxCLP", "fuente",
+        ):
+            with self.subTest(campo=campo):
+                self.assertEqual(
+                    detalle_base[campo], detalle_valor[campo]
+                )

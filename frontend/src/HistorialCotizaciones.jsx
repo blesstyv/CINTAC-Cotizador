@@ -55,6 +55,47 @@ function formatearCLP(valor) {
 }
 
 
+// Monto USD con centavos sólo cuando existen
+// (por ejemplo, un total que incluye valor de carga).
+function formatearMontoUSD(valor) {
+  if (
+    valor === null ||
+    valor === undefined ||
+    valor === ""
+  ) {
+    return "—";
+  }
+
+  const numero =
+    Number(valor);
+
+  const decimales =
+    Math.round(numero * 100) % 100 !== 0
+      ? 2
+      : 0;
+
+  return new Intl.NumberFormat(
+    "es-CL",
+    {
+      minimumFractionDigits:
+        decimales,
+
+      maximumFractionDigits:
+        decimales,
+    }
+  ).format(numero);
+}
+
+
+function tieneValorCarga(cotizacion) {
+  return (
+    Number(
+      cotizacion?.valorCarga ?? 0
+    ) > 0
+  );
+}
+
+
 function formatearNumero(
   valor,
   decimales = 3
@@ -1037,7 +1078,8 @@ function HistorialCotizaciones({
                                 <td>
                                   US${" "}
                                   {
-                                    formatearUSD(
+                                    formatearMontoUSD(
+                                      cotizacion.totalFinalMin ??
                                       cotizacion.totalMin
                                     )
                                   }
@@ -1046,7 +1088,8 @@ function HistorialCotizaciones({
 
                                   US${" "}
                                   {
-                                    formatearUSD(
+                                    formatearMontoUSD(
+                                      cotizacion.totalFinalMax ??
                                       cotizacion.totalMax
                                     )
                                   }
@@ -1309,6 +1352,35 @@ function HistorialCotizaciones({
                 </div>
 
 
+                {
+                  tieneValorCarga(detalle) && (
+                    <div className="history-detail-block">
+                      <span>
+                        VALOR DE CARGA
+                      </span>
+
+                      <strong>
+                        {
+                          detalle.monedaValorCarga ===
+                          "CLP"
+                            ? `$${formatearNumero(detalle.valorCargaIngresado, 2)} CLP`
+                            : `US$ ${formatearMontoUSD(detalle.valorCarga)}`
+                        }
+                      </strong>
+
+                      <small>
+                        {
+                          detalle.monedaValorCarga ===
+                          "CLP"
+                            ? `Equivale a US$ ${formatearMontoUSD(detalle.valorCarga)}`
+                            : "Ingresado en USD"
+                        }
+                      </small>
+                    </div>
+                  )
+                }
+
+
                 <div className="history-detail-block emphasized">
                   <span>
                     TOTAL ESTIMADO USD
@@ -1317,7 +1389,8 @@ function HistorialCotizaciones({
                   <strong>
                     US${" "}
                     {
-                      formatearUSD(
+                      formatearMontoUSD(
+                        detalle.totalFinalMin ??
                         detalle.totalMin
                       )
                     }
@@ -1326,7 +1399,8 @@ function HistorialCotizaciones({
 
                     US${" "}
                     {
-                      formatearUSD(
+                      formatearMontoUSD(
+                        detalle.totalFinalMax ??
                         detalle.totalMax
                       )
                     }
@@ -1334,13 +1408,15 @@ function HistorialCotizaciones({
 
                   <small>
                     {
-                      detalle.esSugerida
-                        ? (
-                          "Opción sugerida por el cotizador"
-                        )
-                        : (
-                          "Opción seleccionada por el usuario"
-                        )
+                      tieneValorCarga(detalle)
+                        ? `Flete US$ ${formatearUSD(detalle.totalMin)} - US$ ${formatearUSD(detalle.totalMax)} + valor de carga`
+                        : detalle.esSugerida
+                          ? (
+                            "Opción sugerida por el cotizador"
+                          )
+                          : (
+                            "Opción seleccionada por el usuario"
+                          )
                     }
                   </small>
                 </div>
@@ -1388,6 +1464,7 @@ function HistorialCotizaciones({
                             $
                             {
                               formatearCLP(
+                                detalle.totalFinalMinCLP ??
                                 detalle.totalMinCLP
                               )
                             }
@@ -1396,6 +1473,7 @@ function HistorialCotizaciones({
 
                             {
                               formatearCLP(
+                                detalle.totalFinalMaxCLP ??
                                 detalle.totalMaxCLP
                               )
                             }
