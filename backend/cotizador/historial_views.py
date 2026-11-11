@@ -1,4 +1,8 @@
 from datetime import datetime
+from decimal import (
+    Decimal,
+    ROUND_HALF_UP,
+)
 
 from django.contrib.auth.models import User
 
@@ -13,6 +17,10 @@ from rest_framework.response import Response
 from .models import (
     Cotizacion,
     PerfilUsuario,
+)
+
+from .services.tipo_cambio import (
+    convertir_usd_a_clp,
 )
 
 
@@ -39,6 +47,126 @@ def _puede_ver_historial_general(
             PerfilUsuario.Rol.ADMINISTRADOR,
         }
     )
+
+
+def _redondear_clp(valor):
+    return Decimal(valor).quantize(
+        Decimal("1"),
+        rounding=ROUND_HALF_UP,
+    )
+
+
+def _totales_finales(
+    cotizacion,
+):
+    """
+    Reconstruye el total final (flete + valor de carga) con
+    los valores guardados en la cotización, con la misma
+    regla usada al cotizar. Las cotizaciones sin valor de
+    carga devuelven exactamente sus totales del flete.
+    """
+    valor_usd = (
+        cotizacion.valor_carga
+    )
+
+    total_final_min = (
+        cotizacion.total_min
+        + valor_usd
+    )
+
+    total_final_max = (
+        cotizacion.total_max
+        + valor_usd
+    )
+
+    final_min_clp = None
+    final_max_clp = None
+
+    if (
+        cotizacion.total_min_clp
+        is not None
+        and cotizacion.total_max_clp
+        is not None
+    ):
+        if valor_usd <= 0:
+            final_min_clp = _redondear_clp(
+                cotizacion.total_min_clp
+            )
+
+            final_max_clp = _redondear_clp(
+                cotizacion.total_max_clp
+            )
+
+        elif (
+            cotizacion.valor_carga_moneda
+            == "CLP"
+        ):
+            final_min_clp = _redondear_clp(
+                cotizacion.total_min_clp
+                + cotizacion
+                .valor_carga_ingresado
+            )
+
+            final_max_clp = _redondear_clp(
+                cotizacion.total_max_clp
+                + cotizacion
+                .valor_carga_ingresado
+            )
+
+        elif (
+            cotizacion.tipo_cambio
+            is not None
+        ):
+            final_min_clp = _redondear_clp(
+                convertir_usd_a_clp(
+                    total_final_min,
+                    cotizacion.tipo_cambio,
+                )
+            )
+
+            final_max_clp = _redondear_clp(
+                convertir_usd_a_clp(
+                    total_final_max,
+                    cotizacion.tipo_cambio,
+                )
+            )
+
+    return {
+        "valorCarga":
+            str(valor_usd),
+
+        "monedaValorCarga":
+            cotizacion
+            .valor_carga_moneda,
+
+        "valorCargaIngresado":
+            str(
+                cotizacion
+                .valor_carga_ingresado
+            ),
+
+        "totalFinalMin":
+            str(total_final_min),
+
+        "totalFinalMax":
+            str(total_final_max),
+
+        "totalFinalMinCLP":
+            (
+                str(final_min_clp)
+                if final_min_clp
+                is not None
+                else None
+            ),
+
+        "totalFinalMaxCLP":
+            (
+                str(final_max_clp)
+                if final_max_clp
+                is not None
+                else None
+            ),
+    }
 
 
 def _serializar_cotizacion(
@@ -233,6 +361,11 @@ def _serializar_cotizacion(
                 )
                 else None
             ),
+
+        # Campos agregados: valor de carga y total final.
+        **_totales_finales(
+            cotizacion
+        ),
     }
 
 
