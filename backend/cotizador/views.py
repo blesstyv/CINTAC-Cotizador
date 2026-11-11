@@ -446,29 +446,22 @@ def cotizar_operacion(
         ]
     )
 
-    # El valor de carga se suma una sola vez al total.
-    # Los totales del flete (total_min/total_max) y sus
-    # equivalentes CLP se conservan sin cambios.
-    valor_carga = (
+    # Valor de carga ingresado por el usuario (USD o CLP).
+    # Se suma una sola vez al total; los totales del flete
+    # (total_min/total_max) y sus equivalentes CLP se
+    # conservan sin cambios.
+    valor_carga_moneda = datos.get(
+        "moneda_valor_carga",
+        "USD",
+    )
+
+    valor_carga_ingresado = (
         datos.get("valor_carga")
         or Decimal("0")
     ).quantize(
         Decimal("0.01"),
         rounding=ROUND_HALF_UP,
     )
-
-    total_final_min = (
-        total_min
-        + valor_carga
-    )
-
-    total_final_max = (
-        total_max
-        + valor_carga
-    )
-
-    total_final_min_clp = None
-    total_final_max_clp = None
 
     tipo_cambio = None
     fecha_tipo_cambio = None
@@ -516,20 +509,6 @@ def cotizar_operacion(
             )
         )
 
-        total_final_min_clp = redondear_clp(
-            convertir_usd_a_clp(
-                total_final_min,
-                tipo_cambio,
-            )
-        )
-
-        total_final_max_clp = redondear_clp(
-            convertir_usd_a_clp(
-                total_final_max,
-                tipo_cambio,
-            )
-        )
-
         conversion_disponible = True
 
     except TipoCambioNoDisponible:
@@ -539,6 +518,87 @@ def cotizar_operacion(
             "la conversión automática a CLP "
             "no está disponible temporalmente."
         )
+
+    # Equivalente en USD del valor de carga. Si se ingresó
+    # en CLP se convierte con el mismo dólar observado de la
+    # cotización (en línea, caché o último valor respaldado).
+    if valor_carga_moneda == "CLP":
+        if (
+            valor_carga_ingresado > 0
+            and not conversion_disponible
+        ):
+            return Response(
+                {
+                    "valor_carga": [
+                        (
+                            "No es posible convertir el "
+                            "valor de carga en CLP porque "
+                            "no hay un tipo de cambio "
+                            "disponible. Ingréselo en USD."
+                        )
+                    ]
+                },
+                status=
+                    status.HTTP_400_BAD_REQUEST,
+            )
+
+        valor_carga = (
+            (
+                valor_carga_ingresado
+                / Decimal(str(tipo_cambio))
+            ).quantize(
+                Decimal("0.01"),
+                rounding=ROUND_HALF_UP,
+            )
+            if valor_carga_ingresado > 0
+            else Decimal("0.00")
+        )
+
+    else:
+        valor_carga = (
+            valor_carga_ingresado
+        )
+
+    total_final_min = (
+        total_min
+        + valor_carga
+    )
+
+    total_final_max = (
+        total_max
+        + valor_carga
+    )
+
+    total_final_min_clp = None
+    total_final_max_clp = None
+
+    if conversion_disponible:
+        if valor_carga_moneda == "CLP":
+            # Flete en CLP + monto CLP exacto ingresado.
+            total_final_min_clp = redondear_clp(
+                total_min_clp
+                + valor_carga_ingresado
+            )
+
+            total_final_max_clp = redondear_clp(
+                total_max_clp
+                + valor_carga_ingresado
+            )
+
+        else:
+            total_final_min_clp = redondear_clp(
+                convertir_usd_a_clp(
+                    total_final_min,
+                    tipo_cambio,
+                )
+            )
+
+            total_final_max_clp = redondear_clp(
+                convertir_usd_a_clp(
+                    total_final_max,
+                    tipo_cambio,
+                )
+            )
 
     transito_original_min = None
     transito_original_max = None
@@ -676,6 +736,12 @@ def cotizar_operacion(
 
             valor_carga=
                 valor_carga,
+
+            valor_carga_moneda=
+                valor_carga_moneda,
+
+            valor_carga_ingresado=
+                valor_carga_ingresado,
 
             conversion_disponible=
                 conversion_disponible,
@@ -842,6 +908,12 @@ def cotizar_operacion(
 
             "valorCarga":
                 str(valor_carga),
+
+            "monedaValorCarga":
+                valor_carga_moneda,
+
+            "valorCargaIngresado":
+                str(valor_carga_ingresado),
 
             "totalFinalMin":
                 str(total_final_min),

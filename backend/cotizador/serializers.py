@@ -297,11 +297,13 @@ class CotizacionOperacionSerializer(
         },
     )
 
-    # Valor de carga opcional (USD) que se suma una vez
-    # al total estimado. No altera tarifas, cantidad de
+    # Valor de carga opcional (USD o CLP) que se suma una
+    # vez al total estimado. No altera tarifas, cantidad de
     # contenedores, recomendación ni tránsito.
+    # El límite de dígitos enteros depende de la moneda y
+    # se valida en validate().
     valor_carga = serializers.DecimalField(
-        max_digits=12,
+        max_digits=14,
         decimal_places=2,
         min_value=Decimal("0"),
         required=False,
@@ -327,6 +329,27 @@ class CotizacionOperacionSerializer(
                 ),
         },
     )
+
+    moneda_valor_carga = serializers.ChoiceField(
+        choices=[
+            "USD",
+            "CLP",
+        ],
+        required=False,
+        default="USD",
+        error_messages={
+            "invalid_choice":
+                "La moneda del valor de carga debe ser USD o CLP.",
+        },
+    )
+
+    # Máximo de dígitos enteros permitidos por moneda.
+    # USD: hasta 9.999.999.999,99
+    # CLP: hasta 999.999.999.999,99
+    DIGITOS_ENTEROS_VALOR_CARGA = {
+        "USD": 10,
+        "CLP": 12,
+    }
 
     def validate_valor_carga(
         self,
@@ -403,5 +426,32 @@ class CotizacionOperacionSerializer(
                         ]
                     }
                 )
+
+        moneda = attrs.get(
+            "moneda_valor_carga",
+            "USD",
+        )
+
+        valor_carga = attrs.get(
+            "valor_carga"
+        ) or Decimal("0")
+
+        limite = Decimal(10) ** (
+            self.DIGITOS_ENTEROS_VALOR_CARGA[
+                moneda
+            ]
+        )
+
+        if valor_carga >= limite:
+            raise serializers.ValidationError(
+                {
+                    "valor_carga": [
+                        (
+                            "El valor de carga excede "
+                            "el formato permitido."
+                        )
+                    ]
+                }
+            )
 
         return attrs
