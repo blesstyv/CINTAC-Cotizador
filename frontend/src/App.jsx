@@ -194,6 +194,85 @@ function obtenerNombreRol(usuario) {
 }
 
 
+// Convierte el valor de carga escrito por el usuario a un
+// número canónico ("1250000.50") para enviarlo a la API.
+// - CLP: formato chileno, punto para miles y coma decimal
+//   (300.000 · 1.250.000,50 · 300000). Máximo 12 dígitos
+//   enteros y 2 decimales.
+// - USD: punto o coma como separador decimal (350.50 ·
+//   350,50). Máximo 10 dígitos enteros y 2 decimales.
+// Devuelve null si el texto no es válido.
+const MAX_DIGITOS_VALOR_CARGA = {
+  USD: 10,
+  CLP: 12,
+};
+
+function normalizarValorCarga(
+  texto,
+  moneda
+) {
+  const limpio =
+    String(texto)
+      .trim()
+      .replace(/\s/g, "")
+      .replace(/^\$/, "");
+
+  if (limpio === "") {
+    return "0";
+  }
+
+  let entero;
+  let decimales = "";
+
+  if (moneda === "CLP") {
+    const coincidencia =
+      limpio.match(
+        /^(\d{1,3}(?:\.\d{3})+|\d+)(?:,(\d{1,2}))?$/
+      );
+
+    if (!coincidencia) {
+      return null;
+    }
+
+    entero =
+      coincidencia[1].replace(/\./g, "");
+
+    decimales =
+      coincidencia[2] || "";
+
+  } else {
+    const coincidencia =
+      limpio.match(
+        /^(\d+)(?:[.,](\d{1,2}))?$/
+      );
+
+    if (!coincidencia) {
+      return null;
+    }
+
+    entero =
+      coincidencia[1];
+
+    decimales =
+      coincidencia[2] || "";
+  }
+
+  entero =
+    entero.replace(/^0+(?=\d)/, "");
+
+  if (
+    entero.length >
+    MAX_DIGITOS_VALOR_CARGA[moneda]
+  ) {
+    return null;
+  }
+
+  return decimales
+    ? `${entero}.${decimales}`
+    : entero;
+}
+
+
 function App() {
   const [
     token,
@@ -303,6 +382,11 @@ function App() {
   ] = useState("");
 
   const [
+    monedaValorCarga,
+    setMonedaValorCarga,
+  ] = useState("USD");
+
+  const [
     recomendacion,
     setRecomendacion,
   ] = useState(null);
@@ -402,6 +486,19 @@ function App() {
     };
 
 
+  const formatearMontoCLP =
+    (valor) =>
+      new Intl.NumberFormat(
+        "es-CL",
+        {
+          maximumFractionDigits:
+            2,
+        }
+      ).format(
+        Number(valor)
+      );
+
+
   const formatearCLP =
     (valor) =>
       new Intl.NumberFormat(
@@ -492,6 +589,7 @@ function App() {
         setUnidadPeso("kg");
         setContingencia("0");
         setValorCarga("");
+        setMonedaValorCarga("USD");
         setRecomendacion(null);
         setResultado(null);
         setMensaje("");
@@ -1327,6 +1425,7 @@ function App() {
       setUnidadPeso("kg");
       setContingencia("0");
       setValorCarga("");
+      setMonedaValorCarga("USD");
       setRecomendacion(null);
       setMensaje("");
       setResultado(null);
@@ -1576,28 +1675,14 @@ function App() {
       }
 
       // Valor de carga opcional: vacío equivale a 0.
-      const valorCargaTexto =
-        String(
-          valorCarga
-        ).trim();
-
-      const valorCargaNumero =
-        valorCargaTexto === ""
-          ? 0
-          : Number(
-            valorCargaTexto
-          );
+      const valorCargaNormalizado =
+        normalizarValorCarga(
+          valorCarga,
+          monedaValorCarga
+        );
 
       if (
-        !Number.isFinite(
-          valorCargaNumero
-        ) ||
-        valorCargaNumero < 0 ||
-        !/^\d+(\.\d{1,2})?$/.test(
-          valorCargaTexto === ""
-            ? "0"
-            : valorCargaTexto
-        )
+        valorCargaNormalizado === null
       ) {
         setErrores(
           (actuales) => ({
@@ -1609,7 +1694,9 @@ function App() {
         );
 
         setMensaje(
-          "El valor de carga debe ser un número igual o mayor que cero, con máximo dos decimales."
+          monedaValorCarga === "CLP"
+            ? "El valor de carga en CLP debe ser un monto válido (por ejemplo 300.000 o 1.250.000,50), sin negativos y con máximo dos decimales."
+            : "El valor de carga en USD debe ser un número igual o mayor que cero, con máximo dos decimales."
         );
 
         return;
@@ -1650,9 +1737,10 @@ function App() {
                     contingenciaNumero,
 
                   valor_carga:
-                    valorCargaTexto === ""
-                      ? "0"
-                      : valorCargaTexto,
+                    valorCargaNormalizado,
+
+                  moneda_valor_carga:
+                    monedaValorCarga,
                 }),
             }
           );
@@ -2419,7 +2507,7 @@ function App() {
                     </span>
                   </label>
 
-                  <div className="input-with-unit">
+                  <div className="field-with-select">
                     <input
                       id="valor-carga"
                       className={
@@ -2427,10 +2515,9 @@ function App() {
                           ? "campo-error"
                           : ""
                       }
-                      type="number"
-                      min="0"
-                      step="0.01"
+                      type="text"
                       inputMode="decimal"
+                      autoComplete="off"
                       value={
                         valorCarga
                       }
@@ -2445,23 +2532,85 @@ function App() {
 
                         limpiarResultado();
                       }}
-                      placeholder="0"
+                      onBlur={() => {
+                        // En CLP se muestra con separador
+                        // de miles chileno al salir del campo.
+                        if (
+                          monedaValorCarga !== "CLP"
+                        ) {
+                          return;
+                        }
+
+                        const normalizado =
+                          normalizarValorCarga(
+                            valorCarga,
+                            "CLP"
+                          );
+
+                        if (
+                          normalizado &&
+                          String(valorCarga).trim() !== ""
+                        ) {
+                          setValorCarga(
+                            new Intl.NumberFormat(
+                              "es-CL",
+                              {
+                                maximumFractionDigits:
+                                  2,
+                              }
+                            ).format(
+                              Number(normalizado)
+                            )
+                          );
+                        }
+                      }}
+                      placeholder={
+                        monedaValorCarga === "CLP"
+                          ? "Ej: 300.000"
+                          : "Ej: 350.50"
+                      }
                       aria-describedby="valor-carga-ayuda"
                       aria-invalid={
                         errores.valorCarga
                       }
                     />
 
-                    <span>
-                      USD
-                    </span>
+                    <select
+                      aria-label="Moneda del valor de carga"
+                      value={
+                        monedaValorCarga
+                      }
+                      onChange={(event) => {
+                        setMonedaValorCarga(
+                          event.target.value
+                        );
+
+                        limpiarError(
+                          "valorCarga"
+                        );
+
+                        limpiarResultado();
+                      }}
+                    >
+                      <option value="USD">
+                        USD
+                      </option>
+
+                      <option value="CLP">
+                        CLP
+                      </option>
+                    </select>
                   </div>
 
                   <small
                     id="valor-carga-ayuda"
                     className="field-hint"
                   >
-                    Se suma al total estimado. Si se deja vacío, se considera 0.
+                    {
+                      monedaValorCarga === "CLP"
+                        ? "Formato chileno (300.000 o 1.250.000,50). Se convierte a USD con el dólar observado de la cotización. Si se deja vacío, se considera 0."
+                        : "Se suma al total estimado. Si se deja vacío, se considera 0."
+                    }
                   </small>
                 </div>
               </div>
@@ -2922,6 +3071,7 @@ function App() {
 
                 {
                   Number(
+                    resultado.valorCargaIngresado ??
                     resultado.valorCarga
                   ) > 0 && (
                     <div className="cost-row cost-row-added">
@@ -2930,11 +3080,41 @@ function App() {
                       </span>
 
                       <strong>
-                        + US${" "}
                         {
-                          formatearMontoUSD(
-                            resultado.valorCarga
-                          )
+                          resultado
+                            .monedaValorCarga ===
+                          "CLP"
+                            ? (
+                              <>
+                                + $
+                                {
+                                  formatearMontoCLP(
+                                    resultado
+                                      .valorCargaIngresado
+                                  )
+                                }{" "}
+                                CLP
+
+                                <small className="cost-row-equivalent">
+                                  ≈ US${" "}
+                                  {
+                                    formatearMontoUSD(
+                                      resultado.valorCarga
+                                    )
+                                  }
+                                </small>
+                              </>
+                            )
+                            : (
+                              <>
+                                + US${" "}
+                                {
+                                  formatearMontoUSD(
+                                    resultado.valorCarga
+                                  )
+                                }
+                              </>
+                            )
                         }
                       </strong>
                     </div>

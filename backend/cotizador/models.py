@@ -724,6 +724,31 @@ class Cotizacion(models.Model):
         ),
     )
 
+    class MonedaValorCarga(models.TextChoices):
+        USD = "USD", "Dólar estadounidense"
+        CLP = "CLP", "Peso chileno"
+
+    valor_carga_moneda = models.CharField(
+        max_length=3,
+        choices=MonedaValorCarga.choices,
+        default=MonedaValorCarga.USD,
+        help_text=(
+            "Moneda en que el usuario ingresó "
+            "el valor de carga."
+        ),
+    )
+
+    valor_carga_ingresado = models.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        default=Decimal("0.00"),
+        help_text=(
+            "Valor de carga tal como fue ingresado, "
+            "en la moneda indicada. valor_carga guarda "
+            "su equivalente en USD."
+        ),
+    )
+
     conversion_disponible = models.BooleanField(
         default=False,
     )
@@ -841,6 +866,23 @@ class Cotizacion(models.Model):
                     valor_carga__gte=0
                 ),
                 name="cot_valor_carga_no_negativo",
+            ),
+
+            models.CheckConstraint(
+                condition=models.Q(
+                    valor_carga_ingresado__gte=0
+                ),
+                name="cot_valor_carga_ing_no_neg",
+            ),
+
+            models.CheckConstraint(
+                condition=models.Q(
+                    valor_carga_moneda__in=[
+                        "USD",
+                        "CLP",
+                    ]
+                ),
+                name="cot_valor_carga_moneda_valida",
             ),
         ]
 

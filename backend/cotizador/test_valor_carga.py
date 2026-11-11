@@ -321,3 +321,281 @@ class ValorCargaTests(BaseCotizadorTestCase):
         )
 
         self.assertEqual(respuesta.status_code, 400)
+
+
+# ----------------------------------------------------------
+# Valor de carga ingresado en CLP
+# ----------------------------------------------------------
+
+def usd_desde_clp(valor_clp, tipo_cambio=TIPO_CAMBIO_PRUEBA):
+    return (
+        Decimal(valor_clp) / Decimal(tipo_cambio)
+    ).quantize(
+        Decimal("0.01"),
+        rounding=ROUND_HALF_UP,
+    )
+
+
+@patch("cotizador.views.obtener_tipo_cambio")
+class ValorCargaClpTests(BaseCotizadorTestCase):
+
+    def configurar_tipo_cambio(self, mock_tipo_cambio, modo="en_linea"):
+        mock_tipo_cambio.return_value = {
+            "valor": TIPO_CAMBIO_PRUEBA,
+            "fecha": timezone.localdate(),
+            "fuente": "Fuente prueba",
+            "modo": modo,
+        }
+
+    def cotizar(self, **extra):
+        datos = {
+            "ruta_id": self.ruta.id,
+            "peso_carga": 100,
+            "unidad_peso": "tn",
+            "tipo_contenedor": "20",
+            "contingencia": 0,
+        }
+        datos.update(extra)
+
+        return self.client.post(
+            "/api/cotizar/",
+            datos,
+            format="json",
+        )
+
+    def test_moneda_por_defecto_es_usd(self, mock_tc):
+        self.configurar_tipo_cambio(mock_tc)
+
+        respuesta = self.cotizar(valor_carga=100)
+
+        self.assertEqual(respuesta.status_code, 200)
+        self.assertEqual(respuesta.data["monedaValorCarga"], "USD")
+        self.assertEqual(respuesta.data["valorCargaIngresado"], "100.00")
+        self.assertEqual(respuesta.data["valorCarga"], "100.00")
+
+    def test_clp_se_convierte_a_usd_con_el_dolar_de_la_cotizacion(
+        self, mock_tc
+    ):
+        self.configurar_tipo_cambio(mock_tc)
+
+        respuesta = self.cotizar(
+            valor_carga=300000,
+            moneda_valor_carga="CLP",
+        )
+
+        self.assertEqual(respuesta.status_code, 200)
+
+        equivalente = usd_desde_clp("300000")
+
+        self.assertEqual(respuesta.data["monedaValorCarga"], "CLP")
+        self.assertEqual(
+            respuesta.data["valorCargaIngresado"], "300000.00"
+        )
+        self.assertEqual(
+            Decimal(respuesta.data["valorCarga"]), equivalente
+        )
+        self.assertEqual(
+            Decimal(respuesta.data["totalFinalMin"]),
+            Decimal("8250.00") + equivalente,
+        )
+        self.assertEqual(
+            Decimal(respuesta.data["totalFinalMax"]),
+            Decimal("14250.00") + equivalente,
+        )
+
+    def test_clp_total_final_clp_suma_el_monto_exacto(self, mock_tc):
+        self.configurar_tipo_cambio(mock_tc)
+
+        respuesta = self.cotizar(
+            valor_carga=300000,
+            moneda_valor_carga="CLP",
+        )
+
+        self.assertEqual(
+            Decimal(respuesta.data["totalFinalMinCLP"]),
+            Decimal(respuesta.data["totalMinCLP"]) + 300000,
+        )
+        self.assertEqual(
+            Decimal(respuesta.data["totalFinalMaxCLP"]),
+            Decimal(respuesta.data["totalMaxCLP"]) + 300000,
+        )
+
+    def test_clp_acepta_decimales(self, mock_tc):
+        self.configurar_tipo_cambio(mock_tc)
+
+        respuesta = self.cotizar(
+            valor_carga="1250000.50",
+            moneda_valor_carga="CLP",
+        )
+
+        self.assertEqual(respuesta.status_code, 200)
+        self.assertEqual(
+            respuesta.data["valorCargaIngresado"], "1250000.50"
+        )
+
+    def test_clp_acepta_maximo_permitido(self, mock_tc):
+        self.configurar_tipo_cambio(mock_tc)
+
+        respuesta = self.cotizar(
+            valor_carga="999999999999.99",
+            moneda_valor_carga="CLP",
+        )
+
+        self.assertEqual(respuesta.status_code, 200)
+
+    def test_clp_rechaza_sobre_el_maximo(self, mock_tc):
+        self.configurar_tipo_cambio(mock_tc)
+        cantidad_antes = Cotizacion.objects.count()
+
+        respuesta = self.cotizar(
+            valor_carga="1000000000000",
+            moneda_valor_carga="CLP",
+        )
+
+        self.assertEqual(respuesta.status_code, 400)
+        self.assertIn("valor_carga", respuesta.data)
+        self.assertEqual(Cotizacion.objects.count(), cantidad_antes)
+
+    def test_clp_rechaza_negativo(self, mock_tc):
+        self.configurar_tipo_cambio(mock_tc)
+
+        respuesta = self.cotizar(
+            valor_carga=-1,
+            moneda_valor_carga="CLP",
+        )
+
+        self.assertEqual(respuesta.status_code, 400)
+
+    def test_rechaza_moneda_no_soportada(self, mock_tc):
+        self.configurar_tipo_cambio(mock_tc)
+
+        respuesta = self.cotizar(
+            valor_carga=100,
+            moneda_valor_carga="EUR",
+        )
+
+        self.assertEqual(respuesta.status_code, 400)
+        self.assertIn("moneda_valor_carga", respuesta.data)
+
+    def test_clp_se_guarda_con_moneda_y_monto_original(self, mock_tc):
+        self.configurar_tipo_cambio(mock_tc)
+
+        respuesta = self.cotizar(
+            valor_carga=300000,
+            moneda_valor_carga="CLP",
+        )
+
+        cotizacion = Cotizacion.objects.get(
+            id=respuesta.data["historialId"]
+        )
+
+        self.assertEqual(cotizacion.valor_carga_moneda, "CLP")
+        self.assertEqual(
+            cotizacion.valor_carga_ingresado, Decimal("300000.00")
+        )
+        self.assertEqual(
+            cotizacion.valor_carga, usd_desde_clp("300000")
+        )
+        # El flete guardado no cambia.
+        self.assertEqual(cotizacion.total_min, Decimal("8250.00"))
+        self.assertEqual(cotizacion.total_max, Decimal("14250.00"))
+
+    def test_clp_usa_ultimo_valor_respaldado(self, mock_tc):
+        self.configurar_tipo_cambio(mock_tc, modo="respaldo")
+
+        respuesta = self.cotizar(
+            valor_carga=300000,
+            moneda_valor_carga="CLP",
+        )
+
+        self.assertEqual(respuesta.status_code, 200)
+        self.assertEqual(respuesta.data["modoTipoCambio"], "respaldo")
+        self.assertEqual(
+            Decimal(respuesta.data["valorCarga"]),
+            usd_desde_clp("300000"),
+        )
+
+    def test_clp_sin_ningun_tipo_de_cambio_se_rechaza(self, mock_tc):
+        mock_tc.side_effect = TipoCambioNoDisponible("sin datos")
+        cantidad_antes = Cotizacion.objects.count()
+
+        respuesta = self.cotizar(
+            valor_carga=300000,
+            moneda_valor_carga="CLP",
+        )
+
+        self.assertEqual(respuesta.status_code, 400)
+        self.assertIn("valor_carga", respuesta.data)
+        self.assertEqual(Cotizacion.objects.count(), cantidad_antes)
+
+    def test_clp_cero_sin_tipo_de_cambio_se_permite(self, mock_tc):
+        mock_tc.side_effect = TipoCambioNoDisponible("sin datos")
+
+        respuesta = self.cotizar(
+            valor_carga=0,
+            moneda_valor_carga="CLP",
+        )
+
+        self.assertEqual(respuesta.status_code, 200)
+        self.assertEqual(respuesta.data["valorCarga"], "0.00")
+
+    def test_regresion_campos_existentes_identicos_con_clp(
+        self, mock_tc
+    ):
+        self.configurar_tipo_cambio(mock_tc)
+
+        base = self.cotizar()
+        con_clp = self.cotizar(
+            valor_carga=450000,
+            moneda_valor_carga="CLP",
+        )
+
+        for campo in CAMPOS_EXISTENTES:
+            self.assertEqual(
+                base.data[campo],
+                con_clp.data[campo],
+                f"El campo existente '{campo}' cambió",
+            )
+
+
+class ValorCargaClpRespaldoRealTests(BaseCotizadorTestCase):
+    """
+    Sin simular obtener_tipo_cambio: si el servicio externo
+    falla, se usa el último dólar observado almacenado.
+    """
+
+    @patch(
+        "cotizador.services.tipo_cambio._obtener_desde_internet",
+        side_effect=TipoCambioNoDisponible("servicio caído"),
+    )
+    def test_servicio_caido_usa_ultimo_valor_observado(self, _mock):
+        from .models import TipoCambio
+
+        TipoCambio.objects.create(
+            moneda_origen="USD",
+            moneda_destino="CLP",
+            valor=Decimal("950.00"),
+            fecha_referencia=timezone.localdate(),
+            fuente="Respaldo de prueba",
+        )
+
+        respuesta = self.client.post(
+            "/api/cotizar/",
+            {
+                "ruta_id": self.ruta.id,
+                "peso_carga": 100,
+                "unidad_peso": "tn",
+                "tipo_contenedor": "20",
+                "valor_carga": 95000,
+                "moneda_valor_carga": "CLP",
+            },
+            format="json",
+        )
+
+        self.assertEqual(respuesta.status_code, 200)
+        self.assertTrue(respuesta.data["conversionDisponible"])
+        self.assertEqual(
+            Decimal(respuesta.data["tipoCambio"]), Decimal("950.00")
+        )
+        # 95.000 CLP / 950 = 100,00 USD
+        self.assertEqual(respuesta.data["valorCarga"], "100.00")
