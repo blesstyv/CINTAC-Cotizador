@@ -284,6 +284,23 @@ function HistorialCotizaciones({
     };
 
 
+  // Filtros de la última búsqueda: la exportación entrega
+  // exactamente lo que se está viendo, aunque el formulario
+  // tenga cambios aún no buscados.
+  const filtrosAplicadosRef =
+    useRef(FILTROS_INICIALES);
+
+  const [
+    exportando,
+    setExportando,
+  ] = useState(false);
+
+  const [
+    mensajeExportacion,
+    setMensajeExportacion,
+  ] = useState("");
+
+
   const construirParametros =
     useCallback(
       (filtrosActuales) => {
@@ -317,6 +334,97 @@ function HistorialCotizaciones({
     );
 
 
+  const exportarCsv =
+    async () => {
+      if (
+        exportando ||
+        cargando ||
+        cotizaciones.length === 0
+      ) {
+        return;
+      }
+
+      setExportando(true);
+      setMensajeExportacion("");
+      setError("");
+
+      try {
+        const query =
+          construirParametros(
+            filtrosAplicadosRef.current
+          ).toString();
+
+        const respuesta =
+          await peticionAutenticada(
+            `${apiUrl}/historial/exportar/${query ? `?${query}` : ""}`
+          );
+
+        if (!respuesta.ok) {
+          let datos = null;
+
+          try {
+            datos = await respuesta.json();
+          } catch {
+            datos = null;
+          }
+
+          throw new Error(
+            obtenerMensajeError(
+              datos,
+              "No fue posible exportar el historial."
+            )
+          );
+        }
+
+        const archivo =
+          await respuesta.blob();
+
+        const disposicion =
+          respuesta.headers.get(
+            "Content-Disposition"
+          ) || "";
+
+        const coincidencia =
+          disposicion.match(
+            /filename="([^"]+)"/
+          );
+
+        const direccion =
+          URL.createObjectURL(archivo);
+
+        const enlace =
+          document.createElement("a");
+
+        enlace.href = direccion;
+        enlace.download =
+          coincidencia?.[1] ||
+          "cintac-historial.csv";
+
+        document.body.appendChild(enlace);
+        enlace.click();
+        enlace.remove();
+
+        window.setTimeout(
+          () => URL.revokeObjectURL(direccion),
+          1000
+        );
+
+        setMensajeExportacion(
+          "Exportación generada con los filtros y permisos actuales."
+        );
+
+      } catch (errorExportacion) {
+        setError(
+          errorExportacion.message ||
+          "No fue posible exportar el historial."
+        );
+
+      } finally {
+        setExportando(false);
+      }
+    };
+
+
   const cargarHistorial =
     useCallback(
       async (
@@ -332,6 +440,9 @@ function HistorialCotizaciones({
 
         consultaEnCursoRef.current =
           true;
+
+        filtrosAplicadosRef.current =
+          filtrosActuales;
 
         setCargando(true);
         setError("");
@@ -893,8 +1004,37 @@ function HistorialCotizaciones({
               >
                 LIMPIAR
               </button>
+
+              <button
+                type="button"
+                className="history-secondary-button"
+                onClick={
+                  exportarCsv
+                }
+                disabled={
+                  cargando ||
+                  exportando ||
+                  cotizaciones.length === 0
+                }
+                title="Descarga en CSV los registros que su cuenta puede ver, con los filtros de la última búsqueda"
+              >
+                {
+                  exportando
+                    ? "EXPORTANDO..."
+                    : "EXPORTAR CSV"
+                }
+              </button>
             </div>
           </form>
+
+          {mensajeExportacion && (
+            <p
+              className="history-export-note"
+              role="status"
+            >
+              {mensajeExportacion}
+            </p>
+          )}
 
 
           {error && (

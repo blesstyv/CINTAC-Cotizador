@@ -604,13 +604,20 @@ def celda_csv_segura(valor):
     Evita la inyección de fórmulas (CSV/Formula Injection): un texto
     que comienza con =, +, -, @, tabulación o retorno se antepone con
     un apóstrofo para que Excel lo trate como texto. Los números se
-    exportan sin alterar.
+    exportan con coma decimal, sin separador de miles.
     """
     if valor is None:
         return ""
 
-    if isinstance(valor, (int, Decimal)) and not isinstance(valor, bool):
+    if isinstance(valor, bool):
+        return "Sí" if valor else "No"
+
+    if isinstance(valor, int):
         return str(valor)
+
+    if isinstance(valor, Decimal):
+        # Coma decimal: el archivo usa ';' y se abre en Excel es-CL.
+        return format(valor, "f").replace(".", ",")
 
     texto = str(valor)
 

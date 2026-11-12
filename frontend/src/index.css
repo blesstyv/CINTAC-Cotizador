@@ -19,3 +19,38 @@ body {
 #root {
   min-height: 100vh;
 }
+
+/* Accesibilidad: foco visible y consistente para navegación por teclado. */
+:where(a, button, input, select, textarea, summary, [role="button"], [role="switch"], [tabindex]):focus-visible {
+  outline: 3px solid #c43d00;
+  outline-offset: 2px;
+}
+
+:where(button, input, select, textarea):disabled {
+  cursor: not-allowed;
+}
+
+/* Respeta la preferencia del sistema de reducir animaciones. */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+
+/* Los campos usan borde naranja al enfocarse; se refuerza el anillo
+   para que el foco cumpla un contraste visible (WCAG 2.4.7). */
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  box-shadow: 0 0 0 3px rgba(196, 61, 0, 0.35) !important;
+}

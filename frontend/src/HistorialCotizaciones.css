@@ -334,6 +334,8 @@
 
   align-items: flex-end;
 
+  flex-wrap: wrap;
+
   gap: 9px;
 }
 
@@ -821,4 +823,12 @@
   .history-detail-heading {
     gap: 10px;
   }
+}
+
+.history-export-note {
+  margin: 10px 0 0;
+
+  color: #1d6b3a;
+
+  font-size: 12px;
 }

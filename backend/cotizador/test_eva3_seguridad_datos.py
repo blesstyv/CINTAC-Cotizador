@@ -431,7 +431,9 @@ class ExportacionCsvTests(BaseEva3):
         self.assertEqual(celda_csv_segura("@SUM"), "'@SUM")
         self.assertEqual(celda_csv_segura("\tx"), "'\tx")
         self.assertEqual(celda_csv_segura("Shanghai"), "Shanghai")
-        self.assertEqual(celda_csv_segura(Decimal("10.50")), "10.50")
+        self.assertEqual(celda_csv_segura(Decimal("10.50")), "10,50")
+        self.assertEqual(celda_csv_segura(Decimal("-3.5")), "-3,5")
+        self.assertEqual(celda_csv_segura(7), "7")
         self.assertEqual(celda_csv_segura(None), "")
 
     def test_filtro_invalido(self):

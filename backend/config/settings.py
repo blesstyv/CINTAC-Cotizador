@@ -210,6 +210,12 @@ CORS_ALLOWED_ORIGIN_REGEXES = [
 ]
 
 
+# Permite al frontend leer el nombre del archivo CSV exportado.
+CORS_EXPOSE_HEADERS = [
+    "Content-Disposition",
+]
+
+
 TESTING = (
     len(sys.argv) > 1
     and sys.argv[1] == "test"
