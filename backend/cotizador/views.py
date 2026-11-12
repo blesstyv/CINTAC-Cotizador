@@ -1,7 +1,6 @@
 from decimal import (
     Decimal,
     ROUND_CEILING,
-    ROUND_HALF_UP,
 )
 
 from django.db.models import Prefetch
@@ -24,6 +23,13 @@ from .serializers import (
     OpcionesOperacionSerializer,
     RutaSerializer,
     TipoContenedorSerializer,
+)
+
+from .services.calculo_cotizacion import (
+    ConversionNoDisponible,
+    calcular_totales_finales,
+    normalizar_valor_carga,
+    redondear_clp,
 )
 
 from .services.tipo_cambio import (
@@ -220,10 +226,11 @@ def obtener_opciones(
     )
 
 
-def redondear_clp(valor):
-    return Decimal(valor).quantize(
-        Decimal("1"),
-        rounding=ROUND_HALF_UP,
+def _texto_o_nulo(valor):
+    return (
+        str(valor)
+        if valor is not None
+        else None
     )
 
 
@@ -446,55 +453,41 @@ def cotizar_operacion(
         ]
     )
 
-    # Valor de carga ingresado por el usuario (USD o CLP).
-    # Se suma una sola vez al total; los totales del flete
-    # (total_min/total_max) y sus equivalentes CLP se
-    # conservan sin cambios.
     valor_carga_moneda = datos.get(
         "moneda_valor_carga",
         "USD",
     )
 
-    valor_carga_ingresado = (
-        datos.get("valor_carga")
-        or Decimal("0")
-    ).quantize(
-        Decimal("0.01"),
-        rounding=ROUND_HALF_UP,
+    incluir_valor_carga = datos.get(
+        "incluir_valor_carga",
+        True,
     )
 
-    tipo_cambio = None
-    fecha_tipo_cambio = None
-    fuente_tipo_cambio = None
-    modo_tipo_cambio = None
-
+    cambio = None
     total_min_clp = None
     total_max_clp = None
-
-    conversion_disponible = False
     mensaje_conversion = None
 
     try:
-        cambio = (
-            obtener_tipo_cambio()
+        cambio = obtener_tipo_cambio()
+
+    except TipoCambioNoDisponible:
+        mensaje_conversion = (
+            "La cotización en USD fue "
+            "generada correctamente, pero "
+            "la conversión automática a CLP "
+            "no está disponible temporalmente."
         )
 
-        tipo_cambio = (
-            cambio["valor"]
-        )
+    conversion_disponible = cambio is not None
 
-        fecha_tipo_cambio = (
-            cambio["fecha"]
-        )
+    tipo_cambio = (
+        cambio["valor"]
+        if cambio
+        else None
+    )
 
-        fuente_tipo_cambio = (
-            cambio["fuente"]
-        )
-
-        modo_tipo_cambio = (
-            cambio["modo"]
-        )
-
+    if conversion_disponible:
         total_min_clp = redondear_clp(
             convertir_usd_a_clp(
                 total_min,
@@ -509,96 +502,58 @@ def cotizar_operacion(
             )
         )
 
-        conversion_disponible = True
-
-    except TipoCambioNoDisponible:
-        mensaje_conversion = (
-            "La cotización en USD fue "
-            "generada correctamente, pero "
-            "la conversión automática a CLP "
-            "no está disponible temporalmente."
+    # Valor monetario de la carga: se suma una sola vez al flete.
+    # Inactivo, vacío o 0 => 0 (el total final es el flete).
+    try:
+        valor_carga = normalizar_valor_carga(
+            datos.get("valor_carga"),
+            valor_carga_moneda,
+            incluir=incluir_valor_carga,
+            tipo_cambio=tipo_cambio,
         )
 
-    # Equivalente en USD del valor de carga. Si se ingresó
-    # en CLP se convierte con el mismo dólar observado de la
-    # cotización (en línea, caché o último valor respaldado).
-    if valor_carga_moneda == "CLP":
-        if (
-            valor_carga_ingresado > 0
-            and not conversion_disponible
-        ):
-            return Response(
-                {
-                    "valor_carga": [
-                        (
-                            "No es posible convertir el "
-                            "valor de carga en CLP porque "
-                            "no hay un tipo de cambio "
-                            "disponible. Ingréselo en USD."
-                        )
-                    ]
-                },
-                status=
-                    status.HTTP_400_BAD_REQUEST,
-            )
-
-        valor_carga = (
-            (
-                valor_carga_ingresado
-                / Decimal(str(tipo_cambio))
-            ).quantize(
-                Decimal("0.01"),
-                rounding=ROUND_HALF_UP,
-            )
-            if valor_carga_ingresado > 0
-            else Decimal("0.00")
+    except ConversionNoDisponible:
+        return Response(
+            {
+                "valor_carga": [
+                    (
+                        "No es posible convertir el "
+                        "valor de carga en CLP porque "
+                        "no hay un tipo de cambio "
+                        "disponible. Ingréselo en USD."
+                    )
+                ]
+            },
+            status=
+                status.HTTP_400_BAD_REQUEST,
         )
 
-    else:
-        valor_carga = (
-            valor_carga_ingresado
-        )
-
-    total_final_min = (
-        total_min
-        + valor_carga
+    totales = calcular_totales_finales(
+        total_min,
+        total_max,
+        valor_carga,
+        total_min_clp,
+        total_max_clp,
+        tipo_cambio,
     )
 
-    total_final_max = (
-        total_max
-        + valor_carga
+    fecha_tipo_cambio = (
+        cambio["fecha"]
+        if cambio
+        else None
     )
 
-    total_final_min_clp = None
-    total_final_max_clp = None
+    fuente_tipo_cambio = (
+        cambio["fuente"]
+        if cambio
+        else None
+    )
 
-    if conversion_disponible:
-        if valor_carga_moneda == "CLP":
-            # Flete en CLP + monto CLP exacto ingresado.
-            total_final_min_clp = redondear_clp(
-                total_min_clp
-                + valor_carga_ingresado
-            )
-
-            total_final_max_clp = redondear_clp(
-                total_max_clp
-                + valor_carga_ingresado
-            )
-
-        else:
-            total_final_min_clp = redondear_clp(
-                convertir_usd_a_clp(
-                    total_final_min,
-                    tipo_cambio,
-                )
-            )
-
-            total_final_max_clp = redondear_clp(
-                convertir_usd_a_clp(
-                    total_final_max,
-                    tipo_cambio,
-                )
-            )
+    modo_tipo_cambio = (
+        cambio["modo"]
+        if cambio
+        else None
+    )
 
     transito_original_min = None
     transito_original_max = None
@@ -735,13 +690,13 @@ def cotizar_operacion(
                 or "",
 
             valor_carga=
-                valor_carga,
+                valor_carga.usd,
 
             valor_carga_moneda=
-                valor_carga_moneda,
+                valor_carga.moneda,
 
             valor_carga_ingresado=
-                valor_carga_ingresado,
+                valor_carga.ingresado,
 
             conversion_disponible=
                 conversion_disponible,
@@ -769,6 +724,18 @@ def cotizar_operacion(
 
             total_max_clp=
                 total_max_clp,
+
+            total_final_min=
+                totales.total_final_min,
+
+            total_final_max=
+                totales.total_final_max,
+
+            total_final_min_clp=
+                totales.total_final_min_clp,
+
+            total_final_max_clp=
+                totales.total_final_max_clp,
         )
     )
 
@@ -906,35 +873,46 @@ def cotizar_operacion(
             "mensajeConversion":
                 mensaje_conversion,
 
+            "incluyeValorCarga":
+                valor_carga.incluido,
+
             "valorCarga":
-                str(valor_carga),
+                str(valor_carga.usd),
 
             "monedaValorCarga":
-                valor_carga_moneda,
+                valor_carga.moneda,
 
             "valorCargaIngresado":
-                str(valor_carga_ingresado),
+                str(valor_carga.ingresado),
 
             "totalFinalMin":
-                str(total_final_min),
+                str(totales.total_final_min),
 
             "totalFinalMax":
-                str(total_final_max),
+                str(totales.total_final_max),
 
             "totalFinalMinCLP":
-                (
-                    str(total_final_min_clp)
-                    if total_final_min_clp
-                    is not None
-                    else None
+                _texto_o_nulo(
+                    totales.total_final_min_clp
                 ),
 
             "totalFinalMaxCLP":
+                _texto_o_nulo(
+                    totales.total_final_max_clp
+                ),
+
+            "antiguedadTipoCambioDias":
                 (
-                    str(total_final_max_clp)
-                    if total_final_max_clp
-                    is not None
+                    cambio.get("antiguedadDias")
+                    if cambio
                     else None
+                ),
+
+            "tipoCambioDesactualizado":
+                (
+                    bool(cambio.get("desactualizado"))
+                    if cambio
+                    else False
                 ),
         }
     )

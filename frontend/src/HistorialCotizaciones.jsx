@@ -1344,10 +1344,7 @@ function HistorialCotizaciones({
                   </strong>
 
                   <small>
-                    {
-                      detalle.fuente ||
-                      "Sin fuente informada"
-                    }
+                    Valor mínimo y máximo por contenedor
                   </small>
                 </div>
 

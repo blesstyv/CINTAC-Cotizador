@@ -1,4 +1,5 @@
 import os
+import sys
 from pathlib import Path
 
 import dj_database_url
@@ -205,6 +206,27 @@ CORS_ALLOWED_ORIGIN_REGEXES = [
     ).split(",")
     if pattern.strip()
 ]
+
+
+TESTING = (
+    len(sys.argv) > 1
+    and sys.argv[1] == "test"
+)
+
+
+# Tras una falla de la fuente externa del dólar, se usa el respaldo
+# almacenado sin reintentar durante este período (evita esperar el
+# tiempo de red en cada cotización). Desactivado durante las pruebas.
+TIPO_CAMBIO_REINTENTO_SEGUNDOS = (
+    0
+    if TESTING
+    else int(
+        os.getenv(
+            "TIPO_CAMBIO_REINTENTO_SEGUNDOS",
+            "300",
+        )
+    )
+)
 
 
 TOKEN_EXPIRATION_HOURS = int(

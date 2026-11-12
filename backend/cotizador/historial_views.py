@@ -1,8 +1,4 @@
 from datetime import datetime
-from decimal import (
-    Decimal,
-    ROUND_HALF_UP,
-)
 
 from django.contrib.auth.models import User
 
@@ -19,8 +15,9 @@ from .models import (
     PerfilUsuario,
 )
 
-from .services.tipo_cambio import (
-    convertir_usd_a_clp,
+from .services.calculo_cotizacion import (
+    redondear_clp,
+    totales_finales_de_cotizacion,
 )
 
 
@@ -49,10 +46,11 @@ def _puede_ver_historial_general(
     )
 
 
-def _redondear_clp(valor):
-    return Decimal(valor).quantize(
-        Decimal("1"),
-        rounding=ROUND_HALF_UP,
+def _texto_o_nulo(valor):
+    return (
+        str(valor)
+        if valor is not None
+        else None
     )
 
 
@@ -60,80 +58,22 @@ def _totales_finales(
     cotizacion,
 ):
     """
-    Reconstruye el total final (flete + valor de carga) con
-    los valores guardados en la cotización, con la misma
-    regla usada al cotizar. Las cotizaciones sin valor de
-    carga devuelven exactamente sus totales del flete.
+    Total final (flete + valor de carga) de una cotización guardada.
+
+    Se lee la instantánea persistida al cotizar; los registros
+    anteriores a esa columna se reconstruyen con los valores del
+    mismo registro, nunca con tarifas ni dólares actuales.
     """
-    valor_usd = (
-        cotizacion.valor_carga
+    totales = totales_finales_de_cotizacion(
+        cotizacion
     )
-
-    total_final_min = (
-        cotizacion.total_min
-        + valor_usd
-    )
-
-    total_final_max = (
-        cotizacion.total_max
-        + valor_usd
-    )
-
-    final_min_clp = None
-    final_max_clp = None
-
-    if (
-        cotizacion.total_min_clp
-        is not None
-        and cotizacion.total_max_clp
-        is not None
-    ):
-        if valor_usd <= 0:
-            final_min_clp = _redondear_clp(
-                cotizacion.total_min_clp
-            )
-
-            final_max_clp = _redondear_clp(
-                cotizacion.total_max_clp
-            )
-
-        elif (
-            cotizacion.valor_carga_moneda
-            == "CLP"
-        ):
-            final_min_clp = _redondear_clp(
-                cotizacion.total_min_clp
-                + cotizacion
-                .valor_carga_ingresado
-            )
-
-            final_max_clp = _redondear_clp(
-                cotizacion.total_max_clp
-                + cotizacion
-                .valor_carga_ingresado
-            )
-
-        elif (
-            cotizacion.tipo_cambio
-            is not None
-        ):
-            final_min_clp = _redondear_clp(
-                convertir_usd_a_clp(
-                    total_final_min,
-                    cotizacion.tipo_cambio,
-                )
-            )
-
-            final_max_clp = _redondear_clp(
-                convertir_usd_a_clp(
-                    total_final_max,
-                    cotizacion.tipo_cambio,
-                )
-            )
 
     return {
+        "incluyeValorCarga":
+            cotizacion.valor_carga_ingresado > 0,
+
         "valorCarga":
-            str(valor_usd),
+            str(cotizacion.valor_carga),
 
         "monedaValorCarga":
             cotizacion
@@ -146,25 +86,19 @@ def _totales_finales(
             ),
 
         "totalFinalMin":
-            str(total_final_min),
+            str(totales.total_final_min),
 
         "totalFinalMax":
-            str(total_final_max),
+            str(totales.total_final_max),
 
         "totalFinalMinCLP":
-            (
-                str(final_min_clp)
-                if final_min_clp
-                is not None
-                else None
+            _texto_o_nulo(
+                totales.total_final_min_clp
             ),
 
         "totalFinalMaxCLP":
-            (
-                str(final_max_clp)
-                if final_max_clp
-                is not None
-                else None
+            _texto_o_nulo(
+                totales.total_final_max_clp
             ),
     }
 
@@ -337,8 +271,10 @@ def _serializar_cotizacion(
         "totalMinCLP":
             (
                 str(
-                    cotizacion
-                    .total_min_clp
+                    redondear_clp(
+                        cotizacion
+                        .total_min_clp
+                    )
                 )
                 if (
                     cotizacion
@@ -351,8 +287,10 @@ def _serializar_cotizacion(
         "totalMaxCLP":
             (
                 str(
-                    cotizacion
-                    .total_max_clp
+                    redondear_clp(
+                        cotizacion
+                        .total_max_clp
+                    )
                 )
                 if (
                     cotizacion

@@ -343,6 +343,18 @@ class CotizacionOperacionSerializer(
         },
     )
 
+    # Control explícito: cuando es False el valor de carga se
+    # considera 0 aunque se envíe un monto. Si se omite, se
+    # mantiene el comportamiento anterior (se usa el monto enviado).
+    incluir_valor_carga = serializers.BooleanField(
+        required=False,
+        default=True,
+        error_messages={
+            "invalid":
+                "Indique si desea incluir el valor de carga (true o false).",
+        },
+    )
+
     # Máximo de dígitos enteros permitidos por moneda.
     # USD: hasta 9.999.999.999,99
     # CLP: hasta 999.999.999.999,99

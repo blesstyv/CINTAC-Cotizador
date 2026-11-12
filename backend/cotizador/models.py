@@ -789,6 +789,37 @@ class Cotizacion(models.Model):
         blank=True,
     )
 
+    # Instantánea del total final (flete + valor de carga) tal como
+    # se informó al usuario. Se persiste para que el historial nunca
+    # dependa de recalcular con reglas, tarifas o dólares posteriores.
+    total_final_min = models.DecimalField(
+        max_digits=21,
+        decimal_places=2,
+        null=True,
+        blank=True,
+    )
+
+    total_final_max = models.DecimalField(
+        max_digits=21,
+        decimal_places=2,
+        null=True,
+        blank=True,
+    )
+
+    total_final_min_clp = models.DecimalField(
+        max_digits=25,
+        decimal_places=2,
+        null=True,
+        blank=True,
+    )
+
+    total_final_max_clp = models.DecimalField(
+        max_digits=25,
+        decimal_places=2,
+        null=True,
+        blank=True,
+    )
+
     class Meta:
         ordering = [
             "-creada_en",
@@ -883,6 +914,46 @@ class Cotizacion(models.Model):
                     ]
                 ),
                 name="cot_valor_carga_moneda_valida",
+            ),
+
+            models.CheckConstraint(
+                condition=(
+                    models.Q(total_final_min__isnull=True)
+                    | models.Q(
+                        total_final_min__gte=models.F("total_min")
+                    )
+                ),
+                name="cot_total_final_min_ge_flete",
+            ),
+
+            models.CheckConstraint(
+                condition=(
+                    models.Q(total_final_max__isnull=True)
+                    | models.Q(
+                        total_final_max__gte=models.F("total_max")
+                    )
+                ),
+                name="cot_total_final_max_ge_flete",
+            ),
+
+            # Sin monto ingresado no puede existir cargo en USD.
+            models.CheckConstraint(
+                condition=(
+                    models.Q(valor_carga_ingresado__gt=0)
+                    | models.Q(valor_carga=0)
+                ),
+                name="cot_valor_carga_sin_monto_cero",
+            ),
+
+            # En USD el equivalente es el mismo monto ingresado.
+            models.CheckConstraint(
+                condition=(
+                    models.Q(valor_carga_moneda="CLP")
+                    | models.Q(
+                        valor_carga=models.F("valor_carga_ingresado")
+                    )
+                ),
+                name="cot_valor_carga_usd_coherente",
             ),
         ]
 
