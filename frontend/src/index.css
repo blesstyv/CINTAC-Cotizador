@@ -19,3 +19,26 @@ body {
 #root {
   min-height: 100vh;
 }
+
+/* Accesibilidad: navegación por teclado consistente en toda la aplicación. */
+:where(a, button, input, select, textarea, [role="button"]):focus-visible {
+  outline: 3px solid #f4511e;
+  outline-offset: 3px;
+}
+
+:where(button, input, select, textarea):disabled {
+  cursor: not-allowed;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

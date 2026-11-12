@@ -3165,7 +3165,7 @@ function App() {
                   ? (
                     <div className="conversion-box">
                       <span>
-                        EQUIVALENTE AUTOMÁTICO EN CLP
+                        EQUIVALENTE REFERENCIAL EN CLP
                       </span>
 
                       <strong>
@@ -3237,12 +3237,12 @@ function App() {
                               resultado
                                 .modoTipoCambio ===
                               "respaldo"
-                                ? "Último valor disponible"
+                                ? "Valor de respaldo (ver fecha)"
                                 : resultado
                                     .modoTipoCambio ===
                                   "cache"
-                                ? "Valor automático vigente"
-                                : "Actualizado automáticamente"
+                                ? "Valor almacenado (ver fecha)"
+                                : "Consultado en fuente externa"
                             }
                           </strong>
                         </div>
@@ -3255,6 +3255,9 @@ function App() {
                             "Fuente de tipo de cambio no informada"
                           }
                         </div>
+                        <p className="exchange-rate-source">
+                          Conversión referencial. Compruebe la fecha del dólar antes de utilizar estos valores en una operación real.
+                        </p>
                       </div>
                     </div>
                   )

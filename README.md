@@ -26,10 +26,11 @@ PostgreSQL es el único motor de base de datos del proyecto.
 - Tiempo de tránsito y contingencia.
 - Conversión USD/CLP.
 - Historial de cotizaciones.
+- Exportación a CSV de los registros del historial visibles para cada usuario, respetando permisos y neutralizando fórmulas peligrosas.
 - Gestión de usuarios y permisos.
 - Importación y validación de datos maestros desde Excel.
 - Actualización transaccional de datos: ante un error PostgreSQL revierte todos los cambios.
-- Diseño responsive.
+- Diseño responsive, navegación por teclado y compatibilidad con preferencias de movimiento reducido.
 - Health check del backend y de la conexión a PostgreSQL.
 - Pruebas unitarias, de integración, robustez y seguridad.
 - Pruebas de rendimiento y concurrencia.
@@ -133,13 +134,15 @@ gunicorn config.wsgi:application
 
 ## Inicialización
 
-En el primer despliegue Render ejecuta:
+El build de Render ejecuta `python manage.py bootstrap_production` después de aplicar las migraciones.
 
 ```bash
 python manage.py bootstrap_production
 ```
 
-El comando carga los datos iniciales del cotizador y crea o actualiza de forma idempotente el administrador.
+La primera instalación crea los datos maestros y la cuenta técnica de administración. En despliegues posteriores **no se sobrescriben los datos maestros existentes ni se restablece la contraseña de una cuenta administradora ya creada**. Si el nombre de administrador coincide con una cuenta preexistente que no es superusuario, el bootstrap falla de forma segura.
+
+La base de datos se conserva fuera del código en PostgreSQL. Para una evaluación se recomienda ejecutar la suite de pruebas contra una base temporal, nunca contra producción.
 
 ## API
 
@@ -205,6 +208,8 @@ La prueba mide GET de sesión/rutas y POST de opciones/cotización con distintos
 ## Seguridad
 
 - Secretos mediante variables de entorno.
+- Inicialización de producción que conserva credenciales y datos maestros en despliegues posteriores.
+- CORS restringido al dominio real del frontend.
 - Contraseñas con hashing de Django.
 - Token con expiración configurable.
 - Autorización comprobada en backend.

@@ -16,6 +16,7 @@ from django.core.management.base import (
 
 from cotizador.models import (
     PerfilUsuario,
+    Ruta,
     TipoCambio,
 )
 
@@ -142,33 +143,41 @@ class Command(BaseCommand):
                 "y DJANGO_SUPERUSER_PASSWORD."
             )
 
-        self.stdout.write(
-            "Cargando datos iniciales..."
-        )
+        usuario = User.objects.filter(
+            username=username
+        ).first()
 
-        call_command(
-            "cargar_datos"
-        )
+        if usuario is not None and not usuario.is_superuser:
+            raise CommandError(
+                "La cuenta del administrador configurado "
+                "existe, pero no tiene permisos de superusuario."
+            )
+
+        if not Ruta.objects.exists():
+            self.stdout.write(
+                "Instalación inicial: cargando datos maestros..."
+            )
+            call_command("cargar_datos")
+        else:
+            self.stdout.write(
+                "Datos maestros existentes conservados."
+            )
 
         self._cargar_tipo_cambio_respaldo()
 
-        usuario, creado = (
-            User.objects.get_or_create(
+        if usuario is None:
+            usuario = User.objects.create_superuser(
                 username=username,
-                defaults={
-                    "email": email,
-                },
+                email=email,
+                password=password,
             )
-        )
-
-        usuario.email = email
-        usuario.is_staff = True
-        usuario.is_superuser = True
-        usuario.is_active = True
-        usuario.set_password(
-            password
-        )
-        usuario.save()
+            creado = True
+        else:
+            creado = False
+            self.stdout.write(
+                "Cuenta administrativa existente conservada "
+                "sin modificar la contraseña."
+            )
 
         perfil, _ = (
             PerfilUsuario.objects.get_or_create(

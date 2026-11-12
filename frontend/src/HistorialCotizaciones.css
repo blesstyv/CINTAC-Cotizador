@@ -334,6 +334,8 @@
 
   align-items: flex-end;
 
+  flex-wrap: wrap;
+
   gap: 9px;
 }
 
