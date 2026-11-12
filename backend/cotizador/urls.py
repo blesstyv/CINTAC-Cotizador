@@ -8,11 +8,14 @@ from .auth_views import (
 
 from .gestion_views import (
     importar_excel,
+    operaciones_datos_maestros,
+    restaurar_datos_maestros,
     resumen_datos_maestros,
     validar_excel,
 )
 
 from .historial_views import (
+    exportar_historial_csv,
     historial_cotizacion_detalle,
     historial_cotizaciones,
 )
@@ -80,6 +83,12 @@ urlpatterns = [
     ),
 
     path(
+        "historial/exportar/",
+        exportar_historial_csv,
+        name="historial-exportar",
+    ),
+
+    path(
         "historial/<int:cotizacion_id>/",
         historial_cotizacion_detalle,
         name="historial-detalle",
@@ -101,6 +110,21 @@ urlpatterns = [
         "administracion/importar-excel/",
         importar_excel,
         name="administracion-importar-excel",
+    ),
+
+    path(
+        "administracion/operaciones/",
+        operaciones_datos_maestros,
+        name="administracion-operaciones",
+    ),
+
+    path(
+        (
+            "administracion/operaciones/"
+            "<int:operacion_id>/restaurar/"
+        ),
+        restaurar_datos_maestros,
+        name="administracion-operacion-restaurar",
     ),
 
     path(

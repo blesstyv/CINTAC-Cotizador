@@ -2,6 +2,7 @@ from django.contrib import admin
 
 from .models import (
     Cotizacion,
+    OperacionDatosMaestros,
     PerfilUsuario,
     Puerto,
     Ruta,
@@ -194,6 +195,10 @@ class CotizacionAdmin(admin.ModelAdmin):
         "fuente_tarifa",
     )
 
+    list_select_related = (
+        "usuario",
+    )
+
     readonly_fields = (
         "creada_en",
     )
@@ -201,3 +206,54 @@ class CotizacionAdmin(admin.ModelAdmin):
     ordering = (
         "-creada_en",
     )
+
+    # El historial es una instantánea: no se crea ni edita a mano
+    # para no alterar resultados ya informados.
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(OperacionDatosMaestros)
+class OperacionDatosMaestrosAdmin(admin.ModelAdmin):
+    list_display = (
+        "id",
+        "tipo",
+        "estado",
+        "usuario_username",
+        "creada_en",
+        "archivo_nombre",
+    )
+
+    list_filter = (
+        "tipo",
+        "estado",
+        "creada_en",
+    )
+
+    search_fields = (
+        "usuario_username",
+        "archivo_nombre",
+        "archivo_sha256",
+    )
+
+    exclude = (
+        "estado_previo",
+    )
+
+    ordering = (
+        "-creada_en",
+    )
+
+    # Bitácora de auditoría: solo lectura.
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+

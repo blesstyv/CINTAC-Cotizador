@@ -1,4 +1,9 @@
+import hashlib
+import logging
+
+from django.conf import settings
 from django.contrib.auth import authenticate
+from django.core.cache import cache
 
 from rest_framework import status
 
@@ -20,6 +25,44 @@ from .models import PerfilUsuario
 from .throttles import (
     LoginRateThrottle,
 )
+
+
+logger = logging.getLogger("cotizador.seguridad")
+
+
+def _clave_fallos(username):
+    # Se usa un hash para no guardar nombres de usuario en la caché.
+    resumen = hashlib.sha256(
+        username.strip().lower().encode("utf-8")
+    ).hexdigest()
+
+    return f"cintac:login_fallos:{resumen}"
+
+
+def _cuenta_bloqueada(username):
+    return (
+        cache.get(_clave_fallos(username), 0)
+        >= settings.LOGIN_MAX_FALLOS
+    )
+
+
+def _registrar_fallo(username):
+    clave = _clave_fallos(username)
+    ventana = settings.LOGIN_BLOQUEO_SEGUNDOS
+
+    if cache.add(clave, 1, ventana):
+        return 1
+
+    try:
+        return cache.incr(clave)
+
+    except ValueError:
+        cache.set(clave, 1, ventana)
+        return 1
+
+
+def _limpiar_fallos(username):
+    cache.delete(_clave_fallos(username))
 
 
 def obtener_permisos_usuario(
@@ -209,6 +252,25 @@ def iniciar_sesion(request):
                 status.HTTP_400_BAD_REQUEST,
         )
 
+    if _cuenta_bloqueada(username):
+        logger.warning(
+            "Inicio de sesión bloqueado temporalmente por "
+            "intentos fallidos consecutivos."
+        )
+
+        return Response(
+            {
+                "detail":
+                    (
+                        "Se superó el número de intentos "
+                        "fallidos. Espere unos minutos e "
+                        "intente nuevamente."
+                    )
+            },
+            status=
+                status.HTTP_429_TOO_MANY_REQUESTS,
+        )
+
     usuario = authenticate(
         request=request,
         username=username,
@@ -216,6 +278,8 @@ def iniciar_sesion(request):
     )
 
     if usuario is None:
+        _registrar_fallo(username)
+
         return Response(
             {
                 "detail":
@@ -262,6 +326,8 @@ def iniciar_sesion(request):
             status=
                 status.HTTP_403_FORBIDDEN,
         )
+
+    _limpiar_fallos(username)
 
     Token.objects.filter(
         user=usuario

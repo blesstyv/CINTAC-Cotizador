@@ -963,3 +963,132 @@ class Cotizacion(models.Model):
             f"{self.usuario.username} - "
             f"{self.origen} → {self.destino}"
         )
+
+class OperacionDatosMaestros(models.Model):
+    """
+    Bitácora de cambios administrativos sobre los datos maestros.
+
+    Cada importación o restauración guarda quién la realizó, cuándo,
+    con qué archivo (nombre y SHA-256), un resumen del resultado y una
+    instantánea completa del estado ANTERIOR. Esa instantánea permite
+    recuperar los datos maestros previos de forma controlada; la propia
+    restauración vuelve a registrar el estado que reemplaza, por lo
+    que también puede revertirse.
+    """
+
+    class Tipo(models.TextChoices):
+        IMPORTACION_EXCEL = (
+            "IMPORTACION_EXCEL",
+            "Importación Excel",
+        )
+        RESTAURACION = (
+            "RESTAURACION",
+            "Restauración",
+        )
+
+    class Estado(models.TextChoices):
+        COMPLETADA = "COMPLETADA", "Completada"
+        FALLIDA = "FALLIDA", "Fallida"
+
+    tipo = models.CharField(
+        max_length=20,
+        choices=Tipo.choices,
+    )
+
+    estado = models.CharField(
+        max_length=12,
+        choices=Estado.choices,
+        default=Estado.COMPLETADA,
+    )
+
+    usuario = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="operaciones_datos_cintac",
+    )
+
+    usuario_username = models.CharField(
+        max_length=150,
+        help_text="Nombre de usuario conservado aunque la cuenta cambie.",
+    )
+
+    creada_en = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    archivo_nombre = models.CharField(
+        max_length=255,
+        blank=True,
+    )
+
+    archivo_sha256 = models.CharField(
+        max_length=64,
+        blank=True,
+    )
+
+    resumen = models.JSONField(
+        default=dict,
+        blank=True,
+    )
+
+    estado_previo = models.JSONField(
+        null=True,
+        blank=True,
+        help_text=(
+            "Instantánea de los datos maestros antes de la operación."
+        ),
+    )
+
+    restaurada_desde = models.ForeignKey(
+        "self",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="restauraciones",
+    )
+
+    detalle = models.TextField(
+        blank=True,
+    )
+
+    class Meta:
+        ordering = [
+            "-creada_en",
+            "-id",
+        ]
+
+        indexes = [
+            models.Index(
+                fields=["-creada_en"],
+                name="op_datos_fecha_idx",
+            ),
+        ]
+
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(
+                    tipo__in=[
+                        "IMPORTACION_EXCEL",
+                        "RESTAURACION",
+                    ]
+                ),
+                name="op_datos_tipo_valido",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    ~models.Q(tipo="RESTAURACION")
+                    | ~models.Q(estado="COMPLETADA")
+                    | models.Q(restaurada_desde__isnull=False)
+                ),
+                name="op_datos_restauracion_con_origen",
+            ),
+        ]
+
+    def __str__(self):
+        return (
+            f"{self.get_tipo_display()} #{self.id} - "
+            f"{self.usuario_username} - "
+            f"{self.get_estado_display()}"
+        )
