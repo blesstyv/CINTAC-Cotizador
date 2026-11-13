@@ -9,6 +9,17 @@
 | No sumar cargos cuando es 0 | Total final = flete total | idem |
 | Quitar "Fuente de tarifa" bajo el resultado | Retirada del resultado y del detalle del historial; el dato se conserva en la base y en la API | E2E (`fuenteTarifaVisible: false`) |
 
+## Aviso "Formalidades exposición" (10-11-2026) — cumplimiento
+
+| Requisito | Estado | Dónde se demuestra |
+|---|---|---|
+| Valor de la carga opcional, se digita si se conoce | ✅ | Interruptor "Incluir valor de la carga" + monto USD/CLP; vacío o desactivado = 0 |
+| Contenedor 20' = 23 ton, 40' = máx. 25 ton (confirmado por el cliente) | ✅ | `TipoContenedor`; el bootstrap no las sobrescribe |
+| No ingresar cantidad de contenedores; calcularla según el peso | ✅ | No existe ese campo; `ceil(peso / capacidad)` en el backend |
+| Ingresar puerto de origen y destino, peso (ton y/o kg) y valor de la carga | ✅ | Formulario del cotizador |
+| Agregar 2 puertos requeridos por el cliente | ⚠️ Función lista; **faltan los datos** | Administración → "Puertos, rutas y tarifas" → NUEVA RUTA. Los puertos se cargan en minutos cuando el cliente confirme nombre, tarifas y tránsito |
+| Quitar la fuente de las tarifas (el admin actualiza manualmente) | ✅ | Sin "Fuente" en cotizador, historial ni administración; edición manual de tarifas con bitácora |
+
 ## Relación con la rúbrica
 
 | Criterio | Aporte de esta versión | Evidencia |

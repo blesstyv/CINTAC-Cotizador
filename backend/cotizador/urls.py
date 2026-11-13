@@ -20,6 +20,11 @@ from .historial_views import (
     historial_cotizaciones,
 )
 
+from .rutas_admin_views import (
+    ruta_admin_detalle,
+    rutas_admin,
+)
+
 from .usuario_views import (
     usuario_detalle,
     usuarios,
@@ -110,6 +115,18 @@ urlpatterns = [
         "administracion/importar-excel/",
         importar_excel,
         name="administracion-importar-excel",
+    ),
+
+    path(
+        "administracion/rutas/",
+        rutas_admin,
+        name="administracion-rutas",
+    ),
+
+    path(
+        "administracion/rutas/<int:ruta_id>/",
+        ruta_admin_detalle,
+        name="administracion-ruta-detalle",
     ),
 
     path(

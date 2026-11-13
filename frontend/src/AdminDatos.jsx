@@ -5,6 +5,9 @@ import {
   useState,
 } from "react";
 
+import AdminRutas
+  from "./AdminRutas";
+
 import AdminUsuarios
   from "./AdminUsuarios";
 
@@ -176,6 +179,13 @@ function AdminDatos({
     restaurandoId,
     setRestaurandoId,
   ] = useState(null);
+
+  // Aumenta cuando una importación o restauración cambia los
+  // datos maestros, para que la tabla de rutas se recargue.
+  const [
+    versionDatos,
+    setVersionDatos,
+  ] = useState(0);
 
 
   const resumenEnCursoRef =
@@ -358,6 +368,10 @@ function AdminDatos({
 
       await cargarResumen();
       await cargarOperaciones();
+
+      setVersionDatos(
+        (actual) => actual + 1
+      );
 
       if (
         onDatosActualizados
@@ -740,6 +754,10 @@ function AdminDatos({
       await cargarResumen();
       await cargarOperaciones();
 
+      setVersionDatos(
+        (actual) => actual + 1
+      );
+
       if (
         onDatosActualizados
       ) {
@@ -997,11 +1015,26 @@ function AdminDatos({
         </section>
 
 
+        <AdminRutas
+          apiUrl={apiUrl}
+          peticionAutenticada={peticionAutenticada}
+          version={versionDatos}
+          onCambio={() => {
+            void cargarResumen();
+            void cargarOperaciones();
+
+            if (onDatosActualizados) {
+              onDatosActualizados();
+            }
+          }}
+        />
+
+
         <section className="admin-section">
           <div className="admin-section-heading">
             <div>
               <span className="admin-eyebrow">
-                ACTUALIZACIÓN
+                ACTUALIZACIÓN MASIVA
               </span>
 
               <h2>
@@ -1288,9 +1321,6 @@ function AdminDatos({
                         Tránsito
                       </th>
 
-                      <th>
-                        Fuente
-                      </th>
                     </tr>
                   </thead>
 
@@ -1381,11 +1411,6 @@ function AdminDatos({
                                 {" días"}
                               </td>
 
-                              <td>
-                                {
-                                  fila.fuente
-                                }
-                              </td>
                             </tr>
                           )
                         )
@@ -1614,6 +1639,13 @@ function AdminDatos({
 
                                   <td>
                                     {operacion.tipoNombre}
+                                    {
+                                      operacion.detalle && (
+                                        <small className="admin-op-note">
+                                          {operacion.detalle}
+                                        </small>
+                                      )
+                                    }
                                     {
                                       operacion.restauradaDesde && (
                                         <small className="admin-op-note">

@@ -32,6 +32,7 @@ PostgreSQL es el único motor de base de datos del proyecto.
 - Gestión de usuarios y permisos.
 - Importación y validación de datos maestros desde Excel, con vista previa de cambios (actual vs propuesto) y confirmación.
 - Actualización transaccional de datos: ante un error PostgreSQL revierte todos los cambios.
+- Gestión manual de puertos, rutas, tarifas y tránsito por el encargado o administrador (sin Excel), con validación y respaldo.
 - Bitácora de operaciones sobre datos maestros con respaldo del estado anterior y restauración reversible (solo administrador).
 - Diseño responsive.
 - Health check del backend y de la conexión a PostgreSQL.
@@ -174,6 +175,8 @@ GET  /api/historial/<id>/
 GET  /api/administracion/resumen/
 POST /api/administracion/validar-excel/              (vista previa + comparación + SHA-256)
 POST /api/administracion/importar-excel/             (opcional: archivo_sha256)
+GET/POST /api/administracion/rutas/                  (listar / crear ruta y puerto)
+PATCH /api/administracion/rutas/<id>/                (actualizar tarifas, tránsito y tipo)
 GET  /api/administracion/operaciones/                (bitácora)
 POST /api/administracion/operaciones/<id>/restaurar/ (solo administrador, {"confirmar": true})
 GET/POST /api/administracion/usuarios/

@@ -1,6 +1,6 @@
 # Plan de pruebas y resultados — EVA3
 
-Fecha de ejecución: 12-11-2026 · Rama `eva3-finalizacion-integral`.
+Fecha de ejecución: 13-11-2026 (última ejecución completa) · Rama `eva3-finalizacion-integral`.
 
 ## Entorno
 
@@ -16,8 +16,8 @@ Fecha de ejecución: 12-11-2026 · Rama `eva3-finalizacion-integral`.
 | Migraciones sin cambios pendientes | `makemigrations --check --dry-run` | ✅ No changes detected |
 | Configuración | `manage.py check` | ✅ 0 issues |
 | Configuración de producción | `check --deploy --fail-level WARNING` (DEBUG=False) | ✅ 0 issues |
-| Suite Django | `manage.py test cotizador` | ✅ **296 pruebas, 0 fallos, 0 errores** |
-| Cobertura (ramas) | `coverage run … && coverage report` | ✅ **91 %** (umbral CI: 85 %) |
+| Suite Django | `manage.py test cotizador` | ✅ **312 pruebas, 0 fallos, 0 errores** |
+| Cobertura (ramas) | `coverage run … && coverage report` | ✅ **92 %** (umbral CI: 85 %) |
 | Dependencias Python | `pip-audit -r requirements.txt --strict` | ✅ sin vulnerabilidades (antes: 3 CVE en DRF) |
 | Dependencias Node | `npm audit` | ✅ 0 vulnerabilidades |
 | Lint frontend | `npm run lint` (oxlint) | ✅ 0 advertencias |
@@ -26,9 +26,9 @@ Fecha de ejecución: 12-11-2026 · Rama `eva3-finalizacion-integral`.
 | Reversión de migraciones | `migrate cotizador 0011` y vuelta | ✅ sin errores |
 | E2E en navegador (Chrome headless) | flujo real frontend + API + PostgreSQL | ✅ sin errores de consola |
 
-Línea base al iniciar la sesión: 224 pruebas OK. Se agregaron **72**: 8 de bootstrap,
-28 de cotización/valor de carga/tipo de cambio, 36 de seguridad, permisos, CSV, Excel,
-bitácora y restauración. Las 224 originales se conservaron.
+Línea base: 224 pruebas OK. Se agregaron **88**: 8 de bootstrap, 28 de cotización/valor
+de carga/tipo de cambio, 36 de seguridad, permisos, CSV, Excel, bitácora y restauración,
+y 16 de gestión manual de rutas y puertos. Las 224 originales se conservaron.
 
 ## Cobertura del plan (qué se prueba)
 
@@ -47,6 +47,7 @@ bitácora y restauración. Las 224 originales se conservaron.
 | Integridad PostgreSQL | CHECK y UNIQUE rechazan datos inválidos | `test_valor_carga.py`, `test_eva3_finalizacion.py` |
 | Recuperación | importación fallida revierte; restauración y su reversión | `test_eva3_seguridad_datos.py` |
 | Tipo de cambio | en línea, caché, respaldo, sin respaldo, JSON inválido, NaN | `test_robustez_tipo_cambio.py`, `test_eva3_finalizacion.py` |
+| Gestión manual de rutas | crear puerto y ruta, cotizar en ella, 14 entradas inválidas, duplicados, permisos, restauración | `test_eva3_rutas_admin.py` |
 | Despliegue | redeploy no toca tarifas, capacidades ni contraseñas | `test_bootstrap_production.py` |
 
 ## Esperado vs obtenido (casos clave, E2E)
@@ -63,6 +64,8 @@ Ruta Shanghai → San Antonio, 60.000 kg, contenedor 20' (23 TN), dólar 950,25.
 | Fuente de tarifa | No visible bajo el resultado | No visible (verificado en el texto renderizado) ✅ |
 | Exportación CSV | Solo registros autorizados, filtros aplicados | ✅ (archivo `cintac-historial-AAAA-MM-DD.csv`) |
 | Restauración | Vuelve al estado previo y queda registrada | ✅ |
+| Puerto nuevo (creado desde Administración) | Aparece en el cotizador; 46 TN ⇒ ⌈46/23⌉ = 2 contenedores; flete 2 × 1.900–3.000 | 2 × 20'; US$ 3.800 – 6.000 ✅ |
+| Formulario de ruta vacío / máx < mín | Se rechaza con mensajes por campo | 9 mensajes / "La tarifa máxima de 20' no puede ser menor que la mínima" ✅ |
 
 ## Discrepancias encontradas y corregidas
 

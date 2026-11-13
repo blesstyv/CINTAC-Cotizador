@@ -985,6 +985,10 @@ class OperacionDatosMaestros(models.Model):
             "RESTAURACION",
             "Restauración",
         )
+        EDICION_MANUAL = (
+            "EDICION_MANUAL",
+            "Edición manual",
+        )
 
     class Estado(models.TextChoices):
         COMPLETADA = "COMPLETADA", "Completada"
@@ -1072,6 +1076,7 @@ class OperacionDatosMaestros(models.Model):
                     tipo__in=[
                         "IMPORTACION_EXCEL",
                         "RESTAURACION",
+                        "EDICION_MANUAL",
                     ]
                 ),
                 name="op_datos_tipo_valido",

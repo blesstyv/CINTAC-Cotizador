@@ -10,6 +10,7 @@ Django 6.1 + DRF 3.18 (Gunicorn)       Render Web Service  (CSP, HSTS, CORS exac
   ├─ views.py               HTTP de cotización (delgadas)
   ├─ historial_views.py     listado, detalle, exportación CSV
   ├─ gestion_views.py       Excel, bitácora, restauración
+  ├─ rutas_admin_views.py   gestión manual de puertos, rutas y tarifas
   ├─ auth_views.py          login/logout/sesión + bloqueo por cuenta
   ├─ usuario_views.py       administración de usuarios
   ├─ permissions.py         autorización por rol (siempre en backend)
@@ -73,9 +74,10 @@ completa para registros existentes **con los datos del mismo registro** (verific
 una base creada con el código de `main`: los totales del historial antes y después de
 migrar son idénticos).
 
-### Migración 0013
+### Migraciones 0013 y 0014
 
-Crea `OperacionDatosMaestros`. No modifica tablas existentes.
+0013 crea `OperacionDatosMaestros`. 0014 agrega el tipo `EDICION_MANUAL` a su constraint.
+Ninguna modifica tablas existentes.
 
 ## 4. Rendimiento (BD03)
 

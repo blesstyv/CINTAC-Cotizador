@@ -4,7 +4,8 @@
 
 - `build.sh` no cambia: instala dependencias, `collectstatic`, `migrate`, `bootstrap_production`.
 - Migraciones nuevas: **0012** (agrega 4 columnas nulas, las completa con datos del mismo
-  registro y crea 4 constraints) y **0013** (tabla nueva). Ambas son aditivas.
+  registro y crea 4 constraints), **0013** (tabla nueva) y **0014** (nuevo tipo de operación
+en la bitácora). Todas son aditivas.
   Validado: base creada con el código de `main` + cotizaciones (sin valor, USD y CLP),
   luego `migrate` con esta rama ⇒ totales del historial idénticos.
 - `bootstrap_production` es idempotente: en un redeploy **no** recarga datos maestros, no

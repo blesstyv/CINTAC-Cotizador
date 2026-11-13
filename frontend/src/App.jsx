@@ -2567,7 +2567,7 @@ function App() {
                       htmlFor="incluir-valor-carga"
                       className="switch-label"
                     >
-                      Incluir valor monetario de la carga
+                      Incluir valor de la carga
 
                       <span className="optional">
                         Opcional
@@ -2581,7 +2581,7 @@ function App() {
                         htmlFor="valor-carga"
                         className="sr-only"
                       >
-                        Monto del valor monetario de la carga
+                        Monto del valor de la carga
                       </label>
 
                     <div className="field-with-select">
@@ -3192,7 +3192,7 @@ function App() {
                     }
                   >
                     <dt>
-                      Valor monetario de la carga
+                      Valor de la carga
                       <small className="cost-row-note">
                         {
                           valorCargaIncluido
@@ -3274,7 +3274,7 @@ function App() {
                 <small>
                   {
                     valorCargaIncluido
-                      ? "Flete total + valor monetario de la carga"
+                      ? "Flete total + valor de la carga"
                       : "Corresponde al flete total"
                   }
                 </small>
