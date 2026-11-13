@@ -5,6 +5,14 @@ from django.core.management.base import (
     CommandError,
 )
 
+from django.db import transaction
+
+from cotizador.models import OperacionDatosMaestros
+from cotizador.services.datos_maestros import (
+    calcular_sha256,
+    capturar_estado,
+    resumir_estado,
+)
 from cotizador.services.importador_datos import (
     ErrorImportacionExcel,
     aplicar_importacion,
@@ -185,8 +193,31 @@ class Command(BaseCommand):
             "Aplicando datos..."
         )
 
-        resumen = aplicar_importacion(
-            filas
+        # Igual que la importación web: respaldo del estado anterior
+        # y registro en la bitácora, todo en una transacción.
+        with transaction.atomic():
+            estado_previo = capturar_estado()
+
+            resumen = aplicar_importacion(
+                filas
+            )
+
+            operacion = OperacionDatosMaestros.objects.create(
+                tipo=OperacionDatosMaestros.Tipo.IMPORTACION_EXCEL,
+                usuario=None,
+                usuario_username="consola",
+                archivo_nombre=ruta_archivo.name[:255],
+                archivo_sha256=calcular_sha256(ruta_archivo),
+                resumen={
+                    **resumen,
+                    "filas": len(filas),
+                    "estadoPrevio": resumir_estado(estado_previo),
+                },
+                estado_previo=estado_previo,
+            )
+
+        self.stdout.write(
+            f"Operación registrada en la bitácora: #{operacion.id}"
         )
 
         self.stdout.write("")

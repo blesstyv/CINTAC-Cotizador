@@ -1,0 +1,16 @@
+[run]
+branch = True
+source = cotizador
+omit =
+    cotizador/migrations/*
+    cotizador/test*.py
+    cotizador/tests.py
+    cotizador/management/commands/probar_rendimiento.py
+
+[report]
+show_missing = True
+skip_covered = True
+fail_under = 85
+exclude_lines =
+    pragma: no cover
+    if __name__ == .__main__.:

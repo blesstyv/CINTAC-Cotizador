@@ -24,11 +24,16 @@ PostgreSQL es el único motor de base de datos del proyecto.
 - Cálculo de cantidad de contenedores.
 - Tarifas mínimas y máximas.
 - Tiempo de tránsito y contingencia.
-- Conversión USD/CLP.
-- Historial de cotizaciones.
+- Conversión USD/CLP con fecha, estado y antigüedad del dólar utilizado.
+- Valor monetario de la carga opcional (USD o CLP) con interruptor explícito: se suma una sola vez al flete; desactivado o vacío = 0.
+- Desglose financiero completo: contenedor, cantidad, tarifas, flete, valor de carga, total final USD/CLP, tránsito y contingencia.
+- Historial de cotizaciones como instantánea inmutable (no se recalcula con tarifas ni dólares posteriores).
+- Exportación del historial a CSV respetando permisos y filtros, protegida contra inyección de fórmulas.
 - Gestión de usuarios y permisos.
-- Importación y validación de datos maestros desde Excel.
+- Importación y validación de datos maestros desde Excel, con vista previa de cambios (actual vs propuesto) y confirmación.
 - Actualización transaccional de datos: ante un error PostgreSQL revierte todos los cambios.
+- Gestión manual de puertos, rutas, tarifas y tránsito por el encargado o administrador (sin Excel), con validación y respaldo.
+- Bitácora de operaciones sobre datos maestros con respaldo del estado anterior y restauración reversible (solo administrador).
 - Diseño responsive.
 - Health check del backend y de la conexión a PostgreSQL.
 - Pruebas unitarias, de integración, robustez y seguridad.
@@ -68,6 +73,10 @@ DATABASE_URL=<URL PostgreSQL>
 CORS_ALLOWED_ORIGINS=<orígenes exactos opcionales>
 CORS_ALLOWED_ORIGIN_REGEXES=<regex opcional>
 TOKEN_EXPIRATION_HOURS=8
+LOGIN_MAX_FALLOS=10                    # opcional
+LOGIN_BLOQUEO_SEGUNDOS=900             # opcional
+TIPO_CAMBIO_REINTENTO_SEGUNDOS=300     # opcional
+BOOTSTRAP_RESET_ADMIN_PASSWORD=        # opcional, solo para recuperar la clave
 USD_CLP_FALLBACK_VALUE=<valor inicial de respaldo>
 USD_CLP_FALLBACK_DATE=<AAAA-MM-DD>
 USD_CLP_FALLBACK_SOURCE=<fuente del valor>
@@ -93,8 +102,8 @@ El repositorio incluye `render.yaml`, que define:
 - Health check `/health/`.
 - Migraciones automáticas.
 - Archivos estáticos de Django.
-- Inicialización de datos.
-- Creación/actualización del administrador de producción.
+- Inicialización de datos solo en una instalación nueva.
+- Creación del administrador de producción (sin modificarlo en redeploys).
 - Despliegue automático solo cuando los checks de GitHub pasan.
 
 Para crear la infraestructura desde Render:
@@ -139,7 +148,13 @@ En el primer despliegue Render ejecuta:
 python manage.py bootstrap_production
 ```
 
-El comando carga los datos iniciales del cotizador y crea o actualiza de forma idempotente el administrador.
+El comando es idempotente y seguro para cada redeploy:
+
+- Carga los datos maestros solo si la base no tiene rutas.
+- Crea tipos de contenedor faltantes sin modificar capacidades existentes.
+- Crea el tipo de cambio de respaldo solo si no existe ninguno.
+- Crea el administrador si no existe; si existe, **no** cambia su contraseña ni sus permisos y nunca eleva una cuenta común.
+- Para restablecer la clave del administrador, desplegar una vez con `BOOTSTRAP_RESET_ADMIN_PASSWORD=true` y quitarla después.
 
 ## API
 
@@ -151,15 +166,21 @@ POST /api/logout/
 GET  /api/tipos-contenedor/
 GET  /api/rutas/
 POST /api/opciones-contenedores/
-POST /api/cotizar/
+POST /api/cotizar/   (opcional: incluir_valor_carga, valor_carga, moneda_valor_carga)
 
-GET  /api/historial/
+GET  /api/historial/               (?pagina=&por_pagina=&origen=&destino=&contenedor=&desde=&hasta=&usuario_id=)
+GET  /api/historial/exportar/      (CSV, mismos filtros y permisos)
 GET  /api/historial/<id>/
 
 GET  /api/administracion/resumen/
-POST /api/administracion/validar-excel/
-POST /api/administracion/importar-excel/
+POST /api/administracion/validar-excel/              (vista previa + comparación + SHA-256)
+POST /api/administracion/importar-excel/             (opcional: archivo_sha256)
+GET/POST /api/administracion/rutas/                  (listar / crear ruta y puerto)
+PATCH /api/administracion/rutas/<id>/                (actualizar tarifas, tránsito y tipo)
+GET  /api/administracion/operaciones/                (bitácora)
+POST /api/administracion/operaciones/<id>/restaurar/ (solo administrador, {"confirmar": true})
 GET/POST /api/administracion/usuarios/
+GET/PATCH /api/administracion/usuarios/<id>/
 ```
 
 Health check:
@@ -177,13 +198,16 @@ Backend:
 ```bash
 python manage.py makemigrations --check --dry-run
 python manage.py check
-python manage.py test cotizador
+python manage.py check --deploy --fail-level WARNING   # con DJANGO_DEBUG=False
+pip-audit -r requirements.txt --strict
+coverage run manage.py test cotizador && coverage report   # mínimo 85 %
 ```
 
 Frontend:
 
 ```bash
 npm ci
+npm audit --audit-level=high
 npm run lint
 npm run build
 ```
@@ -209,7 +233,10 @@ La prueba mide GET de sesión/rutas y POST de opciones/cotización con distintos
 - Token con expiración configurable.
 - Autorización comprobada en backend.
 - Roles y principio de mínimo privilegio.
-- Throttling de login.
+- Throttling de login por IP y bloqueo por cuenta tras intentos fallidos.
+- Revocación de sesiones al cambiar contraseña o rol.
+- CSP, Referrer-Policy y COOP en la API; CSP y cabeceras de seguridad en el sitio estático.
+- Errores no controlados respondidos con JSON genérico (sin trazas).
 - CORS restringido.
 - HTTPS, cookies seguras y HSTS en producción.
 - Protección frente a framing.
@@ -218,6 +245,14 @@ La prueba mide GET de sesión/rutas y POST de opciones/cotización con distintos
 - Tipo de cambio en línea con caché y valor de respaldo persistente para contingencias del proveedor.
 - Archivos temporales eliminados después del procesamiento.
 - Base de datos separada del código fuente.
+
+## Documentación técnica
+
+- [Arquitectura y modelo de datos](docs/ARQUITECTURA_Y_DATOS.md)
+- [Seguridad](docs/SEGURIDAD.md)
+- [Despliegue y rollback](docs/DESPLIEGUE.md)
+- [Plan de pruebas y resultados](docs/PRUEBAS_Y_RESULTADOS.md)
+- [Resumen para la defensa EVA3](docs/EVA3_DEFENSA.md)
 
 ## Repositorio
 
@@ -228,6 +263,7 @@ CINTAC-Cotizador/
 │   ├── cotizador/
 │   ├── build.sh
 │   └── manage.py
+├── docs/
 ├── frontend/
 │   ├── public/
 │   ├── src/

@@ -202,6 +202,26 @@ function obtenerNombreRol(usuario) {
 // - USD: punto o coma como separador decimal (350.50 ·
 //   350,50). Máximo 10 dígitos enteros y 2 decimales.
 // Devuelve null si el texto no es válido.
+// Estado legible del dólar utilizado en la cotización.
+function describirEstadoTipoCambio(
+  modo
+) {
+  if (modo === "en_linea") {
+    return "Consultado en línea";
+  }
+
+  if (modo === "cache") {
+    return "Consulta reciente almacenada";
+  }
+
+  if (modo === "respaldo") {
+    return "Valor de respaldo (fuente no disponible)";
+  }
+
+  return "No informado";
+}
+
+
 const MAX_DIGITOS_VALOR_CARGA = {
   USD: 10,
   CLP: 12,
@@ -386,6 +406,13 @@ function App() {
     setMonedaValorCarga,
   ] = useState("USD");
 
+  // C01: control explícito para incorporar el valor monetario
+  // de la carga. Desactivado = 0 (no se suma ningún cargo).
+  const [
+    incluirValorCarga,
+    setIncluirValorCarga,
+  ] = useState(false);
+
   const [
     recomendacion,
     setRecomendacion,
@@ -446,19 +473,6 @@ function App() {
     useRef("");
 
 
-  const formatearUSD =
-    (valor) =>
-      new Intl.NumberFormat(
-        "es-CL",
-        {
-          maximumFractionDigits:
-            0,
-        }
-      ).format(
-        Number(valor)
-      );
-
-
   // Muestra decimales sólo cuando el monto tiene centavos
   // (por ejemplo, un valor de carga de 350,50 USD).
   const formatearMontoUSD =
@@ -484,6 +498,17 @@ function App() {
         numero
       );
     };
+
+
+  const valorCargaIncluido =
+    Boolean(resultado) &&
+    (
+      resultado.incluyeValorCarga ??
+      Number(
+        resultado.valorCargaIngresado ??
+        resultado.valorCarga
+      ) > 0
+    );
 
 
   const formatearMontoCLP =
@@ -590,6 +615,7 @@ function App() {
         setContingencia("0");
         setValorCarga("");
         setMonedaValorCarga("USD");
+        setIncluirValorCarga(false);
         setRecomendacion(null);
         setResultado(null);
         setMensaje("");
@@ -1426,6 +1452,7 @@ function App() {
       setContingencia("0");
       setValorCarga("");
       setMonedaValorCarga("USD");
+      setIncluirValorCarga(false);
       setRecomendacion(null);
       setMensaje("");
       setResultado(null);
@@ -1674,12 +1701,15 @@ function App() {
         return;
       }
 
-      // Valor de carga opcional: vacío equivale a 0.
+      // Valor monetario de carga: solo se valida si el control
+      // está activo. Inactivo o vacío equivale a 0.
       const valorCargaNormalizado =
-        normalizarValorCarga(
-          valorCarga,
-          monedaValorCarga
-        );
+        incluirValorCarga
+          ? normalizarValorCarga(
+            valorCarga,
+            monedaValorCarga
+          )
+          : "0";
 
       if (
         valorCargaNormalizado === null
@@ -1735,6 +1765,9 @@ function App() {
 
                   contingencia:
                     contingenciaNumero,
+
+                  incluir_valor_carga:
+                    incluirValorCarga,
 
                   valor_carga:
                     valorCargaNormalizado,
@@ -2436,7 +2469,7 @@ function App() {
                   <label
                     htmlFor="peso-carga"
                   >
-                    Peso total
+                    Peso total de la carga
 
                     <span className="required">
                       *
@@ -2496,93 +2529,24 @@ function App() {
                 </div>
 
 
-                <div className="form-group">
-                  <label
-                    htmlFor="valor-carga"
-                  >
-                    Valor de carga
-
-                    <span className="optional">
-                      Opcional
-                    </span>
-                  </label>
-
-                  <div className="field-with-select">
-                    <input
-                      id="valor-carga"
+                <div className="form-group form-group-valor-carga">
+                  <div className="valor-carga-toggle">
+                    <button
+                      id="incluir-valor-carga"
+                      type="button"
+                      role="switch"
                       className={
-                        errores.valorCarga
-                          ? "campo-error"
-                          : ""
+                        incluirValorCarga
+                          ? "switch switch-on"
+                          : "switch"
                       }
-                      type="text"
-                      inputMode="decimal"
-                      autoComplete="off"
-                      value={
-                        valorCarga
-                      }
-                      onChange={(event) => {
-                        setValorCarga(
-                          event.target.value
-                        );
-
-                        limpiarError(
-                          "valorCarga"
-                        );
-
-                        limpiarResultado();
-                      }}
-                      onBlur={() => {
-                        // En CLP se muestra con separador
-                        // de miles chileno al salir del campo.
-                        if (
-                          monedaValorCarga !== "CLP"
-                        ) {
-                          return;
-                        }
-
-                        const normalizado =
-                          normalizarValorCarga(
-                            valorCarga,
-                            "CLP"
-                          );
-
-                        if (
-                          normalizado &&
-                          String(valorCarga).trim() !== ""
-                        ) {
-                          setValorCarga(
-                            new Intl.NumberFormat(
-                              "es-CL",
-                              {
-                                maximumFractionDigits:
-                                  2,
-                              }
-                            ).format(
-                              Number(normalizado)
-                            )
-                          );
-                        }
-                      }}
-                      placeholder={
-                        monedaValorCarga === "CLP"
-                          ? "Ej: 300.000"
-                          : "Ej: 350.50"
+                      aria-checked={
+                        incluirValorCarga
                       }
                       aria-describedby="valor-carga-ayuda"
-                      aria-invalid={
-                        errores.valorCarga
-                      }
-                    />
-
-                    <select
-                      aria-label="Moneda del valor de carga"
-                      value={
-                        monedaValorCarga
-                      }
-                      onChange={(event) => {
-                        setMonedaValorCarga(
-                          event.target.value
+                      onClick={() => {
+                        setIncluirValorCarga(
+                          (actual) => !actual
                         );
 
                         limpiarError(
@@ -2592,24 +2556,142 @@ function App() {
                         limpiarResultado();
                       }}
                     >
-                      <option value="USD">
-                        USD
-                      </option>
+                      <span
+                        className="switch-thumb"
+                        aria-hidden="true"
+                      >
+                      </span>
+                    </button>
 
-                      <option value="CLP">
-                        CLP
-                      </option>
-                    </select>
+                    <label
+                      htmlFor="incluir-valor-carga"
+                      className="switch-label"
+                    >
+                      Incluir valor de la carga
+
+                      <span className="optional">
+                        Opcional
+                      </span>
+                    </label>
                   </div>
+
+                  {incluirValorCarga && (
+                    <>
+                      <label
+                        htmlFor="valor-carga"
+                        className="sr-only"
+                      >
+                        Monto del valor de la carga
+                      </label>
+
+                    <div className="field-with-select">
+                      <input
+                        id="valor-carga"
+                        className={
+                          errores.valorCarga
+                            ? "campo-error"
+                            : ""
+                        }
+                        type="text"
+                        inputMode="decimal"
+                        autoComplete="off"
+                        value={
+                          valorCarga
+                        }
+                        onChange={(event) => {
+                          setValorCarga(
+                            event.target.value
+                          );
+
+                          limpiarError(
+                            "valorCarga"
+                          );
+
+                          limpiarResultado();
+                        }}
+                        onBlur={() => {
+                          // En CLP se muestra con separador
+                          // de miles chileno al salir del campo.
+                          if (
+                            monedaValorCarga !== "CLP"
+                          ) {
+                            return;
+                          }
+
+                          const normalizado =
+                            normalizarValorCarga(
+                              valorCarga,
+                              "CLP"
+                            );
+
+                          if (
+                            normalizado &&
+                            String(valorCarga).trim() !== ""
+                          ) {
+                            setValorCarga(
+                              new Intl.NumberFormat(
+                                "es-CL",
+                                {
+                                  maximumFractionDigits:
+                                    2,
+                                }
+                              ).format(
+                                Number(normalizado)
+                              )
+                            );
+                          }
+                        }}
+                        placeholder={
+                          monedaValorCarga === "CLP"
+                            ? "Ej: 300.000"
+                            : "Ej: 350.50"
+                        }
+                        aria-describedby="valor-carga-ayuda"
+                        aria-invalid={
+                          errores.valorCarga
+                        }
+                      />
+
+                      <select
+                        aria-label="Moneda del valor de carga"
+                        value={
+                          monedaValorCarga
+                        }
+                        onChange={(event) => {
+                          setMonedaValorCarga(
+                            event.target.value
+                          );
+
+                          limpiarError(
+                            "valorCarga"
+                          );
+
+                          limpiarResultado();
+                        }}
+                      >
+                        <option value="USD">
+                          USD
+                        </option>
+
+                        <option value="CLP">
+                          CLP
+                        </option>
+                      </select>
+                    </div>
+
+                    </>
+                  )}
 
                   <small
                     id="valor-carga-ayuda"
                     className="field-hint"
                   >
                     {
-                      monedaValorCarga === "CLP"
-                        ? "Formato chileno (300.000 o 1.250.000,50). Se convierte a USD con el dólar observado de la cotización. Si se deja vacío, se considera 0."
-                        : "Se suma al total estimado. Si se deja vacío, se considera 0."
+                      !incluirValorCarga
+                        ? "Desactivado: no se suma ningún cargo adicional (se considera 0). El flete no cambia."
+                        : monedaValorCarga === "CLP"
+                          ? "Se suma una sola vez al flete total. Formato chileno (300.000 o 1.250.000,50); se convierte a USD con el dólar de esta cotización. Vacío = 0."
+                          : "Se suma una sola vez al flete total (no por contenedor). Vacío = 0."
                     }
                   </small>
                 </div>
@@ -2733,7 +2815,7 @@ function App() {
                                 <div className="option-price">
                                   US${" "}
                                   {
-                                    formatearUSD(
+                                    formatearMontoUSD(
                                       opcion.totalMin
                                     )
                                   }
@@ -2742,7 +2824,7 @@ function App() {
 
                                   US${" "}
                                   {
-                                    formatearUSD(
+                                    formatearMontoUSD(
                                       opcion.totalMax
                                     )
                                   }
@@ -3009,79 +3091,122 @@ function App() {
 
               <div className="cost-breakdown">
                 <span className="result-section-title">
-                  DESGLOSE DE COSTOS
+                  DESGLOSE FINANCIERO
                 </span>
 
-                <div className="cost-row">
-                  <span>
-                    Tarifa por contenedor
-                  </span>
+                <dl className="cost-list">
+                  <div className="cost-row">
+                    <dt>
+                      Contenedor seleccionado
+                    </dt>
 
-                  <strong>
-                    US${" "}
-                    {
-                      formatearUSD(
-                        resultado.tarifaMin
-                      )
-                    }
+                    <dd>
+                      {
+                        resultado.nombreContenedor ||
+                        `${resultado.tipoContenedor}'`
+                      }
 
-                    {" – "}
-
-                    {
-                      formatearUSD(
-                        resultado.tarifaMax
-                      )
-                    }
-                  </strong>
-                </div>
-
-
-                <div className="cost-row">
-                  <span>
-                    Flete (
-                    {
-                      resultado.cantidad
-                    }{" "}
-                    {
-                      resultado.cantidad === 1
-                        ? "contenedor"
-                        : "contenedores"
-                    }
-                    )
-                  </span>
-
-                  <strong>
-                    US${" "}
-                    {
-                      formatearUSD(
-                        resultado.totalMin
-                      )
-                    }
-
-                    {" – "}
-
-                    {
-                      formatearUSD(
-                        resultado.totalMax
-                      )
-                    }
-                  </strong>
-                </div>
-
-
-                {
-                  Number(
-                    resultado.valorCargaIngresado ??
-                    resultado.valorCarga
-                  ) > 0 && (
-                    <div className="cost-row cost-row-added">
-                      <span>
-                        Valor de carga
-                      </span>
-
-                      <strong>
+                      <small className="cost-row-equivalent">
+                        Capacidad{" "}
                         {
-                          resultado
+                          formatearNumero(
+                            resultado.capacidadTN
+                          )
+                        }{" "}
+                        TN por contenedor
+                      </small>
+                    </dd>
+                  </div>
+
+                  <div className="cost-row">
+                    <dt>
+                      Cantidad de contenedores
+                    </dt>
+
+                    <dd>
+                      {
+                        resultado.cantidad
+                      }
+                    </dd>
+                  </div>
+
+                  <div className="cost-row">
+                    <dt>
+                      Tarifa por contenedor
+                      <small className="cost-row-note">
+                        mínima – máxima
+                      </small>
+                    </dt>
+
+                    <dd>
+                      US${" "}
+                      {
+                        formatearMontoUSD(
+                          resultado.tarifaMin
+                        )
+                      }
+
+                      {" – "}
+
+                      {
+                        formatearMontoUSD(
+                          resultado.tarifaMax
+                        )
+                      }
+                    </dd>
+                  </div>
+
+                  <div className="cost-row">
+                    <dt>
+                      Flete total
+                      <small className="cost-row-note">
+                        {
+                          resultado.cantidad
+                        }{" × "}tarifa por contenedor
+                      </small>
+                    </dt>
+
+                    <dd>
+                      US${" "}
+                      {
+                        formatearMontoUSD(
+                          resultado.totalMin
+                        )
+                      }
+
+                      {" – "}
+
+                      {
+                        formatearMontoUSD(
+                          resultado.totalMax
+                        )
+                      }
+                    </dd>
+                  </div>
+
+                  <div
+                    className={
+                      valorCargaIncluido
+                        ? "cost-row cost-row-added"
+                        : "cost-row cost-row-muted"
+                    }
+                  >
+                    <dt>
+                      Valor de la carga
+                      <small className="cost-row-note">
+                        {
+                          valorCargaIncluido
+                            ? `Ingresado en ${resultado.monedaValorCarga} · se suma una sola vez`
+                            : "No incluido · se considera 0"
+                        }
+                      </small>
+                    </dt>
+
+                    <dd>
+                      {
+                        !valorCargaIncluido
+                          ? "US$ 0"
+                          : resultado
                             .monedaValorCarga ===
                           "CLP"
                             ? (
@@ -3115,17 +3240,16 @@ function App() {
                                 }
                               </>
                             )
-                        }
-                      </strong>
-                    </div>
-                  )
-                }
+                      }
+                    </dd>
+                  </div>
+                </dl>
               </div>
 
 
               <div className="total-result">
                 <span>
-                  TOTAL ESTIMADO
+                  TOTAL FINAL (USD)
                 </span>
 
                 <strong>
@@ -3147,15 +3271,13 @@ function App() {
                   }
                 </strong>
 
-                {
-                  Number(
-                    resultado.valorCarga
-                  ) > 0 && (
-                    <small>
-                      Incluye flete y valor de carga
-                    </small>
-                  )
-                }
+                <small>
+                  {
+                    valorCargaIncluido
+                      ? "Flete total + valor de la carga"
+                      : "Corresponde al flete total"
+                  }
+                </small>
               </div>
 
 
@@ -3165,7 +3287,7 @@ function App() {
                   ? (
                     <div className="conversion-box">
                       <span>
-                        EQUIVALENTE AUTOMÁTICO EN CLP
+                        EQUIVALENTE REFERENCIAL EN CLP
                       </span>
 
                       <strong>
@@ -3195,7 +3317,7 @@ function App() {
                       <div className="exchange-rate-details">
                         <div className="exchange-rate-row">
                           <span>
-                            Dólar observado
+                            Dólar utilizado
                           </span>
 
                           <strong>
@@ -3223,6 +3345,21 @@ function App() {
                                   .fechaTipoCambio
                               )
                             }
+
+                            {
+                              typeof resultado
+                                .antiguedadTipoCambioDias ===
+                                "number" &&
+                              resultado
+                                .antiguedadTipoCambioDias >
+                                0 && (
+                                ` · hace ${resultado.antiguedadTipoCambioDias} ${
+                                  resultado.antiguedadTipoCambioDias === 1
+                                    ? "día"
+                                    : "días"
+                                }`
+                              )
+                            }
                           </strong>
                         </div>
 
@@ -3234,15 +3371,10 @@ function App() {
 
                           <strong>
                             {
-                              resultado
-                                .modoTipoCambio ===
-                              "respaldo"
-                                ? "Último valor disponible"
-                                : resultado
-                                    .modoTipoCambio ===
-                                  "cache"
-                                ? "Valor automático vigente"
-                                : "Actualizado automáticamente"
+                              describirEstadoTipoCambio(
+                                resultado
+                                  .modoTipoCambio
+                              )
                             }
                           </strong>
                         </div>
@@ -3255,6 +3387,18 @@ function App() {
                             "Fuente de tipo de cambio no informada"
                           }
                         </div>
+
+                        {
+                          resultado
+                            .tipoCambioDesactualizado && (
+                            <p
+                              className="exchange-rate-warning"
+                              role="status"
+                            >
+                              El dólar disponible tiene más de 5 días. Verifique el valor antes de usar estos montos en una operación real.
+                            </p>
+                          )
+                        }
                       </div>
                     </div>
                   )
@@ -3262,8 +3406,14 @@ function App() {
                     resultado
                       .mensajeConversion &&
                     (
-                      <div className="message-box conversion-warning">
-                        <span className="message-icon">
+                      <div
+                        className="message-box conversion-warning"
+                        role="status"
+                      >
+                        <span
+                          className="message-icon"
+                          aria-hidden="true"
+                        >
                           !
                         </span>
 
@@ -3292,13 +3442,54 @@ function App() {
                     .transitoOriginalMax !==
                     null
                     ? (
-                      <>
+                      <dl className="cost-list">
                         <div className="cost-row transit-row">
-                          <span>
-                            Tránsito estimado
-                          </span>
+                          <dt>
+                            Tránsito base
+                          </dt>
 
-                          <strong>
+                          <dd>
+                            {
+                              resultado
+                                .transitoOriginalMin
+                            }
+
+                            {" – "}
+
+                            {
+                              resultado
+                                .transitoOriginalMax
+                            }{" "}
+                            días
+                          </dd>
+                        </div>
+
+                        <div className="cost-row transit-row">
+                          <dt>
+                            Contingencia
+                          </dt>
+
+                          <dd>
+                            +{" "}
+                            {
+                              resultado
+                                .contingencia
+                            }{" "}
+                            {
+                              resultado
+                                .contingencia === 1
+                                ? "día"
+                                : "días"
+                            }
+                          </dd>
+                        </div>
+
+                        <div className="cost-row transit-row transit-total">
+                          <dt>
+                            Tránsito estimado
+                          </dt>
+
+                          <dd>
                             {
                               resultado
                                 .transitoMin
@@ -3311,41 +3502,9 @@ function App() {
                                 .transitoMax
                             }{" "}
                             días
-                          </strong>
+                          </dd>
                         </div>
-
-                        {
-                          resultado
-                            .contingencia >
-                            0 && (
-                            <small className="transit-detail">
-                              Base{" "}
-                              {
-                                resultado
-                                  .transitoOriginalMin
-                              }
-
-                              {" – "}
-
-                              {
-                                resultado
-                                  .transitoOriginalMax
-                              }{" "}
-                              días + {
-                                resultado
-                                  .contingencia
-                              }{" "}
-                              {
-                                resultado
-                                  .contingencia === 1
-                                  ? "día"
-                                  : "días"
-                              }{" "}
-                              de contingencia
-                            </small>
-                          )
-                        }
-                      </>
+                      </dl>
                     )
                     : (
                       <div className="cost-row transit-row">

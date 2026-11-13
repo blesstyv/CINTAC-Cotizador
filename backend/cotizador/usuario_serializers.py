@@ -543,6 +543,12 @@ class ActualizarUsuarioSerializer(
                 valor,
             )
 
+        rol_anterior = (
+            instance
+            .perfil_cintac
+            .rol
+        )
+
         instance.is_active = activo
 
         if password:
@@ -551,6 +557,14 @@ class ActualizarUsuarioSerializer(
             )
 
         instance.save()
+
+        # Un cambio de contraseña o de rol invalida las sesiones
+        # abiertas: el usuario debe volver a autenticarse con sus
+        # nuevas credenciales y permisos.
+        if password or rol != rol_anterior:
+            Token.objects.filter(
+                user=instance
+            ).delete()
 
         _configurar_perfil(
             instance.perfil_cintac,

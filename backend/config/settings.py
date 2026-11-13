@@ -1,7 +1,9 @@
 import os
+import sys
 from pathlib import Path
 
 import dj_database_url
+from django.utils.csp import CSP
 from dotenv import load_dotenv
 
 
@@ -84,6 +86,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "django.middleware.csp.ContentSecurityPolicyMiddleware",
 ]
 
 
@@ -207,6 +210,33 @@ CORS_ALLOWED_ORIGIN_REGEXES = [
 ]
 
 
+# Permite al frontend leer el nombre del archivo CSV exportado.
+CORS_EXPOSE_HEADERS = [
+    "Content-Disposition",
+]
+
+
+TESTING = (
+    len(sys.argv) > 1
+    and sys.argv[1] == "test"
+)
+
+
+# Tras una falla de la fuente externa del dólar, se usa el respaldo
+# almacenado sin reintentar durante este período (evita esperar el
+# tiempo de red en cada cotización). Desactivado durante las pruebas.
+TIPO_CAMBIO_REINTENTO_SEGUNDOS = (
+    0
+    if TESTING
+    else int(
+        os.getenv(
+            "TIPO_CAMBIO_REINTENTO_SEGUNDOS",
+            "300",
+        )
+    )
+)
+
+
 TOKEN_EXPIRATION_HOURS = int(
     os.getenv(
         "TOKEN_EXPIRATION_HOURS",
@@ -227,6 +257,62 @@ REST_FRAMEWORK = {
     "DEFAULT_THROTTLE_RATES": {
         "login": "5/minute",
     },
+
+    # Errores no controlados: JSON genérico y registro en el log.
+    "EXCEPTION_HANDLER":
+        "cotizador.excepciones.manejar_excepcion_api",
+}
+
+
+# Bloqueo por cuenta tras intentos fallidos consecutivos
+# (complementa el límite por IP del endpoint de login).
+LOGIN_MAX_FALLOS = int(
+    os.getenv(
+        "LOGIN_MAX_FALLOS",
+        "10",
+    )
+)
+
+LOGIN_BLOQUEO_SEGUNDOS = int(
+    os.getenv(
+        "LOGIN_BLOQUEO_SEGUNDOS",
+        "900",
+    )
+)
+
+
+# Límite de tamaño de solicitudes (el Excel admite 5 MB).
+DATA_UPLOAD_MAX_MEMORY_SIZE = 6 * 1024 * 1024
+
+FILE_UPLOAD_MAX_MEMORY_SIZE = 6 * 1024 * 1024
+
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "simple": {
+            "format":
+                "%(asctime)s %(levelname)s %(name)s: %(message)s",
+        },
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "simple",
+        },
+    },
+    "root": {
+        "handlers": ["console"],
+        "level": "WARNING",
+    },
+    "loggers": {
+        "cotizador": {
+            "handlers": ["console"],
+            "level": os.getenv("CINTAC_LOG_LEVEL", "INFO"),
+            "propagate": False,
+        },
+    },
 }
 
 
@@ -234,9 +320,32 @@ X_FRAME_OPTIONS = "DENY"
 
 SECURE_CONTENT_TYPE_NOSNIFF = True
 
+SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"
+
+SECURE_CROSS_ORIGIN_OPENER_POLICY = "same-origin"
+
+# CSP de la API y del panel /admin/ de Django. El frontend React se
+# publica en otro origen (sitio estático de Render) con su propia CSP.
+SECURE_CSP = {
+    "default-src": [CSP.SELF],
+    "script-src": [CSP.SELF],
+    "style-src": [CSP.SELF, CSP.UNSAFE_INLINE],
+    "img-src": [CSP.SELF, "data:"],
+    "font-src": [CSP.SELF],
+    "connect-src": [CSP.SELF],
+    "object-src": [CSP.NONE],
+    "base-uri": [CSP.SELF],
+    "form-action": [CSP.SELF],
+    "frame-ancestors": [CSP.NONE],
+}
+
 SESSION_COOKIE_HTTPONLY = True
 
+SESSION_COOKIE_SAMESITE = "Lax"
+
 CSRF_COOKIE_HTTPONLY = True
+
+CSRF_COOKIE_SAMESITE = "Lax"
 
 SECURE_PROXY_SSL_HEADER = (
     "HTTP_X_FORWARDED_PROTO",

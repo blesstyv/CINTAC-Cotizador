@@ -1161,3 +1161,281 @@
     min-width: 900px;
   }
 }
+
+/* ==========================================================
+   EVA3 · Comparación de cambios y bitácora
+   ========================================================== */
+
+.admin-diff {
+  margin-top: 28px;
+}
+
+
+.admin-diff-title {
+  margin: 0 0 12px;
+
+  font-size: 16px;
+}
+
+
+.admin-diff-grid {
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+}
+
+
+.admin-diff-old {
+  color: #8a8d91;
+
+  text-decoration: line-through;
+}
+
+
+.admin-diff-new {
+  color: #b23c00;
+
+  font-weight: 700;
+}
+
+
+.admin-badge {
+  display: inline-block;
+
+  padding: 3px 8px;
+
+  border-radius: 999px;
+
+  font-size: 11px;
+
+  font-weight: 700;
+
+  white-space: nowrap;
+}
+
+
+.admin-badge-new {
+  background: #e7f6ec;
+
+  color: #1d6b3a;
+}
+
+
+.admin-badge-changed {
+  background: #fff1eb;
+
+  color: #a53c00;
+}
+
+
+.admin-badge-ok {
+  background: #e7f6ec;
+
+  color: #1d6b3a;
+}
+
+
+.admin-badge-error {
+  background: #fdecea;
+
+  color: #a32a1f;
+}
+
+
+.admin-op-note {
+  display: block;
+
+  color: #8a8d91;
+
+  font-size: 11px;
+}
+
+
+.admin-restore-button {
+  padding: 7px 12px;
+
+  border: 1px solid #ff4f00;
+
+  border-radius: 2px;
+
+  background: #ffffff;
+
+  color: #c43d00;
+
+  font-size: 12px;
+
+  font-weight: 700;
+
+  cursor: pointer;
+
+  white-space: nowrap;
+}
+
+
+.admin-restore-button:hover:not(:disabled) {
+  background: #fff1eb;
+}
+
+
+.admin-restore-button:disabled {
+  opacity: 0.55;
+
+  cursor: not-allowed;
+}
+
+
+.sr-only {
+  position: absolute;
+
+  width: 1px;
+  height: 1px;
+
+  padding: 0;
+  margin: -1px;
+
+  overflow: hidden;
+
+  clip: rect(0, 0, 0, 0);
+
+  white-space: nowrap;
+
+  border: 0;
+}
+
+
+/* ==========================================================
+   EVA3 · Gestión manual de puertos, rutas y tarifas
+   ========================================================== */
+
+.rutas-mensaje {
+  margin: 0 0 16px;
+
+  padding: 10px 14px;
+
+  border-left: 3px solid #1d6b3a;
+
+  background: #e7f6ec;
+
+  color: #1d6b3a;
+
+  font-size: 13px;
+
+  font-weight: 600;
+}
+
+
+.rutas-form {
+  margin-bottom: 22px;
+
+  padding: 18px;
+
+  border: 1px solid #e3e6e8;
+
+  border-top: 3px solid #ff4f00;
+
+  background: #fafafa;
+}
+
+
+.rutas-form h3 {
+  margin: 0 0 14px;
+
+  font-size: 16px;
+}
+
+
+.rutas-form-grid {
+  display: grid;
+
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+
+  gap: 14px;
+}
+
+
+.rutas-field,
+.rutas-busqueda {
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 6px;
+}
+
+
+.rutas-field label,
+.rutas-busqueda label {
+  font-size: 12px;
+
+  font-weight: 600;
+}
+
+
+.rutas-field input,
+.rutas-field select,
+.rutas-busqueda input {
+  width: 100%;
+
+  min-height: 42px;
+
+  padding: 8px 11px;
+
+  border: 1px solid #d0d4d7;
+
+  border-radius: 2px;
+
+  background: #ffffff;
+
+  color: #41454a;
+
+  font: inherit;
+}
+
+
+.rutas-field input:disabled,
+.rutas-field select:disabled {
+  background: #f0f1f2;
+
+  color: #8a8d91;
+}
+
+
+.rutas-errores {
+  margin: 14px 0 0;
+
+  padding: 10px 14px 10px 30px;
+
+  border-left: 3px solid #d73f32;
+
+  background: #fff4f3;
+
+  color: #a32a1f;
+
+  font-size: 13px;
+}
+
+
+.rutas-form-actions {
+  margin-top: 16px;
+
+  display: flex;
+
+  justify-content: flex-end;
+
+  flex-wrap: wrap;
+
+  gap: 9px;
+}
+
+
+.rutas-busqueda {
+  max-width: 320px;
+
+  margin-bottom: 14px;
+}
+
+
+/* Auditoría EVA3: los textos solo para lectores de pantalla dentro de
+   una tabla ancha quedaban fuera del área con scroll y generaban
+   desplazamiento horizontal de toda la página en teléfonos. */
+.admin-table-container {
+  position: relative;
+}

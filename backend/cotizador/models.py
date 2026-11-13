@@ -789,6 +789,37 @@ class Cotizacion(models.Model):
         blank=True,
     )
 
+    # Instantánea del total final (flete + valor de carga) tal como
+    # se informó al usuario. Se persiste para que el historial nunca
+    # dependa de recalcular con reglas, tarifas o dólares posteriores.
+    total_final_min = models.DecimalField(
+        max_digits=21,
+        decimal_places=2,
+        null=True,
+        blank=True,
+    )
+
+    total_final_max = models.DecimalField(
+        max_digits=21,
+        decimal_places=2,
+        null=True,
+        blank=True,
+    )
+
+    total_final_min_clp = models.DecimalField(
+        max_digits=25,
+        decimal_places=2,
+        null=True,
+        blank=True,
+    )
+
+    total_final_max_clp = models.DecimalField(
+        max_digits=25,
+        decimal_places=2,
+        null=True,
+        blank=True,
+    )
+
     class Meta:
         ordering = [
             "-creada_en",
@@ -884,6 +915,46 @@ class Cotizacion(models.Model):
                 ),
                 name="cot_valor_carga_moneda_valida",
             ),
+
+            models.CheckConstraint(
+                condition=(
+                    models.Q(total_final_min__isnull=True)
+                    | models.Q(
+                        total_final_min__gte=models.F("total_min")
+                    )
+                ),
+                name="cot_total_final_min_ge_flete",
+            ),
+
+            models.CheckConstraint(
+                condition=(
+                    models.Q(total_final_max__isnull=True)
+                    | models.Q(
+                        total_final_max__gte=models.F("total_max")
+                    )
+                ),
+                name="cot_total_final_max_ge_flete",
+            ),
+
+            # Sin monto ingresado no puede existir cargo en USD.
+            models.CheckConstraint(
+                condition=(
+                    models.Q(valor_carga_ingresado__gt=0)
+                    | models.Q(valor_carga=0)
+                ),
+                name="cot_valor_carga_sin_monto_cero",
+            ),
+
+            # En USD el equivalente es el mismo monto ingresado.
+            models.CheckConstraint(
+                condition=(
+                    models.Q(valor_carga_moneda="CLP")
+                    | models.Q(
+                        valor_carga=models.F("valor_carga_ingresado")
+                    )
+                ),
+                name="cot_valor_carga_usd_coherente",
+            ),
         ]
 
     def __str__(self):
@@ -891,4 +962,138 @@ class Cotizacion(models.Model):
             f"Cotización #{self.id} - "
             f"{self.usuario.username} - "
             f"{self.origen} → {self.destino}"
+        )
+
+class OperacionDatosMaestros(models.Model):
+    """
+    Bitácora de cambios administrativos sobre los datos maestros.
+
+    Cada importación o restauración guarda quién la realizó, cuándo,
+    con qué archivo (nombre y SHA-256), un resumen del resultado y una
+    instantánea completa del estado ANTERIOR. Esa instantánea permite
+    recuperar los datos maestros previos de forma controlada; la propia
+    restauración vuelve a registrar el estado que reemplaza, por lo
+    que también puede revertirse.
+    """
+
+    class Tipo(models.TextChoices):
+        IMPORTACION_EXCEL = (
+            "IMPORTACION_EXCEL",
+            "Importación Excel",
+        )
+        RESTAURACION = (
+            "RESTAURACION",
+            "Restauración",
+        )
+        EDICION_MANUAL = (
+            "EDICION_MANUAL",
+            "Edición manual",
+        )
+
+    class Estado(models.TextChoices):
+        COMPLETADA = "COMPLETADA", "Completada"
+        FALLIDA = "FALLIDA", "Fallida"
+
+    tipo = models.CharField(
+        max_length=20,
+        choices=Tipo.choices,
+    )
+
+    estado = models.CharField(
+        max_length=12,
+        choices=Estado.choices,
+        default=Estado.COMPLETADA,
+    )
+
+    usuario = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="operaciones_datos_cintac",
+    )
+
+    usuario_username = models.CharField(
+        max_length=150,
+        help_text="Nombre de usuario conservado aunque la cuenta cambie.",
+    )
+
+    creada_en = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    archivo_nombre = models.CharField(
+        max_length=255,
+        blank=True,
+    )
+
+    archivo_sha256 = models.CharField(
+        max_length=64,
+        blank=True,
+    )
+
+    resumen = models.JSONField(
+        default=dict,
+        blank=True,
+    )
+
+    estado_previo = models.JSONField(
+        null=True,
+        blank=True,
+        help_text=(
+            "Instantánea de los datos maestros antes de la operación."
+        ),
+    )
+
+    restaurada_desde = models.ForeignKey(
+        "self",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="restauraciones",
+    )
+
+    detalle = models.TextField(
+        blank=True,
+    )
+
+    class Meta:
+        ordering = [
+            "-creada_en",
+            "-id",
+        ]
+
+        indexes = [
+            models.Index(
+                fields=["-creada_en"],
+                name="op_datos_fecha_idx",
+            ),
+        ]
+
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(
+                    tipo__in=[
+                        "IMPORTACION_EXCEL",
+                        "RESTAURACION",
+                        "EDICION_MANUAL",
+                    ]
+                ),
+                name="op_datos_tipo_valido",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    ~models.Q(tipo="RESTAURACION")
+                    | ~models.Q(estado="COMPLETADA")
+                    | models.Q(restaurada_desde__isnull=False)
+                ),
+                name="op_datos_restauracion_con_origen",
+            ),
+        ]
+
+    def __str__(self):
+        return (
+            f"{self.get_tipo_display()} #{self.id} - "
+            f"{self.usuario_username} - "
+            f"{self.get_estado_display()}"
         )

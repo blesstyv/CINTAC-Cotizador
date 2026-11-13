@@ -1,4 +1,21 @@
+"""
+Obtención del tipo de cambio USD/CLP con trazabilidad del origen.
+
+Modos informados al usuario:
+
+* ``en_linea``: consultado ahora en la fuente externa (mindicador.cl).
+* ``cache``: valor consultado en línea hace menos de CACHE_MINUTOS y
+  cuya fecha de referencia sigue vigente (no se vuelve a consultar).
+* ``respaldo``: la fuente externa no respondió; se usa el último valor
+  almacenado en PostgreSQL, informando su fecha y antigüedad.
+
+Si la fuente falla, se evita reintentar en cada cotización durante
+TIPO_CAMBIO_REINTENTO_SEGUNDOS para no bloquear al usuario con el
+tiempo de espera de la red.
+"""
+
 import json
+import logging
 
 from datetime import timedelta
 
@@ -17,6 +34,8 @@ from urllib.request import (
     urlopen,
 )
 
+from django.conf import settings
+from django.core.cache import cache as cache_django
 from django.utils import timezone
 
 from django.utils.dateparse import (
@@ -39,6 +58,14 @@ FUENTE_DOLAR = (
 TIMEOUT_SEGUNDOS = 5
 
 CACHE_MINUTOS = 60
+
+# Un valor con fecha de referencia más antigua que esto se informa
+# como desactualizado (cubre fines de semana largos y feriados).
+DIAS_VIGENCIA = 5
+
+CLAVE_FALLO_RECIENTE = "cintac:tipo_cambio:fallo_reciente"
+
+logger = logging.getLogger(__name__)
 
 
 class TipoCambioNoDisponible(
@@ -88,12 +115,21 @@ def _obtener_cache_reciente():
         )
     )
 
+    # Un registro recién creado con una fecha de referencia antigua
+    # (por ejemplo, el respaldo cargado en el despliegue) no es una
+    # consulta reciente: no debe ocultar el intento en línea.
+    fecha_minima = (
+        timezone.localdate()
+        - timedelta(days=DIAS_VIGENCIA)
+    )
+
     return (
         TipoCambio.objects
         .filter(
             moneda_origen="USD",
             moneda_destino="CLP",
             obtenido_en__gte=limite,
+            fecha_referencia__gte=fecha_minima,
         )
         .order_by(
             "-fecha_referencia",
@@ -330,74 +366,124 @@ def _obtener_desde_internet():
     )
 
 
+def antiguedad_dias(fecha_referencia):
+    """Días transcurridos desde la fecha de referencia del dólar."""
+    if fecha_referencia is None:
+        return None
+
+    return max(
+        (timezone.localdate() - fecha_referencia).days,
+        0,
+    )
+
+
+def _resultado(registro, modo):
+    antiguedad = antiguedad_dias(
+        registro.fecha_referencia
+    )
+
+    return {
+        "valor":
+            registro.valor,
+
+        "fecha":
+            registro.fecha_referencia,
+
+        "fuente":
+            registro.fuente,
+
+        "modo":
+            modo,
+
+        "obtenidoEn":
+            registro.obtenido_en,
+
+        "antiguedadDias":
+            antiguedad,
+
+        "desactualizado":
+            (
+                antiguedad is not None
+                and antiguedad > DIAS_VIGENCIA
+            ),
+    }
+
+
+def _reintento_suspendido():
+    espera = getattr(
+        settings,
+        "TIPO_CAMBIO_REINTENTO_SEGUNDOS",
+        0,
+    )
+
+    return (
+        espera > 0
+        and bool(cache_django.get(CLAVE_FALLO_RECIENTE))
+    )
+
+
+def _registrar_fallo():
+    espera = getattr(
+        settings,
+        "TIPO_CAMBIO_REINTENTO_SEGUNDOS",
+        0,
+    )
+
+    if espera > 0:
+        cache_django.set(
+            CLAVE_FALLO_RECIENTE,
+            True,
+            espera,
+        )
+
+
 def obtener_tipo_cambio():
     cache = (
         _obtener_cache_reciente()
     )
 
     if cache is not None:
-        return {
-            "valor":
-                cache.valor,
-
-            "fecha":
-                cache.fecha_referencia,
-
-            "fuente":
-                cache.fuente,
-
-            "modo":
-                "cache",
-        }
-
-
-    try:
-        registro = (
-            _obtener_desde_internet()
+        return _resultado(
+            cache,
+            "cache",
         )
 
-        return {
-            "valor":
-                registro.valor,
-
-            "fecha":
-                registro.fecha_referencia,
-
-            "fuente":
-                registro.fuente,
-
-            "modo":
-                "en_linea",
-        }
-
-    except TipoCambioNoDisponible:
-        respaldo = (
-            _obtener_ultimo_respaldo()
-        )
-
-        if respaldo is None:
-            raise TipoCambioNoDisponible(
-                (
-                    "No fue posible obtener "
-                    "el tipo de cambio y no "
-                    "existe un valor de "
-                    "respaldo almacenado."
-                )
+    if not _reintento_suspendido():
+        try:
+            registro = (
+                _obtener_desde_internet()
             )
 
-        return {
-            "valor":
-                respaldo.valor,
+            return _resultado(
+                registro,
+                "en_linea",
+            )
 
-            "fecha":
-                respaldo.fecha_referencia,
+        except TipoCambioNoDisponible as error:
+            logger.warning(
+                "Tipo de cambio en línea no disponible: %s",
+                error,
+            )
+            _registrar_fallo()
 
-            "fuente":
-                respaldo.fuente,
+    respaldo = (
+        _obtener_ultimo_respaldo()
+    )
 
-            "modo":
-                "respaldo",
-        }
+    if respaldo is None:
+        raise TipoCambioNoDisponible(
+            (
+                "No fue posible obtener "
+                "el tipo de cambio y no "
+                "existe un valor de "
+                "respaldo almacenado."
+            )
+        )
+
+    return _resultado(
+        respaldo,
+        "respaldo",
+    )
 
 
 def convertir_usd_a_clp(
