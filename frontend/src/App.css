@@ -2876,3 +2876,25 @@ form {
     white-space: normal;
   }
 }
+
+
+/* Auditoría EVA3: con tres acciones en el encabezado (historial,
+   administración y cerrar sesión) el contenido se salía de la
+   pantalla en teléfonos. Se permite que las acciones bajen de línea. */
+@media (max-width: 650px) {
+  .header-inner {
+    flex-wrap: wrap;
+
+    row-gap: 10px;
+  }
+
+  .header-user {
+    flex-wrap: wrap;
+
+    justify-content: flex-end;
+
+    gap: 6px;
+
+    min-width: 0;
+  }
+}

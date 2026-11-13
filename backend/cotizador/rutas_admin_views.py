@@ -16,7 +16,7 @@ Las cotizaciones del historial no cambian: conservan sus propios valores.
 
 from decimal import Decimal
 
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.db.models import Prefetch
 
 from rest_framework import serializers, status
@@ -311,8 +311,25 @@ def rutas_admin(request):
 
     serializer = CrearRutaSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
-    datos = serializer.validated_data
 
+    try:
+        return _crear_ruta(request, serializer.validated_data)
+
+    except IntegrityError:
+        # Dos personas crearon la misma ruta al mismo tiempo: la
+        # restricción UNIQUE de PostgreSQL rechaza la segunda.
+        return Response(
+            {
+                "detail": (
+                    "La ruta o el puerto ya fue creado por otra "
+                    "persona. Actualice la página."
+                )
+            },
+            status=status.HTTP_409_CONFLICT,
+        )
+
+
+def _crear_ruta(request, datos):
     with transaction.atomic():
         estado_previo = capturar_estado()
 

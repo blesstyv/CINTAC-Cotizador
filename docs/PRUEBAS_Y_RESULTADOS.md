@@ -16,7 +16,7 @@ Fecha de ejecución: 13-11-2026 (última ejecución completa) · Rama `eva3-fina
 | Migraciones sin cambios pendientes | `makemigrations --check --dry-run` | ✅ No changes detected |
 | Configuración | `manage.py check` | ✅ 0 issues |
 | Configuración de producción | `check --deploy --fail-level WARNING` (DEBUG=False) | ✅ 0 issues |
-| Suite Django | `manage.py test cotizador` | ✅ **312 pruebas, 0 fallos, 0 errores** |
+| Suite Django | `manage.py test cotizador` | ✅ **313 pruebas, 0 fallos, 0 errores** |
 | Cobertura (ramas) | `coverage run … && coverage report` | ✅ **92 %** (umbral CI: 85 %) |
 | Dependencias Python | `pip-audit -r requirements.txt --strict` | ✅ sin vulnerabilidades (antes: 3 CVE en DRF) |
 | Dependencias Node | `npm audit` | ✅ 0 vulnerabilidades |
@@ -26,9 +26,9 @@ Fecha de ejecución: 13-11-2026 (última ejecución completa) · Rama `eva3-fina
 | Reversión de migraciones | `migrate cotizador 0011` y vuelta | ✅ sin errores |
 | E2E en navegador (Chrome headless) | flujo real frontend + API + PostgreSQL | ✅ sin errores de consola |
 
-Línea base: 224 pruebas OK. Se agregaron **88**: 8 de bootstrap, 28 de cotización/valor
+Línea base: 224 pruebas OK. Se agregaron **89**: 8 de bootstrap, 28 de cotización/valor
 de carga/tipo de cambio, 36 de seguridad, permisos, CSV, Excel, bitácora y restauración,
-y 16 de gestión manual de rutas y puertos. Las 224 originales se conservaron.
+y 17 de gestión manual de rutas y puertos. Las 224 originales se conservaron.
 
 ## Cobertura del plan (qué se prueba)
 
@@ -81,6 +81,26 @@ Ruta Shanghai → San Antonio, 60.000 kg, contenedor 20' (23 TN), dólar 950,25.
    administrador, forzaba superusuario y reescribía capacidades en cada despliegue.
 5. **Exportación CSV** con punto decimal y separador `;`: Excel en español la interpretaba
    mal. Ahora usa coma decimal.
+
+6. **Auditoría del 13-11 — desborde horizontal en teléfonos:** en Administración la página
+   completa se desplazaba ~526 px (textos para lectores de pantalla dentro de tablas anchas)
+   y el encabezado se salía 17 px con tres botones. Corregido y verificado en 360 px y 390 px
+   en login, cotizador, historial, detalle y administración (desborde 0).
+7. **Auditoría del 13-11 — creación simultánea de la misma ruta:** respondía un error
+   genérico; ahora responde 409 con un mensaje claro.
+
+## Auditoría final (13-11-2026)
+
+| Verificación | Resultado |
+|---|---|
+| Clon limpio de la rama publicada + suite completa | ✅ 313 pruebas OK |
+| Secretos en el repositorio | ✅ ninguno |
+| E2E USUARIO: cotizar con y sin valor de la carga | ✅ sin errores de consola |
+| E2E ENCARGADO: crear puerto y ruta, editar tarifa, cotizar en el puerto nuevo | ✅ |
+| E2E ADMINISTRADOR: Excel, bitácora, restauración, CSV | ✅ |
+| Sondeos de API (sin token, token falso, escalada por rol, campo `cantidad` enviado por el cliente, valor negativo, inyección en filtros, CORS ajeno) | ✅ 401/403/400 según corresponde |
+| Capacidades vigentes | ✅ 20' = 23 TN, 40' = 25 TN |
+| "Fuente" visible en alguna pantalla | ✅ no |
 
 ## Limitaciones de la evidencia
 

@@ -1431,3 +1431,11 @@
 
   margin-bottom: 14px;
 }
+
+
+/* Auditoría EVA3: los textos solo para lectores de pantalla dentro de
+   una tabla ancha quedaban fuera del área con scroll y generaban
+   desplazamiento horizontal de toda la página en teléfonos. */
+.admin-table-container {
+  position: relative;
+}

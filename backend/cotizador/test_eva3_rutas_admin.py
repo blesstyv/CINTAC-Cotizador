@@ -152,6 +152,17 @@ class CrearRutaTests(BaseEva3):
         self.assertEqual(Puerto.objects.count(), 2)
         self.assertFalse(OperacionDatosMaestros.objects.exists())
 
+    @patch("cotizador.rutas_admin_views.Ruta.objects.create")
+    def test_creacion_simultanea_responde_conflicto(self, mock_create):
+        from django.db import IntegrityError
+        mock_create.side_effect = IntegrityError("duplicada")
+        respuesta = _cliente(self.encargado).post(
+            URL, _nueva(), format="json"
+        )
+        self.assertEqual(respuesta.status_code, 409)
+        self.assertFalse(Puerto.objects.filter(nombre="Singapur").exists())
+        self.assertFalse(OperacionDatosMaestros.objects.exists())
+
     def test_validaciones(self):
         invalidos = {
             "tarifa negativa": {"tarifa20_min": "-5"},
