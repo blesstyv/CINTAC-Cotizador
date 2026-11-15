@@ -181,6 +181,11 @@ class CrearRutaTests(BaseEva3):
             2,
         )
 
+        rutas_publicas = _cliente(self.usuario).get("/api/rutas/").data
+        callao = [r for r in rutas_publicas if r["destino"] == "Callao"]
+        self.assertEqual(len(callao), 2)
+        self.assertTrue(all(r["paisDestino"] == "Perú" for r in callao))
+
     def test_client_callao_transito_min_5_max_3_rechazado(self):
         """La planilla recibida requiere aclaración: rango invertido."""
         respuesta = _cliente(self.encargado).post(
