@@ -186,6 +186,31 @@ class CrearRutaTests(BaseEva3):
         self.assertEqual(len(callao), 2)
         self.assertTrue(all(r["paisDestino"] == "Perú" for r in callao))
 
+        # Tarifas del cliente y capacidades reales, con tiempos de
+        # tránsito ficticios válidos únicamente para el test.
+        for peso, cantidades, sugerida in (
+            ("24", {"20": 2, "40": 1}, "40"),
+            ("46", {"20": 2, "40": 2}, "20"),
+        ):
+            with self.subTest(peso_tn=peso):
+                opciones = _cliente(self.usuario).post(
+                    "/api/opciones-contenedores/",
+                    {
+                        "ruta_id": primera.data["ruta"]["id"],
+                        "peso_carga": peso,
+                        "unidad_peso": "tn",
+                    },
+                    format="json",
+                )
+                self.assertEqual(opciones.status_code, 200)
+                self.assertEqual(opciones.data["sugerida"], sugerida)
+                cantidades_reales = {
+                    op["codigo"]: op["cantidad"]
+                    for op in opciones.data["opciones"]
+                }
+                self.assertEqual(cantidades_reales, cantidades)
+
+
     def test_client_callao_transito_min_5_max_3_rechazado(self):
         """La planilla recibida requiere aclaración: rango invertido."""
         respuesta = _cliente(self.encargado).post(
