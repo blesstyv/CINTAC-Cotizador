@@ -469,8 +469,48 @@ function App() {
   const cotizacionEnCursoRef =
     useRef(false);
 
+  const resultadoRef =
+    useRef(null);
+
   const claveOpcionesRef =
     useRef("");
+
+
+  // Lleva al usuario al resumen al finalizar una cotización.
+  // Respeta la preferencia del sistema para reducir animaciones.
+  useEffect(
+    () => {
+      if (
+        !resultado ||
+        vistaActiva !== "cotizador"
+      ) {
+        return;
+      }
+
+      const panel = resultadoRef.current;
+
+      if (!panel) {
+        return;
+      }
+
+      panel.focus({
+        preventScroll: true,
+      });
+
+      const reducirMovimiento =
+        window.matchMedia(
+          "(prefers-reduced-motion: reduce)"
+        ).matches;
+
+      panel.scrollIntoView({
+        behavior: reducirMovimiento
+          ? "auto"
+          : "smooth",
+        block: "start",
+      });
+    },
+    [resultado, vistaActiva]
+  );
 
 
   // Muestra decimales sólo cuando el monto tiene centavos
@@ -2975,7 +3015,13 @@ function App() {
         </section>
 
 
-        <aside className="result-card">
+        <aside
+          className="result-card"
+          ref={resultadoRef}
+          role="region"
+          aria-labelledby="titulo-resultado-cintac"
+          tabIndex={-1}
+        >
           <div className="result-header">
             <span className="result-number">
               02
@@ -2986,7 +3032,7 @@ function App() {
                 RESULTADO
               </span>
 
-              <h2>
+              <h2 id="titulo-resultado-cintac">
                 Cotización
                 {
                   resultado?.historialId
@@ -3104,6 +3150,72 @@ function App() {
                 </div>
               </div>
 
+
+              <div className="total-result">
+                <span>
+                  TOTAL FINAL (USD)
+                </span>
+
+                <strong>
+                  US${" "}
+                  {
+                    formatearMontoUSD(
+                      resultado.totalFinalMin ??
+                      resultado.totalMin
+                    )
+                  }
+
+                  {" – "}
+
+                  {
+                    formatearMontoUSD(
+                      resultado.totalFinalMax ??
+                      resultado.totalMax
+                    )
+                  }
+                </strong>
+
+                <small>
+                  {
+                    valorCargaIncluido
+                      ? "Flete total + valor de la carga"
+                      : "Corresponde al flete total"
+                  }
+                </small>
+
+
+                {
+                  resultado.conversionDisponible && (
+                    <div className="result-clp-quick">
+                      <span>Equivalente referencial en CLP</span>
+                      <strong>
+                        $
+                        {
+                          formatearCLP(
+                            resultado.totalFinalMinCLP ??
+                            resultado.totalMinCLP
+                          )
+                        }
+                        {" – $"}
+                        {
+                          formatearCLP(
+                            resultado.totalFinalMaxCLP ??
+                            resultado.totalMaxCLP
+                          )
+                        }
+                      </strong>
+                    </div>
+                  )
+                }
+              </div>
+
+
+              <details className="result-details">
+                <summary className="result-details-summary">
+                  Desglose financiero, dólar y tránsito
+                </summary>
+
+                <div className="result-details-content">
 
               <div className="cost-breakdown">
                 <span className="result-section-title">
@@ -3260,40 +3372,6 @@ function App() {
                     </dd>
                   </div>
                 </dl>
-              </div>
-
-
-              <div className="total-result">
-                <span>
-                  TOTAL FINAL (USD)
-                </span>
-
-                <strong>
-                  US${" "}
-                  {
-                    formatearMontoUSD(
-                      resultado.totalFinalMin ??
-                      resultado.totalMin
-                    )
-                  }
-
-                  {" – "}
-
-                  {
-                    formatearMontoUSD(
-                      resultado.totalFinalMax ??
-                      resultado.totalMax
-                    )
-                  }
-                </strong>
-
-                <small>
-                  {
-                    valorCargaIncluido
-                      ? "Flete total + valor de la carga"
-                      : "Corresponde al flete total"
-                  }
-                </small>
               </div>
 
 
@@ -3535,6 +3613,9 @@ function App() {
                     )
                 }
               </div>
+
+                </div>
+              </details>
 
 
               <div className="result-actions">
