@@ -6,3 +6,4 @@ pip install -r requirements.txt
 python manage.py collectstatic --no-input
 python manage.py migrate
 python manage.py bootstrap_production
+python manage.py incorporar_rutas_callao
