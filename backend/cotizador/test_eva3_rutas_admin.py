@@ -140,6 +140,72 @@ class CrearRutaTests(BaseEva3):
         self.assertEqual(cotizacion.data["totalMin"], "3600.00")
         self.assertEqual(cotizacion.data["transitoMax"], 40)
 
+
+    def test_dos_rutas_a_callao_reutilizan_puerto_peruano(self):
+        """Valida rutas internacionales sin asumir destino Chile."""
+        cliente = _cliente(self.encargado)
+
+        datos = _nueva(
+            origen="San Antonio",
+            pais_origen="Chile",
+            destino="Callao",
+            pais_destino="Perú",
+            tipo_ruta="Directo",
+            tarifa20_min="900",
+            tarifa20_max="900",
+            tarifa40_min="970",
+            tarifa40_max="970",
+            transito_min=2,
+            transito_max=4,
+        )
+        primera = cliente.post(URL, datos, format="json")
+        self.assertEqual(primera.status_code, 201, primera.data)
+        self.assertEqual(primera.data["ruta"]["paisDestino"], "Perú")
+
+        segunda = cliente.post(
+            URL,
+            {**datos, "origen": "Valparaiso"},
+            format="json",
+        )
+        self.assertEqual(segunda.status_code, 201, segunda.data)
+
+        self.assertEqual(
+            Puerto.objects.filter(
+                nombre__iexact="Callao",
+                pais__iexact="Perú",
+            ).count(),
+            1,
+        )
+        self.assertEqual(
+            Ruta.objects.filter(puerto_destino__nombre="Callao").count(),
+            2,
+        )
+
+    def test_client_callao_transito_min_5_max_3_rechazado(self):
+        """La planilla recibida requiere aclaración: rango invertido."""
+        respuesta = _cliente(self.encargado).post(
+            URL,
+            _nueva(
+                origen="San Antonio",
+                pais_origen="Chile",
+                destino="Callao",
+                pais_destino="Perú",
+                tipo_ruta="Directo",
+                tarifa20_min="900",
+                tarifa20_max="900",
+                tarifa40_min="970",
+                tarifa40_max="970",
+                transito_min=5,
+                transito_max=3,
+            ),
+            format="json",
+        )
+        self.assertEqual(respuesta.status_code, 400)
+        self.assertIn("transito_max", respuesta.data)
+        self.assertFalse(
+            Ruta.objects.filter(puerto_destino__nombre="Callao").exists()
+        )
+
     def test_ruta_duplicada_no_crea_nada(self):
         respuesta = _cliente(self.encargado).post(
             URL,
