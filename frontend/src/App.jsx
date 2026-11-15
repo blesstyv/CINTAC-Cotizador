@@ -504,7 +504,7 @@ function App() {
 
       panel.scrollIntoView({
         behavior: reducirMovimiento
-          ? "instant"
+          ? "auto"
           : "smooth",
         block: "start",
       });
@@ -3212,7 +3212,7 @@ function App() {
 
               <details className="result-details">
                 <summary className="result-details-summary">
-                  Ver desglose financiero, dólar y tránsito
+                  Desglose financiero, dólar y tránsito
                 </summary>
 
                 <div className="result-details-content">
