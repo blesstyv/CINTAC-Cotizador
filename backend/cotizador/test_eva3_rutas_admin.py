@@ -155,8 +155,8 @@ class CrearRutaTests(BaseEva3):
             tarifa20_max="900",
             tarifa40_min="970",
             tarifa40_max="970",
-            transito_min=2,
-            transito_max=4,
+            transito_min=3,
+            transito_max=5,
         )
         primera = cliente.post(URL, datos, format="json")
         self.assertEqual(primera.status_code, 201, primera.data)
@@ -185,9 +185,11 @@ class CrearRutaTests(BaseEva3):
         callao = [r for r in rutas_publicas if r["destino"] == "Callao"]
         self.assertEqual(len(callao), 2)
         self.assertTrue(all(r["paisDestino"] == "Perú" for r in callao))
+        self.assertTrue(
+            all(r["transitoMin"] == 3 and r["transitoMax"] == 5 for r in callao)
+        )
 
-        # Tarifas del cliente y capacidades reales, con tiempos de
-        # tránsito ficticios válidos únicamente para el test.
+        # Tarifas y tiempos 3–5 días confirmados para el cliente.
         for peso, cantidades, sugerida in (
             ("24", {"20": 2, "40": 1}, "40"),
             ("46", {"20": 2, "40": 2}, "20"),
