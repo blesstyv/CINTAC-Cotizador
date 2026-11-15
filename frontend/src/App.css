@@ -1087,11 +1087,15 @@ form {
 /* RESULTADOS */
 
 .result-card {
-  position: sticky;
+  position: relative;
 
-  top: 20px;
+  top: auto;
 
-  overflow: hidden;
+  min-width: 0;
+
+  overflow: visible;
+
+  scroll-margin-top: 20px;
 }
 
 
@@ -2896,5 +2900,142 @@ form {
     gap: 6px;
 
     min-width: 0;
+  }
+}
+
+
+/* Resultado EVA3: cifras principales accesibles antes del desglose. */
+.result-header {
+  flex-wrap: wrap;
+}
+
+.result-content {
+  min-width: 0;
+}
+
+.total-result {
+  margin: 14px 0 12px;
+}
+
+.total-result > strong {
+  display: block;
+  max-width: 100%;
+  font-size: clamp(1.125rem, 2.25vw, 1.5rem);
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.result-clp-quick {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.35);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.result-clp-quick span {
+  font-size: 10px;
+  font-weight: 600;
+  opacity: 0.9;
+}
+
+.result-clp-quick strong {
+  font-size: clamp(0.94rem, 1.75vw, 1.12rem);
+  font-weight: 700;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+/* Los datos detallados siguen disponibles en un panel desplegable nativo. */
+.result-details {
+  margin: 14px 0;
+  border: 1px solid var(--gray-200);
+  background: white;
+}
+
+.result-details-summary {
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--text-main);
+  background: var(--gray-050);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.4;
+  list-style: none;
+}
+
+.result-details-summary::-webkit-details-marker {
+  display: none;
+}
+
+.result-details-summary::after {
+  content: "+";
+  flex-shrink: 0;
+  color: var(--cintac-orange-dark);
+  font-size: 20px;
+  line-height: 1;
+}
+
+.result-details[open] > .result-details-summary {
+  border-bottom: 1px solid var(--gray-200);
+}
+
+.result-details[open] > .result-details-summary::after {
+  content: "−";
+}
+
+.result-details-summary:hover {
+  background: var(--gray-100);
+}
+
+.result-details-content {
+  min-width: 0;
+  padding: 15px 16px 18px;
+}
+
+.result-details .cost-row {
+  align-items: flex-start;
+}
+
+.result-details .cost-row dt {
+  flex: 1 1 45%;
+  min-width: 0;
+}
+
+.result-details .cost-row dd {
+  flex: 1 1 55%;
+  min-width: 0;
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.result-details .conversion-box strong {
+  max-width: 100%;
+  font-size: clamp(0.95rem, 1.8vw, 1.125rem);
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 520px) {
+  .result-header {
+    padding: 17px 16px;
+  }
+
+  .result-content {
+    padding: 16px;
+  }
+
+  .result-details-content {
+    padding: 12px;
+  }
+
+  .total-result {
+    padding: 15px;
   }
 }
