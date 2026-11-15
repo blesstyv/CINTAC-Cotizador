@@ -140,6 +140,104 @@ class CrearRutaTests(BaseEva3):
         self.assertEqual(cotizacion.data["totalMin"], "3600.00")
         self.assertEqual(cotizacion.data["transitoMax"], 40)
 
+
+    def test_dos_rutas_a_callao_reutilizan_puerto_peruano(self):
+        """Valida rutas internacionales sin asumir destino Chile."""
+        cliente = _cliente(self.encargado)
+
+        datos = _nueva(
+            origen="San Antonio",
+            pais_origen="Chile",
+            destino="Callao",
+            pais_destino="Perú",
+            tipo_ruta="Directo",
+            tarifa20_min="900",
+            tarifa20_max="900",
+            tarifa40_min="970",
+            tarifa40_max="970",
+            transito_min=3,
+            transito_max=5,
+        )
+        primera = cliente.post(URL, datos, format="json")
+        self.assertEqual(primera.status_code, 201, primera.data)
+        self.assertEqual(primera.data["ruta"]["paisDestino"], "Perú")
+
+        segunda = cliente.post(
+            URL,
+            {**datos, "origen": "Valparaiso"},
+            format="json",
+        )
+        self.assertEqual(segunda.status_code, 201, segunda.data)
+
+        self.assertEqual(
+            Puerto.objects.filter(
+                nombre__iexact="Callao",
+                pais__iexact="Perú",
+            ).count(),
+            1,
+        )
+        self.assertEqual(
+            Ruta.objects.filter(puerto_destino__nombre="Callao").count(),
+            2,
+        )
+
+        rutas_publicas = _cliente(self.usuario).get("/api/rutas/").data
+        callao = [r for r in rutas_publicas if r["destino"] == "Callao"]
+        self.assertEqual(len(callao), 2)
+        self.assertTrue(all(r["paisDestino"] == "Perú" for r in callao))
+        self.assertTrue(
+            all(r["transitoMin"] == 3 and r["transitoMax"] == 5 for r in callao)
+        )
+
+        # Tarifas y tiempos 3–5 días confirmados para el cliente.
+        for peso, cantidades, sugerida in (
+            ("24", {"20": 2, "40": 1}, "40"),
+            ("46", {"20": 2, "40": 2}, "20"),
+        ):
+            with self.subTest(peso_tn=peso):
+                opciones = _cliente(self.usuario).post(
+                    "/api/opciones-contenedores/",
+                    {
+                        "ruta_id": primera.data["ruta"]["id"],
+                        "peso_carga": peso,
+                        "unidad_peso": "tn",
+                    },
+                    format="json",
+                )
+                self.assertEqual(opciones.status_code, 200)
+                self.assertEqual(opciones.data["sugerida"], sugerida)
+                cantidades_reales = {
+                    op["codigo"]: op["cantidad"]
+                    for op in opciones.data["opciones"]
+                }
+                self.assertEqual(cantidades_reales, cantidades)
+
+
+    def test_client_callao_transito_min_5_max_3_rechazado(self):
+        """La planilla recibida requiere aclaración: rango invertido."""
+        respuesta = _cliente(self.encargado).post(
+            URL,
+            _nueva(
+                origen="San Antonio",
+                pais_origen="Chile",
+                destino="Callao",
+                pais_destino="Perú",
+                tipo_ruta="Directo",
+                tarifa20_min="900",
+                tarifa20_max="900",
+                tarifa40_min="970",
+                tarifa40_max="970",
+                transito_min=5,
+                transito_max=3,
+            ),
+            format="json",
+        )
+        self.assertEqual(respuesta.status_code, 400)
+        self.assertIn("transito_max", respuesta.data)
+        self.assertFalse(
+            Ruta.objects.filter(puerto_destino__nombre="Callao").exists()
+        )
+
     def test_ruta_duplicada_no_crea_nada(self):
         respuesta = _cliente(self.encargado).post(
             URL,

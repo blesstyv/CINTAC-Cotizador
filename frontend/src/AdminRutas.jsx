@@ -10,6 +10,7 @@ const FORMULARIO_VACIO = {
   origen: "",
   pais_origen: "",
   destino: "",
+  pais_destino: "",
   tipo_ruta: "Directo / Transbordo",
   tarifa20_min: "",
   tarifa20_max: "",
@@ -74,6 +75,10 @@ function validarFormulario(formulario, editando) {
 
     if (!formulario.destino.trim()) {
       errores.push("Seleccione o ingrese el puerto de destino.");
+    }
+
+    if (!formulario.pais_destino.trim()) {
+      errores.push("Ingrese el país de destino.");
     }
   }
 
@@ -236,6 +241,7 @@ function AdminRutas({
       origen: ruta.origen,
       pais_origen: ruta.paisOrigen,
       destino: ruta.destino,
+      pais_destino: ruta.paisDestino ?? "Chile",
       tipo_ruta: ruta.tipoRuta,
       tarifa20_min: ruta.tarifa20Min ?? "",
       tarifa20_max: ruta.tarifa20Max ?? "",
@@ -297,6 +303,7 @@ function AdminRutas({
         origen: formulario.origen.trim(),
         pais_origen: formulario.pais_origen.trim(),
         destino: formulario.destino.trim(),
+        pais_destino: formulario.pais_destino.trim(),
         tipo_ruta: formulario.tipo_ruta,
         ...numericos,
       };
@@ -369,7 +376,7 @@ function AdminRutas({
 
   const rutasVisibles = texto
     ? rutas.filter((ruta) =>
-      `${ruta.origen} ${ruta.paisOrigen} ${ruta.destino}`
+      `${ruta.origen} ${ruta.paisOrigen} ${ruta.destino} ${ruta.paisDestino || ""}`
         .toLowerCase()
         .includes(texto)
     )
@@ -480,7 +487,7 @@ function AdminRutas({
 
             <div className="rutas-field">
               <label htmlFor="ruta-destino">
-                Puerto de destino (Chile)
+                Puerto de destino
               </label>
 
               <input
@@ -494,7 +501,7 @@ function AdminRutas({
                   actualizarCampo("destino", event.target.value)
                 }
                 disabled={editando || guardando}
-                placeholder="Ej: San Antonio"
+                placeholder="Ej: Callao"
               />
 
               <datalist id="ruta-destinos-conocidos">
@@ -505,6 +512,26 @@ function AdminRutas({
                   />
                 ))}
               </datalist>
+            </div>
+
+            <div className="rutas-field">
+              <label htmlFor="ruta-pais-destino">
+                País de destino
+              </label>
+
+              <input
+                id="ruta-pais-destino"
+                type="text"
+                maxLength={100}
+                autoComplete="off"
+                value={formulario.pais_destino}
+                onChange={(event) =>
+                  actualizarCampo("pais_destino", event.target.value)
+                }
+                disabled={editando || guardando}
+                placeholder="Ej: Perú"
+                required={!editando}
+              />
             </div>
 
             <div className="rutas-field">
@@ -657,7 +684,7 @@ function AdminRutas({
                     <thead>
                       <tr>
                         <th scope="col">Ruta</th>
-                        <th scope="col">País</th>
+                        <th scope="col">Países</th>
                         <th scope="col">Tipo</th>
                         <th scope="col">20&apos; (US$)</th>
                         <th scope="col">40&apos; (US$)</th>
@@ -677,7 +704,7 @@ function AdminRutas({
                             <strong>{ruta.destino}</strong>
                           </td>
 
-                          <td>{ruta.paisOrigen}</td>
+                          <td>{ruta.paisOrigen} → {ruta.paisDestino || "Chile"}</td>
 
                           <td>{ruta.tipoRuta}</td>
 

@@ -33,6 +33,7 @@ PostgreSQL es el único motor de base de datos del proyecto.
 - Importación y validación de datos maestros desde Excel, con vista previa de cambios (actual vs propuesto) y confirmación.
 - Actualización transaccional de datos: ante un error PostgreSQL revierte todos los cambios.
 - Gestión manual de puertos, rutas, tarifas y tránsito por el encargado o administrador (sin Excel), con validación y respaldo.
+- Rutas confirmadas por el Product Owner (17-11-2026): **San Antonio → Callao (Perú)** y **Valparaiso → Callao (Perú)**, directas, tránsito **3 a 5 días**, 20' **US$900**, 40' **US$970**. Se crean por `incorporar_rutas_callao` de forma idempotente en cada build.
 - Bitácora de operaciones sobre datos maestros con respaldo del estado anterior y restauración reversible (solo administrador).
 - Diseño responsive.
 - Health check del backend y de la conexión a PostgreSQL.
@@ -132,7 +133,7 @@ Render ejecuta desde `backend/`:
 bash build.sh
 ```
 
-El script instala dependencias, recopila archivos estáticos y ejecuta las migraciones.
+El script instala dependencias, recopila archivos estáticos y ejecuta las migraciones. También invoca `bootstrap_production` e `incorporar_rutas_callao`. La última operación solo incorpora rutas y tarifas ausentes, sin modificar cotizaciones o ajustes ya guardados por COMEX.
 
 El servidor de producción utiliza:
 

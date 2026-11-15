@@ -120,6 +120,11 @@ class RutaSerializer(
         read_only=True,
     )
 
+    paisDestino = serializers.CharField(
+        source="puerto_destino.pais",
+        read_only=True,
+    )
+
     tipoRuta = serializers.CharField(
         source="tipo_ruta",
         read_only=True,
@@ -146,6 +151,7 @@ class RutaSerializer(
             "origen",
             "pais",
             "destino",
+            "paisDestino",
             "tipoRuta",
             "transitoMin",
             "transitoMax",
