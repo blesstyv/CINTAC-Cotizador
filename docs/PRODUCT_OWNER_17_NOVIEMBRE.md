@@ -1,48 +1,56 @@
 # Requisitos finales del Product Owner — exposición 17-11-2026
 
-## Fuente
+## Fuente y aclaración del tránsito
 
-Retroalimentación entregada por la profesora y tabla del Product Owner aportada por el equipo. Este documento mantiene las especificaciones recibidas, incluso cuando contienen una contradicción que debe aclararse.
+La planilla compartida por el Product Owner consignaba **5 días como mínimo y 3 días como máximo**. Posteriormente, el responsable del proyecto confirmó para la implementación que el intervalo correcto es **3 días mínimo y 5 días máximo** para ambas rutas. Esta aclaración se registra expresamente; no es una corrección silenciosa de la fuente.
 
-## Funcionalidades solicitadas
+## Requisitos obligatorios
 
-- La herramienta es para uso **interno**; evitar integrarla a una página pública corporativa como un recurso abierto.
-- Valor monetario de la carga opcional. Si se conoce, se suma **una sola vez** al total del flete; si no se conoce, se considera 0.
-- Capacidad máxima: contenedor de **20 pies = 23 toneladas**; contenedor de **40 pies = 25 toneladas**.
-- La cantidad de contenedores **se calcula a partir del peso**, no se introduce manualmente.
-- Inputs: puerto de origen, puerto de destino, peso en kg o toneladas y valor de carga opcional.
-- La fuente de tarifas no debe mostrarse debajo del cálculo. La información de tarifas se actualiza manualmente desde administración.
-- El flete internacional se trata como flete sin IVA adicional en la estimación; no mezclar con posibles impuestos/cargos diferentes que no estén especificados.
-- Agregar dos **rutas** nuevas y un **puerto** nuevo a la base existente, conforme a la tabla de cliente.
+- Herramienta de uso **interno**, protegida por autenticación.
+- Valor monetario de la carga **opcional**; cuando se incorpora, se suma **una sola vez** al flete. Desactivado o vacío = cero adicional.
+- Contenedor 20 pies: **23 toneladas** de capacidad.
+- Contenedor 40 pies: **25 toneladas** de capacidad.
+- Cantidad de contenedores **calculada automáticamente** a partir del peso, nunca digitada.
+- Puertos de origen y destino, peso en kg o toneladas y valor monetario opcional de la carga.
+- No mostrar la fuente de tarifa debajo del resultado; las tarifas se actualizan manualmente desde administración.
+- No agregar IVA adicional al flete internacional estimado.
+- Incorporar las dos rutas internacionales hacia **Callao, Perú**.
 
-## Datos exactos recibidos
+## Valores confirmados para las dos rutas nuevas
 
-| Origen | País origen | Destino | País destino | Tipo de ruta | 20' min (USD) | 20' max (USD) | 40' min (USD) | 40' max (USD) | Tránsito min | Tránsito max |
+| Origen | País origen | Destino | País destino | Tipo de ruta | 20' min (USD) | 20' max (USD) | 40' min (USD) | 40' max (USD) | Tránsito mínimo | Tránsito máximo |
 | --- | --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| San Antonio | Chile | Callao | Perú | Directo | 900 | 900 | 970 | 970 | **5** | **3** |
-| Valparaiso | Chile | Callao | Perú | Directo | 900 | 900 | 970 | 970 | **5** | **3** |
+| San Antonio | Chile | Callao | Perú | Directo | 900 | 900 | 970 | 970 | **3 días** | **5 días** |
+| Valparaiso | Chile | Callao | Perú | Directo | 900 | 900 | 970 | 970 | **3 días** | **5 días** |
 
-**Bloqueo de integridad de datos:** en el original se indica tránsito mínimo de 5 días y máximo de 3 días para ambas rutas. Un rango mínimo > máximo es matemáticamente inválido. El software debe rechazarlo y no se debe corregir silenciosamente. Solicitar confirmación explícita al Product Owner: ¿corresponde 3–5 días o existe otro dato correcto?
+Las dos rutas comparten **un único puerto de destino Callao**. En el sistema se conserva la grafía `Valparaiso` ya utilizada por los registros existentes para no crear un puerto duplicado.
 
-Hasta confirmar la duración, **no cargar rutas incompletas ni inventar tránsitos en PostgreSQL de producción**.
+## Cómo se implementan
 
-## Soporte implementado
+- La PR de aceptación permite elegir y mostrar el país de destino (Perú) en la administración y el cotizador.
+- El comando `python manage.py incorporar_rutas_callao` crea las dos rutas y sus tarifas de forma **idempotente**.
+- `backend/build.sh` lo ejecuta después de `bootstrap_production` en el próximo despliegue del backend a Render.
+- Si una tarifa o tránsito de estas rutas ya existe y COMEX lo editó, el comando **no lo sobrescribe**.
+- Si falta un puerto de origen, o si la ruta existente es incompatible, el comando interrumpe la transacción sin dejar escrituras parciales.
+- PostgreSQL debe pasar de **16 a 18 rutas** y de **32 a 36 tarifas**, sin modificar las cotizaciones históricas.
 
-- PostgreSQL ya contiene los tipos de contenedor 20' y 40' con capacidades 23 y 25 toneladas.
-- El backend cuenta con API administrativa para crear rutas internacionales mediante campo `pais_destino`, validar tarifa y días, registrar operación y respaldar estado anterior.
-- Antes de esta revisión, el frontend administrativo suponía Chile como país de destino. La rama `eva3-client-callao-17nov` agrega dicho campo visible y obligatorio, sin alterar rutas existentes.
-- Se añadieron tests para dos rutas que comparten el puerto de Callao/Perú y para el rechazo del rango invertido original. Los números 2–4 usados en la primera prueba son **datos ficticios de laboratorio**, NO una corrección de la tabla del cliente.
+## Pruebas incorporadas
 
-## Verificación y publicación pendientes
+- Dos rutas directas Chile → Callao, país destino Perú, tarifas correctas y tránsito 3–5.
+- Repetir la carga sin duplicar puertos, rutas ni tarifas.
+- Conservar tarifas y tránsitos editados posteriormente por COMEX.
+- Rechazar el rango invertido original (5–3 días).
+- Cantidad automática en límites de 23 y 25 toneladas.
+- Equivalencia entre kg y toneladas.
+- Rechazo de la cantidad manual enviada por API.
 
-1. Confirmar el rango de tránsito correcto con el Product Owner.
-2. Validar build/lint de React y tests backend contra PostgreSQL de pruebas.
-3. Fusionar únicamente una rama validada y publicar frontend/backend alineados.
-4. Crear las dos rutas desde el módulo administrativo, con los días confirmados; verificar 18 rutas y 36 tarifas en la base final.
-5. Cotizar cargas exactamente de 23, 24, 25, 26, 46 y 50 toneladas para asegurar el redondeo de contenedores según cada capacidad.
-6. Verificar que el historial conserva importes, fecha, moneda y cantidad de contenedores y que la UI no solicite cantidad manual.
-7. Conservar evidencias reproducibles de resultados esperados/obtenidos.
+## Validación y despliegue
 
-## Política de publicación
+Los cambios de esta PR todavía deben comprobarse e integrarse a `main` para quedar publicados; no confundir código preparado con datos presentes en producción. GitHub Actions continúa bloqueado por un problema de facturación de la cuenta, independiente del software.
 
-No fusionar ni desplegar código sin pruebas apropiadas. No transmitir contraseñas ni tokens por conversaciones. La base gratuita de Render tiene fecha de expiración configurada para el 21-11-2026: planificar migración/respaldo si la herramienta debe seguir operativa después de la evaluación.
+Una vez desplegado, comprobar por SQL y por API:
+- 11 puertos, 18 rutas, 36 tarifas.
+- Dos rutas a Callao con tránsito 3–5 y tipo `Directo`.
+- Capacidad 20' = 23 TN y 40' = 25 TN.
+- Cotización de 24 TN y 46 TN con selección automática y precios correctos.
+- Integridad de usuarios, cotizaciones y tarifas previas.
