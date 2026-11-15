@@ -376,7 +376,7 @@ function AdminRutas({
 
   const rutasVisibles = texto
     ? rutas.filter((ruta) =>
-      `${ruta.origen} ${ruta.paisOrigen} ${ruta.destino}`
+      `${ruta.origen} ${ruta.paisOrigen} ${ruta.destino} ${ruta.paisDestino || ""}`
         .toLowerCase()
         .includes(texto)
     )
@@ -684,7 +684,7 @@ function AdminRutas({
                     <thead>
                       <tr>
                         <th scope="col">Ruta</th>
-                        <th scope="col">País</th>
+                        <th scope="col">Países</th>
                         <th scope="col">Tipo</th>
                         <th scope="col">20&apos; (US$)</th>
                         <th scope="col">40&apos; (US$)</th>
@@ -704,7 +704,7 @@ function AdminRutas({
                             <strong>{ruta.destino}</strong>
                           </td>
 
-                          <td>{ruta.paisOrigen}</td>
+                          <td>{ruta.paisOrigen} → {ruta.paisDestino || "Chile"}</td>
 
                           <td>{ruta.tipoRuta}</td>
 
