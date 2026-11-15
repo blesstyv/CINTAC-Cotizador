@@ -1212,6 +1212,17 @@ function App() {
     );
 
 
+  const paisesDestinoPorPuerto =
+    useMemo(
+      () => Object.fromEntries(
+        rutas
+          .filter((ruta) => ruta.origen === origen)
+          .map((ruta) => [ruta.destino, ruta.paisDestino])
+      ),
+      [rutas, origen]
+    );
+
+
   const rutaSeleccionada =
     useMemo(
       () => {
@@ -2377,6 +2388,11 @@ function App() {
                             }
                           >
                             {puerto}
+                            {
+                              paisesDestinoPorPuerto[puerto]
+                                ? ` (${paisesDestinoPorPuerto[puerto]})`
+                                : ""
+                            }
                           </option>
                         )
                       )
