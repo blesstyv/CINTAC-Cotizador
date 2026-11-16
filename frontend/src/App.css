@@ -3015,10 +3015,21 @@ form {
   overflow-wrap: anywhere;
 }
 
-.result-details .conversion-box strong {
+/* Solo el monto principal en CLP debe destacar. */
+.result-details .conversion-box > strong {
   max-width: 100%;
   font-size: clamp(0.95rem, 1.8vw, 1.125rem);
   line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+/* Metadatos del dólar: tipografía compacta y coherente con el desglose. */
+.result-details .conversion-box .exchange-rate-row strong {
+  max-width: 65%;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.45;
+  text-align: right;
   overflow-wrap: anywhere;
 }
 
